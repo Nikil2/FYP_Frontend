@@ -64,26 +64,33 @@ export function Navbar() {
               <Globe className="w-5 h-5 text-paragraph" />
             </button> */}
 
-            {/* Auth Dropdown */}
+            {/* Login Button */}
+            <a href="/auth/login">
+              <Button variant="outline" size="sm">
+                Login
+              </Button>
+            </a>
+
+            {/* Signup Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsAuthDropdownOpen(!isAuthDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 text-paragraph hover:text-heading animation-standard"
+                className="flex items-center gap-2 px-4 py-2 bg-tertiary text-tertiary-foreground hover:bg-tertiary-hover rounded-lg animation-standard font-medium"
               >
-                Login
+                Sign Up
                 <ChevronDown className="w-4 h-4" />
               </button>
 
               {isAuthDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
                   <a
-                    href="/login/customer"
+                    href="/auth/signup/customer"
                     className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
                   >
                     As Customer
                   </a>
                   <a
-                    href="/login/worker"
+                    href="/auth/signup/worker"
                     className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
                   >
                     As Worker
@@ -91,10 +98,6 @@ export function Navbar() {
                 </div>
               )}
             </div>
-
-            <Button variant="tertiary" size="sm">
-              Sign Up
-            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -126,15 +129,21 @@ export function Navbar() {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <Button variant="outline" size="sm" className="w-full">
-                  Login as Customer
-                </Button>
-                <Button variant="outline" size="sm" className="w-full">
-                  Login as Worker
-                </Button>
-                <Button variant="tertiary" size="sm" className="w-full">
-                  Sign Up
-                </Button>
+                <a href="/auth/login" className="w-full">
+                  <Button variant="outline" size="sm" className="w-full">
+                    Login
+                  </Button>
+                </a>
+                <a href="/auth/signup/customer" className="w-full">
+                  <Button variant="tertiary" size="sm" className="w-full">
+                    Sign Up as Customer
+                  </Button>
+                </a>
+                <a href="/auth/signup/worker" className="w-full">
+                  <Button variant="tertiary" size="sm" className="w-full">
+                    Sign Up as Worker
+                  </Button>
+                </a>
               </div>
             </div>
           </div>
