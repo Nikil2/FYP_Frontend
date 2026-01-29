@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,13 +81,17 @@ export function WorkerCard({ worker }: WorkerCardProps) {
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1">
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Chat
-          </Button>
-          <Button variant="tertiary" size="sm" className="flex-1">
-            Book Now
-          </Button>
+          <Link href={`/worker/${worker.id}`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Chat
+            </Button>
+          </Link>
+          <Link href={`/worker/${worker.id}`} className="flex-1">
+            <Button variant="tertiary" size="sm" className="w-full">
+              Book Now
+            </Button>
+          </Link>
         </div>
       </div>
     </Card>

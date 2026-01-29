@@ -2,7 +2,7 @@ import { WorkerSignupForm } from "@/components/auth/WorkerSignupForm";
 
 export default function WorkerSignupPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-secondary-background px-4 py-8">
+    <main className="min-h-screen section-padding-standard flex-center bg-secondary-background px-4 pt-24">
       <WorkerSignupForm />
     </main>
   );
