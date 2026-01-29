@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { signupWorker, validatePhoneNumber, validatePassword, validateCNIC } from "@/lib/auth";
+import {
+  signupWorker,
+  validatePhoneNumber,
+  validatePassword,
+  validateCNIC,
+} from "@/lib/auth";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
 import {
   Eye,
@@ -43,7 +48,8 @@ export function WorkerSignupForm() {
     selectedServices: [],
   });
   const [profilePicture, setProfilePicture] = useState<File | undefined>();
-  const [profilePicturePreview, setProfilePicturePreview] = useState<string>("");
+  const [profilePicturePreview, setProfilePicturePreview] =
+    useState<string>("");
   const [cnicFrontPreview, setCnicFrontPreview] = useState<string>("");
   const [cnicBackPreview, setCnicBackPreview] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
@@ -61,8 +67,11 @@ export function WorkerSignupForm() {
     { id: 6, name: "Mechanic" },
   ];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const value = e.target.type === "number" ? parseFloat(e.target.value) : e.target.value;
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const value =
+      e.target.type === "number" ? parseFloat(e.target.value) : e.target.value;
     setFormData({
       ...formData,
       [e.target.name]: value,
@@ -72,7 +81,9 @@ export function WorkerSignupForm() {
     }
   };
 
-  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePictureChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       setProfilePicture(file);
@@ -226,7 +237,9 @@ export function WorkerSignupForm() {
       if (response.success) {
         router.push("/worker/dashboard");
       } else {
-        setErrors({ general: response.message || "Signup failed. Please try again." });
+        setErrors({
+          general: response.message || "Signup failed. Please try again.",
+        });
       }
     } catch (err) {
       setErrors({ general: "An unexpected error occurred. Please try again." });
@@ -238,14 +251,16 @@ export function WorkerSignupForm() {
   return (
     <Card className="w-full max-w-2xl p-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-heading mb-2">Become a Mehnati Worker</h1>
+        <h1 className="text-3xl font-bold text-heading mb-2">
+          Become a Mehnati Worker
+        </h1>
         <p className="text-paragraph">Complete the steps to start earning</p>
       </div>
 
       {/* Progress Steps */}
       <div className="flex items-center justify-between mb-8">
         {[1, 2, 3].map((step) => (
-          <div key={step} className="flex items-center flex-1">
+          <div key={step} className="flex items-center flex-1 ">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                 currentStep >= step
@@ -270,7 +285,9 @@ export function WorkerSignupForm() {
         {/* Step 1: Basic Information */}
         {currentStep === 1 && (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-heading mb-4">Basic Information</h2>
+            <h2 className="text-xl font-semibold text-heading mb-4">
+              Basic Information
+            </h2>
 
             {/* Profile Picture */}
             <div className="flex flex-col items-center space-y-4">
@@ -304,7 +321,10 @@ export function WorkerSignupForm() {
 
             {/* Full Name */}
             <div className="space-y-2">
-              <label htmlFor="fullName" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="fullName"
+                className="text-sm font-medium text-heading"
+              >
                 Full Name *
               </label>
               <div className="relative">
@@ -320,12 +340,17 @@ export function WorkerSignupForm() {
                   required
                 />
               </div>
-              {errors.fullName && <p className="text-red-500 text-sm">{errors.fullName}</p>}
+              {errors.fullName && (
+                <p className="text-red-500 text-sm">{errors.fullName}</p>
+              )}
             </div>
 
             {/* Phone Number */}
             <div className="space-y-2">
-              <label htmlFor="phoneNumber" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="phoneNumber"
+                className="text-sm font-medium text-heading"
+              >
                 Phone Number *
               </label>
               <div className="relative">
@@ -341,12 +366,17 @@ export function WorkerSignupForm() {
                   required
                 />
               </div>
-              {errors.phoneNumber && <p className="text-red-500 text-sm">{errors.phoneNumber}</p>}
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+              )}
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-heading"
+              >
                 Password *
               </label>
               <div className="relative">
@@ -366,15 +396,24 @@ export function WorkerSignupForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-paragraph hover:text-heading"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="confirmPassword"
+                className="text-sm font-medium text-heading"
+              >
                 Confirm Password *
               </label>
               <div className="relative">
@@ -394,7 +433,11 @@ export function WorkerSignupForm() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-paragraph hover:text-heading"
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
                 </button>
               </div>
               {errors.confirmPassword && (
@@ -407,11 +450,16 @@ export function WorkerSignupForm() {
         {/* Step 2: Professional Details */}
         {currentStep === 2 && (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-heading mb-4">Professional Details</h2>
+            <h2 className="text-xl font-semibold text-heading mb-4">
+              Professional Details
+            </h2>
 
             {/* CNIC Number */}
             <div className="space-y-2">
-              <label htmlFor="cnicNumber" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="cnicNumber"
+                className="text-sm font-medium text-heading"
+              >
                 CNIC Number *
               </label>
               <div className="relative">
@@ -427,14 +475,18 @@ export function WorkerSignupForm() {
                   required
                 />
               </div>
-              {errors.cnicNumber && <p className="text-red-500 text-sm">{errors.cnicNumber}</p>}
+              {errors.cnicNumber && (
+                <p className="text-red-500 text-sm">{errors.cnicNumber}</p>
+              )}
             </div>
 
             {/* CNIC Images */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* CNIC Front */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-heading">CNIC Front *</label>
+                <label className="text-sm font-medium text-heading">
+                  CNIC Front *
+                </label>
                 <label
                   htmlFor="cnicFront"
                   className="block border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-tertiary transition-colors"
@@ -448,7 +500,9 @@ export function WorkerSignupForm() {
                   ) : (
                     <div className="flex flex-col items-center">
                       <Upload className="w-8 h-8 text-paragraph mb-2" />
-                      <span className="text-sm text-paragraph">Upload CNIC Front</span>
+                      <span className="text-sm text-paragraph">
+                        Upload CNIC Front
+                      </span>
                     </div>
                   )}
                   <input
@@ -461,13 +515,17 @@ export function WorkerSignupForm() {
                   />
                 </label>
                 {errors.cnicFrontImage && (
-                  <p className="text-red-500 text-sm">{errors.cnicFrontImage}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.cnicFrontImage}
+                  </p>
                 )}
               </div>
 
               {/* CNIC Back */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-heading">CNIC Back *</label>
+                <label className="text-sm font-medium text-heading">
+                  CNIC Back *
+                </label>
                 <label
                   htmlFor="cnicBack"
                   className="block border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-tertiary transition-colors"
@@ -481,7 +539,9 @@ export function WorkerSignupForm() {
                   ) : (
                     <div className="flex flex-col items-center">
                       <Upload className="w-8 h-8 text-paragraph mb-2" />
-                      <span className="text-sm text-paragraph">Upload CNIC Back</span>
+                      <span className="text-sm text-paragraph">
+                        Upload CNIC Back
+                      </span>
                     </div>
                   )}
                   <input
@@ -517,13 +577,18 @@ export function WorkerSignupForm() {
                   required
                 />
               </div>
-              {errors.bio && <p className="text-red-500 text-sm">{errors.bio}</p>}
+              {errors.bio && (
+                <p className="text-red-500 text-sm">{errors.bio}</p>
+              )}
             </div>
 
             {/* Experience & Charges */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="experienceYears" className="text-sm font-medium text-heading">
+                <label
+                  htmlFor="experienceYears"
+                  className="text-sm font-medium text-heading"
+                >
                   Years of Experience *
                 </label>
                 <div className="relative">
@@ -541,12 +606,17 @@ export function WorkerSignupForm() {
                   />
                 </div>
                 {errors.experienceYears && (
-                  <p className="text-red-500 text-sm">{errors.experienceYears}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.experienceYears}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="visitingCharges" className="text-sm font-medium text-heading">
+                <label
+                  htmlFor="visitingCharges"
+                  className="text-sm font-medium text-heading"
+                >
                   Visiting Charges (PKR) *
                 </label>
                 <div className="relative">
@@ -564,7 +634,9 @@ export function WorkerSignupForm() {
                   />
                 </div>
                 {errors.visitingCharges && (
-                  <p className="text-red-500 text-sm">{errors.visitingCharges}</p>
+                  <p className="text-red-500 text-sm">
+                    {errors.visitingCharges}
+                  </p>
                 )}
               </div>
             </div>
@@ -574,11 +646,16 @@ export function WorkerSignupForm() {
         {/* Step 3: Location & Services */}
         {currentStep === 3 && (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-heading mb-4">Location & Services</h2>
+            <h2 className="text-xl font-semibold text-heading mb-4">
+              Location & Services
+            </h2>
 
             {/* Home Address */}
             <div className="space-y-2">
-              <label htmlFor="homeAddress" className="text-sm font-medium text-heading">
+              <label
+                htmlFor="homeAddress"
+                className="text-sm font-medium text-heading"
+              >
                 Home Address *
               </label>
               <div className="relative">
@@ -594,15 +671,20 @@ export function WorkerSignupForm() {
                   required
                 />
               </div>
-              {errors.homeAddress && <p className="text-red-500 text-sm">{errors.homeAddress}</p>}
+              {errors.homeAddress && (
+                <p className="text-red-500 text-sm">{errors.homeAddress}</p>
+              )}
               <p className="text-xs text-paragraph">
-                Note: For now, coordinates will be set automatically. Map integration coming soon!
+                Note: For now, coordinates will be set automatically. Map
+                integration coming soon!
               </p>
             </div>
 
             {/* Services */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-heading">Select Services *</label>
+              <label className="text-sm font-medium text-heading">
+                Select Services *
+              </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {availableServices.map((service) => (
                   <button
@@ -620,7 +702,9 @@ export function WorkerSignupForm() {
                 ))}
               </div>
               {errors.selectedServices && (
-                <p className="text-red-500 text-sm">{errors.selectedServices}</p>
+                <p className="text-red-500 text-sm">
+                  {errors.selectedServices}
+                </p>
               )}
             </div>
           </div>
@@ -661,7 +745,10 @@ export function WorkerSignupForm() {
         {/* Sign In Link */}
         <p className="text-center text-sm text-paragraph">
           Already have an account?{" "}
-          <Link href="/auth/login" className="text-tertiary hover:underline font-medium">
+          <Link
+            href="/auth/login"
+            className="text-tertiary hover:underline font-medium"
+          >
             Sign in
           </Link>
         </p>

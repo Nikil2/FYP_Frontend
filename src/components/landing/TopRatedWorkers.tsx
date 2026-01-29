@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
+
 import { WorkerCard } from "./WorkerCard";
+
 import { TOP_WORKERS } from "@/content/landing/landing-page-content";
+
 import { useScrollReveal } from "@/lib/animations";
 import { cn } from "@/lib/utils";
+
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 
 export function TopRatedWorkers() {
@@ -81,14 +85,6 @@ export function TopRatedWorkers() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-              {/* 
-              <a
-                href="/workers"
-                className="hidden md:flex items-center gap-2 text-tertiary hover:text-tertiary-hover animation-standard font-medium"
-              >
-                View All
-                <ArrowRight className="w-5 h-5" />
-              </a> */}
             </div>
           </div>
 

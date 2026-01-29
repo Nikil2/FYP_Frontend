@@ -3,10 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { signupCustomer, validatePhoneNumber, validatePassword } from "@/lib/auth";
+import {
+  signupCustomer,
+  validatePhoneNumber,
+  validatePassword,
+} from "@/lib/auth";
+
 import { CustomerSignupFormData } from "@/interfaces/auth-interfaces";
+
 import { Eye, EyeOff, Phone, Lock, User, Upload, Loader2 } from "lucide-react";
 
 export function CustomerSignupForm() {
@@ -18,7 +25,8 @@ export function CustomerSignupForm() {
     confirmPassword: "",
   });
   const [profilePicture, setProfilePicture] = useState<File | undefined>();
-  const [profilePicturePreview, setProfilePicturePreview] = useState<string>("");
+  const [profilePicturePreview, setProfilePicturePreview] =
+    useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +81,7 @@ export function CustomerSignupForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -91,7 +99,9 @@ export function CustomerSignupForm() {
       if (response.success) {
         router.push("/customer/dashboard");
       } else {
-        setErrors({ general: response.message || "Signup failed. Please try again." });
+        setErrors({
+          general: response.message || "Signup failed. Please try again.",
+        });
       }
     } catch (err) {
       setErrors({ general: "An unexpected error occurred. Please try again." });
@@ -103,7 +113,9 @@ export function CustomerSignupForm() {
   return (
     <Card className="w-full max-w-md p-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-heading mb-2">Create Customer Account</h1>
+        <h1 className="text-3xl font-bold text-heading mb-2">
+          Create Customer Account
+        </h1>
         <p className="text-paragraph">Join Mehnati to find skilled workers</p>
       </div>
 
@@ -136,12 +148,17 @@ export function CustomerSignupForm() {
               />
             </label>
           </div>
-          <p className="text-sm text-paragraph">Upload profile picture (optional)</p>
+          <p className="text-sm text-paragraph">
+            Upload profile picture (optional)
+          </p>
         </div>
 
         {/* Full Name */}
         <div className="space-y-2">
-          <label htmlFor="fullName" className="text-sm font-medium text-heading">
+          <label
+            htmlFor="fullName"
+            className="text-sm font-medium text-heading"
+          >
             Full Name *
           </label>
           <div className="relative">
@@ -157,12 +174,17 @@ export function CustomerSignupForm() {
               required
             />
           </div>
-          {errors.fullName && <p className="text-red-500 text-sm">{errors.fullName}</p>}
+          {errors.fullName && (
+            <p className="text-red-500 text-sm">{errors.fullName}</p>
+          )}
         </div>
 
         {/* Phone Number */}
         <div className="space-y-2">
-          <label htmlFor="phoneNumber" className="text-sm font-medium text-heading">
+          <label
+            htmlFor="phoneNumber"
+            className="text-sm font-medium text-heading"
+          >
             Phone Number *
           </label>
           <div className="relative">
@@ -178,12 +200,17 @@ export function CustomerSignupForm() {
               required
             />
           </div>
-          {errors.phoneNumber && <p className="text-red-500 text-sm">{errors.phoneNumber}</p>}
+          {errors.phoneNumber && (
+            <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+          )}
         </div>
 
         {/* Password */}
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium text-heading">
+          <label
+            htmlFor="password"
+            className="text-sm font-medium text-heading"
+          >
             Password *
           </label>
           <div className="relative">
@@ -203,15 +230,24 @@ export function CustomerSignupForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-paragraph hover:text-heading"
             >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
-          {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
+          {errors.password && (
+            <p className="text-red-500 text-sm">{errors.password}</p>
+          )}
         </div>
 
         {/* Confirm Password */}
         <div className="space-y-2">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-heading">
+          <label
+            htmlFor="confirmPassword"
+            className="text-sm font-medium text-heading"
+          >
             Confirm Password *
           </label>
           <div className="relative">
@@ -231,10 +267,16 @@ export function CustomerSignupForm() {
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-paragraph hover:text-heading"
             >
-              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {showConfirmPassword ? (
+                <EyeOff className="w-5 h-5" />
+              ) : (
+                <Eye className="w-5 h-5" />
+              )}
             </button>
           </div>
-          {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
+          {errors.confirmPassword && (
+            <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
+          )}
         </div>
 
         {/* General Error */}
@@ -259,7 +301,10 @@ export function CustomerSignupForm() {
         {/* Sign In Link */}
         <p className="text-center text-sm text-paragraph">
           Already have an account?{" "}
-          <Link href="/auth/login" className="text-tertiary hover:underline font-medium">
+          <Link
+            href="/auth/login"
+            className="text-tertiary hover:underline font-medium"
+          >
             Sign in
           </Link>
         </p>
