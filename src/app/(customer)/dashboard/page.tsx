@@ -36,12 +36,12 @@ export default function DashboardOverviewPage() {
 
   const getStatusColor = (
     status: string,
-  ): "pending" | "default" | "secondary" | "tertiary" => {
+  ): "default" | "tertiary" => {
     switch (status) {
       case "pending":
-        return "pending";
+        return "default";
       case "confirmed":
-        return "secondary";
+        return "default";
       case "in-progress":
         return "tertiary";
       case "completed":

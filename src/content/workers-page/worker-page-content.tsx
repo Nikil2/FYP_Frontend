@@ -37,7 +37,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 days ago",
         comment:
           "Excellent work! Ahmed was very professional and completed the AC installation quickly. Highly recommended!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -46,7 +46,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Great service! Ahmed fixed our electrical wiring issue in no time. Very skilled and courteous.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -55,7 +55,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Good work on the switchboard repair. A bit expensive but the quality was worth it.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -64,7 +64,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Ahmed is very experienced and trustworthy. Would definitely hire again for any electrical work.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -107,7 +107,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "5 days ago",
         comment:
           "Fixed our leaking tap issue in minutes. Very efficient and professional. Worth every rupee!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -116,7 +116,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Installed new pipes in my kitchen. Work quality is excellent and he cleaned up after himself.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -125,7 +125,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Good plumber but took a bit longer than expected. Still very satisfied with the result.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -134,7 +134,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Emergency service was fast and affordable. Highly recommend Muhammad Ali for any plumbing work.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -177,7 +177,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 day ago",
         comment:
           "Usman made beautiful custom wardrobes for our bedroom. Perfect fit and finish. Absolutely love it!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -186,7 +186,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Fitted new doors and windows. Very professional and his attention to detail is remarkable.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -195,7 +195,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Built custom kitchen cabinets for our new house. Best carpenter I've worked with. Highly recommended!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -204,7 +204,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 month ago",
         comment:
           "Restored my old wooden furniture beautifully. Usman is a true craftsman. 5 stars!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -247,7 +247,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 days ago",
         comment:
           "Hassan painted our living room beautifully. Very neat work and he helped us choose the perfect color.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -256,7 +256,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Good painter. The exterior work looks great. Only took a bit longer than estimated.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -265,7 +265,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Professional painter with excellent color sense. My home looks amazing now!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -274,7 +274,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Good quality painting work. Reasonable prices. Would hire again.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -317,7 +317,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 day ago",
         comment:
           "Installed a new AC unit in my office. Perfect installation and very affordable. Bilal is the best!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -326,7 +326,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Regular maintenance by Bilal keeps my AC running smoothly. Very professional and punctual.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -335,7 +335,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "My AC compressor was making noise. Bilal fixed it quickly and gave me a 6-month warranty!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -344,7 +344,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Good service overall. Quick response to emergency calls. Reasonable pricing.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -387,7 +387,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "5 days ago",
         comment:
           "Installed solar panels in my house. Imran is very knowledgeable about renewable energy. Great value!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -396,7 +396,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Home automation setup is working perfectly. Would recommend for tech-savvy electrical solutions.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -405,7 +405,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Rewired my house. Very professional and explained everything clearly.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -414,7 +414,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Best electrician for modern solutions. Imran helped me set up smart lighting. Highly satisfied!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -457,7 +457,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 days ago",
         comment:
           "Built strong walls for my extension. Tariq's craftsmanship is outstanding. Best mason in town!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -466,7 +466,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Plastered our entire house beautifully. Smooth walls and perfect finish. Very happy!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -475,7 +475,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Laid foundation for my new home construction. Professional work and on-time delivery.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -484,7 +484,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Good work on wall repairs. Tariq is reliable and delivers quality work. Recommended!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,
@@ -527,7 +527,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 days ago",
         comment:
           "Called for emergency plumbing at night. Kamran came within 30 minutes. Very responsive!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r2",
@@ -536,7 +536,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "1 week ago",
         comment:
           "Installed new faucets throughout my kitchen. Clean work and fair pricing. Highly satisfied!",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r3",
@@ -545,7 +545,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "2 weeks ago",
         comment:
           "Repaired sewer line issue quickly. Kamran is professional and trustworthy. Highly recommended.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
       {
         id: "r4",
@@ -554,7 +554,7 @@ export const WORKERS_DETAIL_DATA: Record<string, WorkerDetail> = {
         date: "3 weeks ago",
         comment:
           "Good maintenance service. Kamran is reliable and efficient. Would call again.",
-        customerAvatar: null,
+        customerAvatar: undefined,
       },
     ],
     profileImage: null,

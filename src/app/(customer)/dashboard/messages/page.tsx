@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { Suspense, useMemo, useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   getChatConversationById,
 } from "@/lib/mock-bookings";
 
-export default function MessagesPage() {
+function MessagesContent() {
   const searchParams = useSearchParams();
   const conversations = useMemo(() => getChatConversations(), []);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(
@@ -124,7 +124,7 @@ export default function MessagesPage() {
                     <h2 className="font-bold text-heading">
                       {selectedConversation.workerName}
                     </h2>
-                    <Badge variant="secondary" className="text-xs mt-1">
+                    <Badge variant="default" className="text-xs mt-1">
                       Online
                     </Badge>
                   </div>
@@ -194,5 +194,13 @@ export default function MessagesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-96"><p>Loading messages...</p></div>}>
+      <MessagesContent />
+    </Suspense>
   );
 }

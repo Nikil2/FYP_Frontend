@@ -196,7 +196,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex items-start gap-3">
-                <Badge variant="secondary">Verified</Badge>
+                <Badge variant="tertiary">Verified</Badge>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
                     Account Status
