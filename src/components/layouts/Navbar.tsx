@@ -203,7 +203,7 @@ export function Navbar() {
 
         {/* Mobile Search - Collapsible */}
         {isMobileSearchOpen && (
-          <div className="md:hidden px-3 py-3 border-t border-border bg-secondary-background">
+          <div className="md:hidden px-3 py-3 border-t border-border bg-secondary-background relative z-40">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-paragraph pointer-events-none" />
               <input
@@ -229,26 +229,22 @@ export function Navbar() {
             </div>
 
             {/* Mobile Search Results */}
-            <div className="mt-2">
-              {isSearchOpen && searchResults.length > 0 && (
-                <div className="max-h-64 overflow-y-auto">
-                  <SearchResultsDropdown
-                    results={searchResults}
-                    isOpen={isSearchOpen}
-                    onClose={() => {
-                      setIsSearchOpen(false);
-                      setIsMobileSearchOpen(false);
-                    }}
-                    query={searchQuery}
-                  />
-                </div>
-              )}
-              {searchQuery && searchResults.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-4">
-                  No workers found for "{searchQuery}"
-                </p>
-              )}
-            </div>
+            {isSearchOpen && searchResults.length > 0 && (
+              <SearchResultsDropdown
+                results={searchResults}
+                isOpen={isSearchOpen}
+                onClose={() => {
+                  setIsSearchOpen(false);
+                  setIsMobileSearchOpen(false);
+                }}
+                query={searchQuery}
+              />
+            )}
+            {searchQuery && searchResults.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-4">
+                No workers found for "{searchQuery}"
+              </p>
+            )}
           </div>
         )}
 
