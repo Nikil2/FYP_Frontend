@@ -63,7 +63,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-1",
     serviceName: "Electrical Wiring Installation",
     status: "in-progress",
-    scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "14:00",
     location: MOCK_SAVED_LOCATIONS[0],
     jobDescription: "Install new ceiling fan with dimmer switch",
@@ -84,7 +86,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-2",
     serviceName: "Pipe Leak Repair",
     status: "pending",
-    scheduledDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "10:00",
     location: MOCK_SAVED_LOCATIONS[1],
     jobDescription: "Fix leaking pipe in kitchen sink",
@@ -105,7 +109,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-3",
     serviceName: "Custom Cabinet Making",
     status: "confirmed",
-    scheduledDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "09:00",
     location: MOCK_SAVED_LOCATIONS[2],
     jobDescription: "Build custom wooden shelving unit",
@@ -126,7 +132,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-4",
     serviceName: "Interior Wall Painting",
     status: "completed",
-    scheduledDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "08:00",
     location: MOCK_SAVED_LOCATIONS[0],
     jobDescription: "Paint living room with premium finish",
@@ -151,7 +159,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-5",
     serviceName: "AC Unit Repair & Maintenance",
     status: "completed",
-    scheduledDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "11:00",
     location: MOCK_SAVED_LOCATIONS[1],
     jobDescription: "AC compressor repair and cleaning",
@@ -176,7 +186,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-1",
     serviceName: "Light Bulb Installation",
     status: "completed",
-    scheduledDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "15:00",
     location: MOCK_SAVED_LOCATIONS[2],
     jobDescription: "Install LED lights in bedroom",
@@ -201,7 +213,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-2",
     serviceName: "Tap Repair",
     status: "completed",
-    scheduledDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "10:00",
     location: MOCK_SAVED_LOCATIONS[0],
     jobDescription: "Fix leaking bathroom tap",
@@ -226,7 +240,9 @@ export const MOCK_BOOKINGS: Booking[] = [
     serviceId: "service-3",
     serviceName: "Door Installation",
     status: "completed",
-    scheduledDate: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    scheduledDate: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     scheduledTime: "09:00",
     location: MOCK_SAVED_LOCATIONS[1],
     jobDescription: "Install wooden main door",
@@ -285,7 +301,9 @@ export const MOCK_CHAT_CONVERSATIONS: ChatConversation[] = [
     workerName: "Sarah Peters",
     workerImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
     lastMessage: "Great! I'll send you the final invoice soon.",
-    lastMessageTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    lastMessageTime: new Date(
+      Date.now() - 2 * 24 * 60 * 60 * 1000,
+    ).toISOString(),
     unreadCount: 0,
     messages: [
       {
@@ -323,7 +341,9 @@ export const MOCK_CHAT_CONVERSATIONS: ChatConversation[] = [
     workerName: "Ahmed Malik",
     workerImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed",
     lastMessage: "Sounds good! See you soon.",
-    lastMessageTime: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    lastMessageTime: new Date(
+      Date.now() - 5 * 24 * 60 * 60 * 1000,
+    ).toISOString(),
     unreadCount: 0,
     messages: [
       {
@@ -356,14 +376,16 @@ export function getCustomerProfile(): CustomerProfile {
 
 export function getActiveBookings(): Booking[] {
   return MOCK_BOOKINGS.filter((booking) =>
-    ["pending", "confirmed", "in-progress"].includes(booking.status)
+    ["pending", "confirmed", "in-progress"].includes(booking.status),
   );
 }
 
 export function getBookingHistory(): Booking[] {
   return MOCK_BOOKINGS.filter((booking) =>
-    ["completed", "cancelled"].includes(booking.status)
-  ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ["completed", "cancelled"].includes(booking.status),
+  ).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 export function getBookingById(bookingId: string): Booking | undefined {
@@ -371,13 +393,15 @@ export function getBookingById(bookingId: string): Booking | undefined {
 }
 
 export function getChatConversations(): ChatConversation[] {
-  return MOCK_CHAT_CONVERSATIONS.sort((a, b) =>
-    new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
+  return MOCK_CHAT_CONVERSATIONS.sort(
+    (a, b) =>
+      new Date(b.lastMessageTime).getTime() -
+      new Date(a.lastMessageTime).getTime(),
   );
 }
 
 export function getChatConversationById(
-  conversationId: string
+  conversationId: string,
 ): ChatConversation | undefined {
   return MOCK_CHAT_CONVERSATIONS.find((conv) => conv.id === conversationId);
 }

@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
 import logo from "../../../public/icons/mehnati-logo.png";
+
+import { SearchResultsDropdown } from "@/components/search/search-results-dropdown";
 
 import { Button } from "@/components/ui/button";
 
 import { Menu, X, ChevronDown, Search } from "lucide-react";
 
 import { NAV_LINKS } from "@/content/landing/landing-page-content";
-import { SearchResultsDropdown } from "@/components/search/search-results-dropdown";
+
 import { searchWorkers } from "@/lib/mock-data";
-import type { WorkerDetail } from "@/types/worker";
 import { cn } from "@/lib/utils";
+
+import type { WorkerDetail } from "@/types/worker";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,6 +29,7 @@ export function Navbar() {
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null,
   );
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll detection
   useEffect(() => {
@@ -35,6 +39,24 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Handle click outside mobile menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isMobileMenuOpen]);
 
   // Handle search with debouncing (300ms)
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,10 +92,8 @@ export function Navbar() {
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 animation-standard",
-        isScrolled
-          ? "bg-background/95 backdrop-blur-md shadow-md"
-          : "bg-transparent",
+        "fixed top-0 left-0 right-0 z-50 animation-standard border-b border-border",
+        isScrolled ? "bg-background/95 backdrop-blur-md shadow-md" : "bg-card",
       )}
     >
       <div className="layout-standard">
@@ -91,7 +111,7 @@ export function Navbar() {
                 <a
                   key={link.href}
                   href={link.href}
-                  className="text-paragraph hover:text-heading animation-standard font-medium"
+                  className="text-heading hover:text-tertiary animation-standard font-medium"
                 >
                   {link.label}
                 </a>
@@ -175,27 +195,27 @@ export function Navbar() {
           <div className="md:hidden flex items-center gap-2">
             {/* Mobile Search Toggle */}
             <button
-              className="p-2 hover:bg-muted rounded-lg animation-standard"
+              className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
               aria-label="Toggle search"
             >
               {isMobileSearchOpen ? (
-                <X className="w-6 h-6 text-heading" />
+                <X className="w-6 h-6" />
               ) : (
-                <Search className="w-6 h-6 text-heading" />
+                <Search className="w-6 h-6" />
               )}
             </button>
 
             {/* Mobile Menu Button */}
             <button
-              className="p-2 hover:bg-muted rounded-lg animation-standard"
+              className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
-                <X className="w-6 h-6 text-heading" />
+                <X className="w-6 h-6" />
               ) : (
-                <Menu className="w-6 h-6 text-heading" />
+                <Menu className="w-6 h-6" />
               )}
             </button>
           </div>
@@ -250,13 +270,16 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
+          <div
+            ref={mobileMenuRef}
+            className="md:hidden py-4 border-t border-border"
+          >
             <div className="flex flex-col gap-4">
               {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="text-paragraph hover:text-heading animation-standard font-medium py-2"
+                  className="text-heading hover:text-tertiary animation-standard font-medium py-2"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
