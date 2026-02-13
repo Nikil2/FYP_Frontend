@@ -65,29 +65,62 @@ export interface CustomerSignupFormData {
   profilePicture?: File;
 }
 
+// Sub-service inside a main service
+export interface SubService {
+  id: string;
+  name: string;
+  nameUrdu: string;
+}
+
+// Main service category with sub-services
+export interface ServiceCategory {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  icon: string;
+  subServices: SubService[];
+}
+
+// A service the worker selected with chosen sub-services
+export interface SelectedServiceEntry {
+  serviceId: string;
+  serviceName: string;
+  subServiceIds: string[];
+}
+
 export interface WorkerSignupFormData {
-  // Personal Info
+  // Step 1: Basic Info
   fullName: string;
   phoneNumber: string;
   password: string;
   confirmPassword: string;
-  profilePicture?: File;
 
-  // Worker Specific
-  cnicNumber: string;
-  cnicFrontImage: File | null;
-  cnicBackImage: File | null;
-  bio: string;
-  experienceYears: number;
-  visitingCharges: number;
+  // Step 2: OTP
+  otpCode: string;
 
-  // Location
+  // Step 3: Services
+  selectedServices: SelectedServiceEntry[];
+
+  // Step 4: Location
   homeAddress: string;
   homeLat: number;
   homeLng: number;
 
-  // Services
-  selectedServices: number[];
+  // Step 5: Experience
+  experienceYears: number;
+  visitingCharges: number;
+  bio: string;
+
+  // Step 6: Previous Work Photos (min 2)
+  workPhotos: File[];
+
+  // Step 7: Selfie Verification
+  selfieImage: File | null;
+
+  // Step 8: CNIC Identity
+  cnicNumber: string;
+  cnicFrontImage: File | null;
+  cnicBackImage: File | null;
 }
 
 // ============================================
