@@ -1,4 +1,5 @@
-import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData } from "@/interfaces/auth-interfaces";
+import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, UserRole } from "@/interfaces/auth-interfaces";
+import { findWorkerByCredentials, setCurrentWorkerId, clearCurrentWorkerId } from "@/app/dummy/dummy-workers";
 
 // ============================================
 // API BASE URL
@@ -38,6 +39,33 @@ export const isAuthenticated = (): boolean => {
 // ============================================
 
 export const login = async (data: LoginFormData): Promise<AuthResponse> => {
+  // ── Check dummy worker credentials first ──
+  const dummyWorker = findWorkerByCredentials(data.phoneNumber, data.password);
+  if (dummyWorker) {
+    const fakeToken = `dummy-token-${dummyWorker.id}-${Date.now()}`;
+    setAuthToken(fakeToken);
+    setCurrentWorkerId(dummyWorker.id);
+
+    return {
+      success: true,
+      message: "Login successful",
+      data: {
+        token: fakeToken,
+        user: {
+          id: dummyWorker.id,
+          fullName: dummyWorker.profile.name,
+          phoneNumber: dummyWorker.phoneNumber,
+          role: UserRole.WORKER,
+          isVerified: dummyWorker.profile.profileStatus === "approved",
+          isBlocked: false,
+          createdAt: new Date(dummyWorker.profile.joinedDate),
+          updatedAt: new Date(),
+        },
+      },
+    };
+  }
+
+  // ── Real API call (fallback) ──
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
@@ -106,10 +134,6 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     formData.append("password", data.password);
     formData.append("role", "WORKER");
 
-    if (data.profilePicture) {
-      formData.append("profilePicture", data.profilePicture);
-    }
-
     // Worker profile fields
     formData.append("cnicNumber", data.cnicNumber);
     if (data.cnicFrontImage) {
@@ -125,6 +149,18 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     formData.append("homeLat", data.homeLat.toString());
     formData.append("homeLng", data.homeLng.toString());
     formData.append("selectedServices", JSON.stringify(data.selectedServices));
+
+    // Selfie
+    if (data.selfieImage) {
+      formData.append("selfieImage", data.selfieImage);
+    }
+
+    // Work photos
+    if (data.workPhotos && data.workPhotos.length > 0) {
+      data.workPhotos.forEach((photo, index) => {
+        formData.append(`workPhotos`, photo);
+      });
+    }
 
     const response = await fetch(`${API_BASE_URL}/auth/signup/worker`, {
       method: "POST",
@@ -149,6 +185,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 
 export const logout = () => {
   removeAuthToken();
+  clearCurrentWorkerId();
   if (typeof window !== "undefined") {
     window.location.href = "/auth/login";
   }

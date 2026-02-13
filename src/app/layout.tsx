@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Navbar } from "@/components/layouts/Navbar";
-import { Footer } from "@/components/layouts/Footer";
+import { LayoutShell } from "@/components/layouts/LayoutShell";
 import "../styles/globals.css";
 
 // FONT CONFIGURATIONS
@@ -43,9 +42,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} bg-background text-foreground font-body antialiased`}
       >
-        <Navbar />
-        {children}
-        <Footer />
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );
