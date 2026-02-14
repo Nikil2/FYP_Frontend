@@ -6,16 +6,20 @@ import { cn } from "@/lib/utils";
 
 interface OnlineToggleProps {
   initialStatus?: boolean;
+  showLabel?: boolean;
 }
 
-export function OnlineToggle({ initialStatus = true }: OnlineToggleProps) {
+export function OnlineToggle({ initialStatus = true, showLabel = true }: OnlineToggleProps) {
   const [isOnline, setIsOnline] = useState(initialStatus);
   const { t } = useLanguage();
 
   return (
     <button
       onClick={() => setIsOnline(!isOnline)}
-      className="flex items-center gap-2 w-full"
+      className={cn(
+        "flex items-center gap-2",
+        showLabel ? "w-full" : "flex-shrink-0"
+      )}
     >
       {/* Toggle switch */}
       <div
@@ -31,14 +35,16 @@ export function OnlineToggle({ initialStatus = true }: OnlineToggleProps) {
           )}
         />
       </div>
-      <span
-        className={cn(
-          "text-sm font-medium",
-          isOnline ? "text-tertiary" : "text-paragraph"
-        )}
-      >
-        {isOnline ? t.online : t.offline}
-      </span>
+      {showLabel && (
+        <span
+          className={cn(
+            "text-sm font-medium",
+            isOnline ? "text-tertiary" : "text-paragraph"
+          )}
+        >
+          {isOnline ? t.online : t.offline}
+        </span>
+      )}
     </button>
   );
 }
