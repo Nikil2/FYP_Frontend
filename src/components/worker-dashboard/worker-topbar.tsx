@@ -39,6 +39,13 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  // Handle profile click - only toggle sidebar on desktop
+  const handleProfileClick = () => {
+    if (window.innerWidth >= 1024) { // lg: breakpoint
+      onToggleSidebar();
+    }
+  };
+
   // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -187,10 +194,10 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
           )}
         </div>
 
-        {/* Profile Avatar — click to toggle sidebar */}
+        {/* Profile Avatar — click to toggle sidebar on desktop only */}
         <button
-          onClick={onToggleSidebar}
-          className="flex items-center gap-2 pl-2 border-l border-border ml-1 hover:bg-muted rounded-lg py-1.5 pr-2 transition-colors cursor-pointer"
+          onClick={handleProfileClick}
+          className="flex items-center gap-2 pl-2 border-l border-border ml-1 hover:bg-muted rounded-lg py-1.5 pr-2 transition-colors lg:cursor-pointer cursor-default"
         >
           <Avatar
             src={profile.profileImage}
@@ -205,7 +212,7 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
               {profile.category}
             </p>
           </div>
-          <Menu className="w-5 h-5 text-paragraph ml-1" />
+          <Menu className="w-5 h-5 text-paragraph ml-1 hidden lg:block" />
         </button>
       </div>
     </header>

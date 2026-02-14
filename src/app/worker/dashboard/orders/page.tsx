@@ -8,11 +8,13 @@ import { useLanguage } from "@/lib/language-context";
 import { getActiveOrders, getPastOrders } from "@/lib/mock-provider";
 import { cn } from "@/lib/utils";
 import { MapPin, Clock, FileText } from "lucide-react";
-import type { OrderStatus } from "@/types/provider";
+import type { ProviderOrder, OrderStatus } from "@/types/provider";
+import { OrderDetailModal } from "@/components/worker-dashboard/order-detail-modal";
 
 export default function OrdersPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"active" | "past">("active");
+  const [selectedOrder, setSelectedOrder] = useState<ProviderOrder | null>(null);
 
   const activeOrders = useMemo(() => getActiveOrders(), []);
   const pastOrders = useMemo(() => getPastOrders(), []);
@@ -157,7 +159,12 @@ export default function OrdersPage() {
                     </p>
                   )}
 
-                  <Button variant="tertiary" size="sm" className="rounded-full">
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => setSelectedOrder(order)}
+                  >
                     {t.viewDetails}
                   </Button>
                 </div>
@@ -178,6 +185,15 @@ export default function OrdersPage() {
           </Card>
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          isOpen={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
     </div>
   );
 }

@@ -25,16 +25,16 @@ export default function WorkerDashboardLayout({
             {children}
           </main>
 
-          {/* Sidebar - slide-in from right (all screen sizes) */}
+          {/* Sidebar - slide-in from right (desktop only) */}
           {sidebarOpen && (
             <>
-              {/* Backdrop */}
+              {/* Backdrop - desktop only */}
               <div
-                className="fixed inset-0 bg-black/40 z-40"
+                className="fixed inset-0 bg-black/40 z-40 hidden lg:block"
                 onClick={() => setSidebarOpen(false)}
               />
-              {/* Drawer - right side */}
-              <div className="fixed top-0 right-0 bottom-0 w-[280px] z-50 animate-slide-in-right shadow-2xl">
+              {/* Drawer - right side (desktop only) */}
+              <div className="fixed top-0 right-0 bottom-0 w-[280px] z-50 animate-slide-in-right shadow-2xl hidden lg:block">
                 <WorkerSidebar onClose={() => setSidebarOpen(false)} />
               </div>
             </>

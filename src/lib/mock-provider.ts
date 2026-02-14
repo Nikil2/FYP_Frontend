@@ -167,6 +167,8 @@ export function getActiveOrders(): ProviderOrder[] {
       customerPhone: "+92 300 1234567",
       customerImage: null,
       location: "5G4F+XX Multan, Pakistan",
+      customerLat: 30.1975,
+      customerLng: 71.4708,
       scheduledDate: "2026-02-14",
       scheduledTime: "10:00 AM",
       agreedPrice: 2500,

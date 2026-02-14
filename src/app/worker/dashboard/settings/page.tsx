@@ -122,7 +122,12 @@ export default function SettingsPage() {
                   {item.type === "custom" && <LanguageToggle />}
 
                   {item.type === "availability" && (
-                    <OnlineToggle initialStatus={true} />
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-tertiary">
+                        Online
+                      </span>
+                      <OnlineToggle initialStatus={true} showLabel={false} />
+                    </div>
                   )}
 
                   {item.type === "link" && (

@@ -45,6 +45,8 @@ export interface ProviderOrder {
   customerPhone: string;
   customerImage?: string | null;
   location: string;
+  customerLat?: number;
+  customerLng?: number;
   scheduledDate: string;
   scheduledTime: string;
   agreedPrice: number;
