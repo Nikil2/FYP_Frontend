@@ -40,7 +40,7 @@ export function LoginForm() {
         if (response.data?.user.role === "WORKER") {
           router.push("/worker/dashboard");
         } else if (response.data?.user.role === "CUSTOMER") {
-          router.push("/customer/dashboard");
+          router.push("/customer");
         } else if (response.data?.user.role === "ADMIN") {
           router.push("/admin/dashboard");
         }

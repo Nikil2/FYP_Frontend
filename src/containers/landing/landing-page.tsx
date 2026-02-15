@@ -1,6 +1,5 @@
 import { HeroSection } from "@/components/landing/HeroSection";
 import { ServicesGrid } from "@/components/landing/ServicesGrid";
-import { TopRatedWorkers } from "@/components/landing/TopRatedWorkers";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { StatsSection } from "@/components/landing/StatsSection";
@@ -15,8 +14,6 @@ function LandingPage() {
       <StatsSection />
 
       <ServicesGrid />
-
-      <TopRatedWorkers />
 
       <HowItWorks />
 
