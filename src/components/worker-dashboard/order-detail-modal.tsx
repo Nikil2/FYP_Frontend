@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
@@ -13,11 +13,14 @@ import {
   FileText,
   Navigation,
   ExternalLink,
+  Check,
+  XCircle,
 } from "lucide-react";
+import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
 import type { ProviderOrder, OrderStatus } from "@/types/provider";
 
 interface OrderDetailModalProps {
-  order: ProviderOrder;
+  order: ProviderOrder | any;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -29,6 +32,7 @@ export function OrderDetailModal({
 }: OrderDetailModalProps) {
   const { t } = useLanguage();
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<string>(order?.status || "pending");
 
   // Close on ESC key
   useEffect(() => {
@@ -45,13 +49,53 @@ export function OrderDetailModal({
     };
   }, [isOpen, onClose]);
 
+  const handleAccept = () => {
+    // Update in MOCK_BOOKINGS array
+    const booking = MOCK_BOOKINGS.find((b) => b.id === order.id);
+    if (booking) {
+      (booking as any).status = "accepted";
+    }
+    
+    // Update localStorage too
+    const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
+    const storedBooking = stored.find((b: any) => b.id === order.id);
+    if (storedBooking) {
+      storedBooking.status = "accepted";
+      localStorage.setItem("user_bookings", JSON.stringify(stored));
+    }
+    
+    setStatus("accepted");
+    setTimeout(() => onClose(), 1000);
+  };
+
+  const handleReject = () => {
+    // Update in MOCK_BOOKINGS array
+    const booking = MOCK_BOOKINGS.find((b) => b.id === order.id);
+    if (booking) {
+      (booking as any).status = "rejected";
+    }
+    
+    // Update localStorage too
+    const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
+    const storedBooking = stored.find((b: any) => b.id === order.id);
+    if (storedBooking) {
+      storedBooking.status = "rejected";
+      localStorage.setItem("user_bookings", JSON.stringify(stored));
+    }
+    
+    setStatus("rejected");
+    setTimeout(() => onClose(), 1000);
+  };
+
   if (!isOpen) return null;
 
-  const getStatusColor = (status: OrderStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
         return "text-green-600 bg-green-50 border-green-200";
       case "cancelled":
+        return "text-red-500 bg-red-50 border-red-200";
+      case "rejected":
         return "text-red-500 bg-red-50 border-red-200";
       case "in-progress":
         return "text-blue-600 bg-blue-50 border-blue-200";
@@ -64,12 +108,14 @@ export function OrderDetailModal({
     }
   };
 
-  const getStatusLabel = (status: OrderStatus): string => {
+  const getStatusLabel = (status: string): string => {
     switch (status) {
       case "completed":
         return t.completed;
       case "cancelled":
         return t.cancelled;
+      case "rejected":
+        return "Rejected";
       case "in-progress":
         return t.inProgress;
       case "accepted":
@@ -140,9 +186,9 @@ export function OrderDetailModal({
               </p>
             </div>
             <span
-              className={`px-3 py-1 rounded-full text-sm font-semibold border capitalize ${getStatusColor(order.status)}`}
+              className={`px-3 py-1 rounded-full text-sm font-semibold border capitalize ${getStatusColor(status)}`}
             >
-              {getStatusLabel(order.status)}
+              {getStatusLabel(status)}
             </span>
           </div>
 
@@ -256,36 +302,59 @@ export function OrderDetailModal({
           </div>
 
           {/* ── Action Buttons ── */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            {directionsUrl && (
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
+          {status === "pending" ? (
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={handleAccept}
+                variant="tertiary"
+                size="sm"
+                className="flex-1 rounded-xl"
               >
+                <Check className="w-4 h-4 mr-2" />
+                Accept Order
+              </Button>
+              <Button
+                onClick={handleReject}
+                variant="outline"
+                size="sm"
+                className="flex-1 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Reject Order
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {directionsUrl && (
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1"
+                >
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    className="w-full rounded-xl"
+                  >
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Navigate to Customer
+                    <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-60" />
+                  </Button>
+                </a>
+              )}
+              <a href={`tel:${order.customerPhone}`} className="flex-1">
                 <Button
-                  variant="tertiary"
+                  variant="outline"
                   size="sm"
                   className="w-full rounded-xl"
                 >
-                  <Navigation className="w-4 h-4 mr-2" />
-                  Navigate to Customer
-                  <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-60" />
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Customer
                 </Button>
               </a>
-            )}
-            <a href={`tel:${order.customerPhone}`} className="flex-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full rounded-xl"
-              >
-                <Phone className="w-4 h-4 mr-2" />
-                Call Customer
-              </Button>
-            </a>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -33,7 +33,7 @@ export function CustomerSidebar() {
     <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-border">
-        <Link href="/customer" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-tertiary flex items-center justify-center">
             <span className="text-white font-bold text-sm">M</span>
           </div>

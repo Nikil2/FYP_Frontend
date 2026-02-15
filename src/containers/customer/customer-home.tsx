@@ -44,8 +44,8 @@ export default function CustomerHome() {
         onCityChange={setSelectedCity}
       />
 
-      {/* Weekly Offers */}
-      <WeeklyOffers />
+      {/* Weekly Offers - Commented out for now */}
+      {/* <WeeklyOffers /> */}
 
       {/* Popular Services */}
       <PopularServices />

@@ -1,20 +1,15 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { BookingForm } from "@/components/customer/booking-form";
-import { WorkerSelection } from "@/components/customer/worker-selection";
 import { getServiceItemById } from "@/lib/customer-data";
 import { getWorkersForService } from "@/lib/mock-bookings";
+import { WorkerSelection } from "@/components/customer/worker-selection";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 
-interface BookingPageProps {
+interface WorkersPageProps {
   serviceId: string;
 }
 
-export default function BookingPage({ serviceId }: BookingPageProps) {
-  const searchParams = useSearchParams();
-  const workerId = searchParams.get("workerId");
-  
+export default function WorkersPage({ serviceId }: WorkersPageProps) {
   const service = getServiceItemById(serviceId);
 
   if (!service) {
@@ -30,28 +25,14 @@ export default function BookingPage({ serviceId }: BookingPageProps) {
     );
   }
 
-  // If no workerId, show worker selection
-  if (!workerId) {
-    const workers = getWorkersForService(serviceId);
-    return (
-      <>
-        <WorkerSelection 
-          serviceId={service.id} 
-          serviceName={service.name}
-          workers={workers}
-        />
-        <FloatingButtons />
-      </>
-    );
-  }
+  const workers = getWorkersForService(serviceId);
 
-  // If workerId provided, show booking form
   return (
     <>
-      <BookingForm 
+      <WorkerSelection 
         serviceId={service.id} 
         serviceName={service.name}
-        workerId={workerId}
+        workers={workers}
       />
       <FloatingButtons />
     </>

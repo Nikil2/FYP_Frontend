@@ -427,3 +427,96 @@ export function getDashboardStats(): DashboardStats {
     averageRating,
   };
 }
+
+// ============================================
+// SERVICE TO WORKER MAPPING
+// Maps which workers can perform which services
+// ============================================
+export const SERVICE_WORKER_MAPPING: Record<string, string[]> = {
+  // Category Services (for browsing)
+  "ac-services": ["ahmed-hassan"],
+  "electrician-services": ["ahmed-hassan"],
+  "plumber-services": ["muhammad-ali"],
+  "home-cleaning": ["hassan-raza"],
+  "pest-control": ["usman-khan"],
+  "water-tank-cleaning": ["muhammad-ali"],
+  "ladies-tailoring": ["usman-khan"],
+  "gents-tailoring": ["ahmed-hassan"],
+  "alteration-services": ["usman-khan"],
+  "car-wash": ["hassan-raza"],
+  "car-repair": ["ahmed-hassan"],
+  "bike-repair": ["ahmed-hassan"],
+  "tire-service": ["hassan-raza"],
+  "mason-services": ["usman-khan"],
+  "carpenter-services": ["usman-khan"],
+  "painter-services": ["hassan-raza"],
+  "waterproofing": ["usman-khan"],
+  "welding-services": ["ahmed-hassan"],
+  
+  // Individual Service Items
+  "ac-general-service": ["ahmed-hassan"],
+  "ac-repairing-service": ["ahmed-hassan"],
+  "ac-installation-service": ["ahmed-hassan"],
+  "ac-dismounting-service": ["ahmed-hassan"],
+  "ac-gas-refill": ["ahmed-hassan"],
+  
+  "wiring-service": ["ahmed-hassan"],
+  "switch-repair": ["ahmed-hassan"],
+  "fan-installation": ["ahmed-hassan"],
+  "light-fitting": ["ahmed-hassan"],
+  "ups-installation": ["ahmed-hassan"],
+  "board-repair": ["ahmed-hassan"],
+  
+  "emergency-plumbing": ["muhammad-ali"],
+  "tap-repair": ["muhammad-ali"],
+  "leak-detection": ["muhammad-ali"],
+  "toilet-repair": ["muhammad-ali"],
+  "gas-leakage": ["muhammad-ali"],
+  "drain-cleaning": ["muhammad-ali"],
+  
+  "home-deep-cleaning": ["hassan-raza"],
+  "bathroom-cleaning": ["hassan-raza"],
+  "kitchen-cleaning": ["hassan-raza"],
+  "sofa-cleaning": ["hassan-raza"],
+  "carpet-cleaning": ["hassan-raza"],
+  
+  "pest-control-service": ["usman-khan"],
+  "water-tank-cleaning-service": ["muhammad-ali"],
+  
+  "ladies-stitching": ["usman-khan"],
+  "gents-stitching": ["usman-khan"],
+  "designer-dress": ["usman-khan"],
+  "alteration-service": ["usman-khan"],
+  "bridal-stitching": ["usman-khan"],
+  
+  // Car & Bike Services (Individual Items)
+  "car-general-wash": ["hassan-raza"],
+  "car-premium-wash": ["hassan-raza"],
+  "bike-wash": ["hassan-raza"],
+  "bike-service": ["ahmed-hassan"],
+  "bike-puncture": ["hassan-raza"],
+  
+  // Construction & Repair Services (Individual Items)
+  "tile-work": ["usman-khan"],
+  "door-fitting": ["usman-khan"],
+  
+  // Popular Services
+  "pop-1": ["ahmed-hassan"], // Home Wiring Repair
+  "pop-2": ["muhammad-ali"], // Pipe Leak Repair
+  "pop-3": ["ahmed-hassan"], // AC General Service
+  "pop-4": ["hassan-raza"], // Room Painting
+  "pop-5": ["usman-khan"], // Door & Furniture Repair
+  "pop-6": ["hassan-raza"], // Deep House Cleaning
+  
+  // Default fallback
+  "default": ["ahmed-hassan"],
+};
+
+export function getWorkersForService(serviceId: string) {
+  const { MOCK_WORKERS } = require("@/lib/mock-data");
+  const workerIds = SERVICE_WORKER_MAPPING[serviceId] || SERVICE_WORKER_MAPPING["default"] || [];
+  
+  return workerIds
+    .map((id: string) => MOCK_WORKERS.find((w: any) => w.id === id))
+    .filter((w: any) => w !== undefined);
+}

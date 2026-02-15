@@ -10,7 +10,7 @@ interface ServiceCardProps {
 export function ServiceCard({ service }: ServiceCardProps) {
   return (
     <Link
-      href={`/customer/book/${service.id}`}
+      href={`/customer/book/${service.id}/workers`}
       className="block rounded-xl border border-tertiary/30 overflow-hidden bg-white shadow-sm hover:shadow-md transition-all hover:border-tertiary/50"
     >
       {/* Service Image */}
