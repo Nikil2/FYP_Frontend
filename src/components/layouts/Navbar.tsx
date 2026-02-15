@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 
 import logo from "../../../public/icons/mehnati-logo.png";
@@ -19,6 +20,10 @@ import { cn } from "@/lib/utils";
 import type { WorkerDetail } from "@/types/worker";
 
 export function Navbar() {
+  const pathname = usePathname();
+  const isLandingPage = pathname === "/";
+  const isAuthPage = pathname.startsWith("/auth");
+  
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthDropdownOpen, setIsAuthDropdownOpen] = useState(false);
@@ -103,55 +108,57 @@ export function Navbar() {
             <Image src={logo} alt="Logo" width={150} height={40} />
           </a>
 
-          {/* Desktop Navigation + Search */}
-          <div className="hidden md:flex items-center gap-8 flex-1 justify-center">
-            {/* Navigation Links */}
-            <div className="flex items-center gap-8">
-              {NAV_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-heading hover:text-tertiary animation-standard font-medium"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-
-            {/* Search Bar - Desktop */}
-            <div className="relative w-64">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-paragraph pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search workers..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() =>
-                    searchResults.length > 0 && setIsSearchOpen(true)
-                  }
-                  className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-lg text-paragraph placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-tertiary animation-standard"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={handleClearSearch}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-heading animation-standard"
-                    aria-label="Clear search"
+          {/* Desktop Navigation + Search - Hidden on Landing Page & Auth Pages */}
+          {!isLandingPage && !isAuthPage && (
+            <div className="hidden md:flex items-center gap-8 flex-1 justify-center">
+              {/* Navigation Links */}
+              <div className="flex items-center gap-8">
+                {NAV_LINKS.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-heading hover:text-tertiary animation-standard font-medium"
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                    {link.label}
+                  </a>
+                ))}
               </div>
 
-              {/* Search Results Dropdown */}
-              <SearchResultsDropdown
-                results={searchResults}
-                isOpen={isSearchOpen}
-                onClose={() => setIsSearchOpen(false)}
-                query={searchQuery}
-              />
+              {/* Search Bar - Desktop */}
+              <div className="relative w-64">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-paragraph pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search workers..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onFocus={() =>
+                      searchResults.length > 0 && setIsSearchOpen(true)
+                    }
+                    className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-lg text-paragraph placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-tertiary animation-standard"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-heading animation-standard"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Results Dropdown */}
+                <SearchResultsDropdown
+                  results={searchResults}
+                  isOpen={isSearchOpen}
+                  onClose={() => setIsSearchOpen(false)}
+                  query={searchQuery}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Desktop Auth & Language */}
           <div className="hidden md:flex items-center gap-4">
@@ -191,38 +198,40 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Mobile Buttons - Search + Menu */}
-          <div className="md:hidden flex items-center gap-2">
-            {/* Mobile Search Toggle */}
-            <button
-              className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
-              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-              aria-label="Toggle search"
-            >
-              {isMobileSearchOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Search className="w-6 h-6" />
-              )}
-            </button>
+          {/* Mobile Buttons - Search + Menu - Hidden on Landing Page & Auth Pages */}
+          {!isLandingPage && !isAuthPage && (
+            <div className="md:hidden flex items-center gap-2">
+              {/* Mobile Search Toggle */}
+              <button
+                className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
+                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                aria-label="Toggle search"
+              >
+                {isMobileSearchOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Search className="w-6 h-6" />
+                )}
+              </button>
 
-            {/* Mobile Menu Button */}
-            <button
-              className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-          </div>
+              {/* Mobile Menu Button */}
+              <button
+                className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Mobile Search - Collapsible */}
-        {isMobileSearchOpen && (
+        {/* Mobile Search - Collapsible - Hidden on Landing Page & Auth Pages */}
+        {!isLandingPage && !isAuthPage && isMobileSearchOpen && (
           <div className="md:hidden px-3 py-3 border-t border-border bg-secondary-background relative z-40">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-paragraph pointer-events-none" />
@@ -268,8 +277,8 @@ export function Navbar() {
           </div>
         )}
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
+        {/* Mobile Menu - Hidden on Landing Page & Auth Pages */}
+        {!isLandingPage && !isAuthPage && isMobileMenuOpen && (
           <div
             ref={mobileMenuRef}
             className="md:hidden py-4 border-t border-border"

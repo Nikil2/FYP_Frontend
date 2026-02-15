@@ -1,15 +1,42 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle, Home, ClipboardList, ArrowRight } from "lucide-react";
+import { CheckCircle, Home, ClipboardList, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
 
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("id") || "CB-XXXX";
-  const serviceName = searchParams.get("service") || "Service";
+  const [booking, setBooking] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Find booking in array
+    const foundBooking = MOCK_BOOKINGS.find((b) => b.id === bookingId);
+    if (!foundBooking) {
+      // Try to load from localStorage
+      const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
+      const storedBooking = stored.find((b: any) => b.id === bookingId);
+      setBooking(storedBooking || null);
+    } else {
+      setBooking(foundBooking);
+    }
+    setLoading(false);
+  }, [bookingId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-2 border-tertiary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const worker = booking?.worker;
+  const serviceName = booking?.serviceName || "Service";
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -25,8 +52,8 @@ function BookingSuccessContent() {
           Booking Confirmed!
         </h1>
         <p className="text-sm text-muted-foreground text-center max-w-xs mb-6">
-          Your booking has been submitted successfully. A worker will be
-          assigned shortly.
+          Your booking has been submitted successfully.
+          {worker && ` ${worker.name} will handle your service.`}
         </p>
 
         {/* Booking Details Card */}
@@ -41,7 +68,7 @@ function BookingSuccessContent() {
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Service</span>
             <span className="text-sm font-medium text-heading">
-              {decodeURIComponent(serviceName)}
+              {serviceName}
             </span>
           </div>
           <div className="border-t border-border" />
@@ -51,7 +78,66 @@ function BookingSuccessContent() {
               Pending Confirmation
             </span>
           </div>
+
+          {/* Booking Details - NEW */}
+          {booking && (
+            <>
+              <div className="border-t border-border" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Date & Time</span>
+                <span className="text-sm font-medium text-heading">
+                  {booking.scheduledDate} at {booking.scheduledTime}
+                </span>
+              </div>
+              <div className="border-t border-border" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Cost</span>
+                <span className="text-sm font-semibold text-tertiary">
+                  Rs {booking.estimatedCost}
+                </span>
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Assigned Worker Card - NEW */}
+        {worker && (
+          <div className="w-full max-w-sm mt-6 bg-white rounded-xl border-2 border-tertiary/30 p-4">
+            <h3 className="text-sm font-semibold text-heading mb-3">
+              Assigned Worker
+            </h3>
+            <div className="flex items-center gap-3">
+              {worker.profileImage ? (
+                <img
+                  src={worker.profileImage}
+                  alt={worker.name}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center">
+                  <span className="font-semibold text-tertiary">
+                    {worker.name.charAt(0)}
+                  </span>
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="font-semibold text-heading">{worker.name}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs font-semibold text-heading">
+                    {worker.rating}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    • {worker.category}
+                  </span>
+                </div>
+              </div>
+              {worker.isOnline && (
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* What's Next */}
         <div className="w-full max-w-sm mt-6">
@@ -64,7 +150,9 @@ function BookingSuccessContent() {
                 1
               </div>
               <p className="text-xs text-muted-foreground">
-                A nearby verified worker will review your booking request
+                {worker
+                  ? `${worker.name} will review your booking request`
+                  : "A nearby verified worker will review your booking request"}
               </p>
             </div>
             <div className="flex items-start gap-3">

@@ -1,6 +1,6 @@
 // Booking Types for Customer Dashboard
 
-export type BookingStatusType = "pending" | "confirmed" | "in-progress" | "completed" | "cancelled";
+export type BookingStatusType = "pending" | "confirmed" | "accepted" | "rejected" | "in-progress" | "completed" | "cancelled";
 
 export interface BookingWorker {
   id: string;

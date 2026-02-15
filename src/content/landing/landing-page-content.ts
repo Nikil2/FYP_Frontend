@@ -97,9 +97,8 @@ export const STATS: Stat[] = [
 
 // Navigation links
 export const NAV_LINKS = [
-  { label: "Services", href: "#services" },
+  { label: "Services", href: "#browse-services" },
   { label: "How It Works", href: "#how-it-works" },
-  { label: "For Workers", href: "#for-workers" },
   { label: "About", href: "#about" },
 ];
 

@@ -47,7 +47,7 @@ export function PopularServices() {
         {POPULAR_SERVICES.map((service) => (
           <Link
             key={service.id}
-            href={`/customer/book/${service.id}`}
+            href={`/customer/book/${service.id}/workers`}
             className="flex-shrink-0 w-[260px] md:w-full rounded-xl border border-tertiary/30 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
             style={{ scrollSnapAlign: "start" }}
           >

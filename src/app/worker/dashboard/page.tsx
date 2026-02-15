@@ -13,6 +13,8 @@ import {
   getProviderProfile,
   getActiveOrders,
 } from "@/lib/mock-provider";
+import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
+import { getCurrentWorker } from "@/app/dummy/dummy-workers";
 import {
   Briefcase,
   ArrowRight,
@@ -24,7 +26,20 @@ import type { ProviderOrder } from "@/types/provider";
 export default function WorkerDashboardPage() {
   const { t } = useLanguage();
   const profile = useMemo(() => getProviderProfile(), []);
-  const activeOrders = useMemo(() => getActiveOrders(), []);
+  
+  // Get current logged-in worker
+  const currentWorker = getCurrentWorker();
+  
+  // Get customer bookings for this worker from MOCK_BOOKINGS
+  const customerBookings = useMemo(() => {
+    return MOCK_BOOKINGS.filter(
+      (b) => b.workerId === currentWorker?.id && b.status === "pending"
+    );
+  }, [currentWorker?.id]);
+  
+  // Combine with hardcoded orders for backward compatibility
+  const hardcodedOrders = useMemo(() => getActiveOrders(), []);
+  const activeOrders = [...customerBookings, ...hardcodedOrders] as any[];
 
   // Track verification and online status
   // Change to "pending" to see the under-verification screen
@@ -32,7 +47,7 @@ export default function WorkerDashboardPage() {
     profile.profileStatus
   );
   const [isOnline, setIsOnline] = useState(profile.isOnline);
-  const [selectedOrder, setSelectedOrder] = useState<ProviderOrder | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   const handleGoLive = () => {
     setIsOnline(true);
