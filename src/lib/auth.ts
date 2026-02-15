@@ -1,5 +1,6 @@
 import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, UserRole } from "@/interfaces/auth-interfaces";
 import { findWorkerByCredentials, setCurrentWorkerId, clearCurrentWorkerId } from "@/app/dummy/dummy-workers";
+import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId } from "@/app/dummy/dummy-customers";
 
 // ============================================
 // API BASE URL
@@ -59,6 +60,32 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
           isVerified: dummyWorker.profile.profileStatus === "approved",
           isBlocked: false,
           createdAt: new Date(dummyWorker.profile.joinedDate),
+          updatedAt: new Date(),
+        },
+      },
+    };
+  }
+
+  // ── Check dummy customer credentials ──
+  const dummyCustomer = findCustomerByCredentials(data.phoneNumber, data.password);
+  if (dummyCustomer) {
+    const fakeToken = `dummy-token-${dummyCustomer.id}-${Date.now()}`;
+    setAuthToken(fakeToken);
+    setCurrentCustomerId(dummyCustomer.id);
+
+    return {
+      success: true,
+      message: "Login successful",
+      data: {
+        token: fakeToken,
+        user: {
+          id: dummyCustomer.id,
+          fullName: dummyCustomer.profile.name,
+          phoneNumber: dummyCustomer.phoneNumber,
+          role: UserRole.CUSTOMER,
+          isVerified: true,
+          isBlocked: false,
+          createdAt: new Date(dummyCustomer.profile.joinedDate),
           updatedAt: new Date(),
         },
       },
@@ -186,6 +213,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 export const logout = () => {
   removeAuthToken();
   clearCurrentWorkerId();
+  clearCurrentCustomerId();
   if (typeof window !== "undefined") {
     window.location.href = "/auth/login";
   }
