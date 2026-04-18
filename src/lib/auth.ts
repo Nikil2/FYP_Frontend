@@ -6,7 +6,30 @@ import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId
 // API BASE URL
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+// ============================================
+// USER ROLE MANAGEMENT
+// ============================================
+
+export const setUserRole = (role: string) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("userRole", role);
+  }
+};
+
+export const getUserRole = (): string | null => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("userRole");
+  }
+  return null;
+};
+
+export const clearUserRole = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("userRole");
+  }
+};
 
 // ============================================
 // AUTH TOKEN MANAGEMENT
@@ -40,76 +63,58 @@ export const isAuthenticated = (): boolean => {
 // ============================================
 
 export const login = async (data: LoginFormData): Promise<AuthResponse> => {
-  // ── Check dummy worker credentials first ──
-  const dummyWorker = findWorkerByCredentials(data.phoneNumber, data.password);
-  if (dummyWorker) {
-    const fakeToken = `dummy-token-${dummyWorker.id}-${Date.now()}`;
-    setAuthToken(fakeToken);
-    setCurrentWorkerId(dummyWorker.id);
-
-    return {
-      success: true,
-      message: "Login successful",
-      data: {
-        token: fakeToken,
-        user: {
-          id: dummyWorker.id,
-          fullName: dummyWorker.profile.name,
-          phoneNumber: dummyWorker.phoneNumber,
-          role: UserRole.WORKER,
-          isVerified: dummyWorker.profile.profileStatus === "approved",
-          isBlocked: false,
-          createdAt: new Date(dummyWorker.profile.joinedDate),
-          updatedAt: new Date(),
-        },
-      },
-    };
-  }
-
-  // ── Check dummy customer credentials ──
-  const dummyCustomer = findCustomerByCredentials(data.phoneNumber, data.password);
-  if (dummyCustomer) {
-    const fakeToken = `dummy-token-${dummyCustomer.id}-${Date.now()}`;
-    setAuthToken(fakeToken);
-    setCurrentCustomerId(dummyCustomer.id);
-
-    return {
-      success: true,
-      message: "Login successful",
-      data: {
-        token: fakeToken,
-        user: {
-          id: dummyCustomer.id,
-          fullName: dummyCustomer.profile.name,
-          phoneNumber: dummyCustomer.phoneNumber,
-          role: UserRole.CUSTOMER,
-          isVerified: true,
-          isBlocked: false,
-          createdAt: new Date(dummyCustomer.profile.joinedDate),
-          updatedAt: new Date(),
-        },
-      },
-    };
-  }
-
-  // ── Real API call (fallback) ──
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/users/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        phoneNumber: data.phoneNumber,
+        password: data.password,
+      }),
     });
 
     const result = await response.json();
 
-    if (response.ok && result.data?.token) {
-      setAuthToken(result.data.token);
+    // Debug: Log the actual response
+    console.log('Login response:', result);
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+
+    // Check if response is successful (200 OK)
+    if (response.ok) {
+      // Backend returns user object directly, not wrapped in data
+      // Check if we got user data with role
+      if (result.id && result.role) {
+        // Generate a token-like identifier from user data
+        const token = `token-${result.id}-${Date.now()}`;
+        
+        setAuthToken(token);
+        setUserRole(result.role);
+        
+        console.log('Login successful, user role:', result.role);
+        
+        return {
+          success: true,
+          message: "Login successful",
+          data: {
+            accessToken: token,
+            token: token,
+            user: result,
+          },
+        };
+      }
     }
 
-    return result;
+    // If we reach here, login failed
+    return {
+      success: false,
+      message: result.message || "Login failed - Invalid response from server",
+      error: result.error,
+    };
   } catch (error) {
+    console.error('Login error:', error);
     return {
       success: false,
       message: "Network error. Please try again.",
@@ -120,28 +125,34 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
 
 export const signupCustomer = async (data: CustomerSignupFormData): Promise<AuthResponse> => {
   try {
-    const formData = new FormData();
-    formData.append("fullName", data.fullName);
-    formData.append("phoneNumber", data.phoneNumber);
-    formData.append("password", data.password);
-    formData.append("role", "CUSTOMER");
-
-    if (data.profilePicture) {
-      formData.append("profilePicture", data.profilePicture);
-    }
-
-    const response = await fetch(`${API_BASE_URL}/auth/signup/customer`, {
+    const response = await fetch(`${API_BASE_URL}/users/register`, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber,
+        password: data.password,
+      }),
     });
 
     const result = await response.json();
 
-    if (response.ok && result.data?.token) {
-      setAuthToken(result.data.token);
+    if (response.ok && result.data?.accessToken) {
+      setAuthToken(result.data.accessToken);
+      return {
+        success: true,
+        message: "Signup successful",
+        data: result.data,
+      };
     }
 
-    return result;
+    return {
+      success: false,
+      message: result.message || "Signup failed",
+      error: result.error,
+    };
   } catch (error) {
     return {
       success: false,
@@ -157,6 +168,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     
     // User fields
     formData.append("fullName", data.fullName);
+    formData.append("email", data.email);
     formData.append("phoneNumber", data.phoneNumber);
     formData.append("password", data.password);
     formData.append("role", "WORKER");
@@ -175,7 +187,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     formData.append("homeAddress", data.homeAddress);
     formData.append("homeLat", data.homeLat.toString());
     formData.append("homeLng", data.homeLng.toString());
-    formData.append("selectedServices", JSON.stringify(data.selectedServices));
+    formData.append("selectedServiceIds", JSON.stringify(data.selectedServiceIds));
 
     // Selfie
     if (data.selfieImage) {
@@ -212,6 +224,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 
 export const logout = () => {
   removeAuthToken();
+  clearUserRole();
   clearCurrentWorkerId();
   clearCurrentCustomerId();
   if (typeof window !== "undefined") {
@@ -233,6 +246,11 @@ export const validateCNIC = (cnic: string): boolean => {
   // Pakistani CNIC format: XXXXX-XXXXXXX-X
   const cnicRegex = /^[0-9]{5}-[0-9]{7}-[0-9]{1}$/;
   return cnicRegex.test(cnic);
+};
+
+export const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
 };
 
 export const validatePassword = (password: string): { valid: boolean; message?: string } => {

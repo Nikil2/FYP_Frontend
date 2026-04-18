@@ -91,6 +91,7 @@ export interface SelectedServiceEntry {
 export interface WorkerSignupFormData {
   // Step 1: Basic Info
   fullName: string;
+  email: string;
   phoneNumber: string;
   password: string;
   confirmPassword: string;
@@ -99,7 +100,7 @@ export interface WorkerSignupFormData {
   otpCode: string;
 
   // Step 3: Services
-  selectedServices: SelectedServiceEntry[];
+  selectedServiceIds: number[];
 
   // Step 4: Location
   homeAddress: string;
@@ -131,9 +132,11 @@ export interface AuthResponse {
   success: boolean;
   message: string;
   data?: {
-    user: User;
+    user?: User;
     workerProfile?: WorkerProfile;
-    token: string;
+    token?: string;
+    accessToken?: string;
+    refreshToken?: string;
   };
   error?: string;
 }

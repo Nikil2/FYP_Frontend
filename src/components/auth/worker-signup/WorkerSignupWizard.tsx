@@ -16,8 +16,10 @@ import {
   validatePhoneNumber,
   validatePassword,
   validateCNIC,
+  validateEmail,
 } from "@/lib/auth";
-import { WorkerSignupFormData, SelectedServiceEntry } from "@/interfaces/auth-interfaces";
+import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
+import { registerWorker, ApiRequestError } from "@/api";
 
 import { StepBasicInfo } from "./StepBasicInfo";
 import { StepOtpVerification } from "./StepOtpVerification";
@@ -27,6 +29,7 @@ import { StepExperience } from "./StepExperience";
 import { StepWorkPhotos } from "./StepWorkPhotos";
 import { StepSelfieVerification } from "./StepSelfieVerification";
 import { StepCnicIdentity } from "./StepCnicIdentity";
+import { uploadToCloudinary, uploadMultipleToCloudinary } from "@/lib/cloudinary";
 
 const TOTAL_STEPS = 8;
 
@@ -44,11 +47,12 @@ export function WorkerSignupForm() {
 
   const [formData, setFormData] = useState<WorkerSignupFormData>({
     fullName: "",
+    email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
     otpCode: "",
-    selectedServices: [],
+    selectedServiceIds: [],
     homeAddress: "",
     homeLat: 0,
     homeLng: 0,
@@ -62,6 +66,14 @@ export function WorkerSignupForm() {
     cnicBackImage: null,
   });
 
+  // Cloudinary upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadedWorkPhotoUrls, setUploadedWorkPhotoUrls] = useState<string[]>([]);
+  const [uploadedSelfieUrl, setUploadedSelfieUrl] = useState<string | null>(null);
+  const [uploadedCnicFrontUrl, setUploadedCnicFrontUrl] = useState<string | null>(null);
+  const [uploadedCnicBackUrl, setUploadedCnicBackUrl] = useState<string | null>(null);
+
   const isUrdu = lang === "ur";
 
   // ─── Field Change Handlers ───
@@ -71,9 +83,11 @@ export function WorkerSignupForm() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const handleServicesChange = (services: SelectedServiceEntry[]) => {
-    setFormData((prev) => ({ ...prev, selectedServices: services }));
-    if (errors.selectedServices) setErrors((prev) => ({ ...prev, selectedServices: "" }));
+  const handleServicesChange = (serviceIds: number[]) => {
+    setFormData((prev) => ({ ...prev, selectedServiceIds: serviceIds }));
+    if (errors.selectedServiceIds) {
+      setErrors((prev) => ({ ...prev, selectedServiceIds: "" }));
+    }
   };
 
   const handleAddressChange = (address: string, lat: number, lng: number) => {
@@ -81,24 +95,97 @@ export function WorkerSignupForm() {
     if (errors.homeAddress) setErrors((prev) => ({ ...prev, homeAddress: "" }));
   };
 
-  const handleWorkPhotosChange = (photos: File[]) => {
+  const handleWorkPhotosChange = async (photos: File[]) => {
     setFormData((prev) => ({ ...prev, workPhotos: photos }));
     if (errors.workPhotos) setErrors((prev) => ({ ...prev, workPhotos: "" }));
+
+    // Upload to Cloudinary immediately when 2+ photos selected
+    if (photos.length >= 2) {
+      setIsUploading(true);
+      setUploadProgress((prev) => ({ ...prev, workPhotos: 0 }));
+      try {
+        const urls = await uploadMultipleToCloudinary(photos, 'worker-portfolio');
+        setUploadedWorkPhotoUrls(urls);
+        setUploadProgress((prev) => ({ ...prev, workPhotos: 100 }));
+      } catch (error) {
+        console.error('Work photo upload failed:', error);
+        setErrors((prev) => ({
+          ...prev,
+          workPhotos: isUrdu ? 'تصاویر اپلوڈ نہیں ہو سکیں' : 'Failed to upload work photos',
+        }));
+      } finally {
+        setIsUploading(false);
+      }
+    }
   };
 
-  const handleSelfieChange = (file: File | null) => {
+  const handleSelfieChange = async (file: File | null) => {
     setFormData((prev) => ({ ...prev, selfieImage: file }));
     if (errors.selfieImage) setErrors((prev) => ({ ...prev, selfieImage: "" }));
+
+    if (file) {
+      setIsUploading(true);
+      setUploadProgress((prev) => ({ ...prev, selfie: 0 }));
+      try {
+        const url = await uploadToCloudinary(file, 'worker-selfie');
+        setUploadedSelfieUrl(url);
+        setUploadProgress((prev) => ({ ...prev, selfie: 100 }));
+      } catch (error) {
+        console.error('Selfie upload failed:', error);
+        setErrors((prev) => ({
+          ...prev,
+          selfieImage: isUrdu ? 'سیلفی اپلوڈ نہیں ہو سکی' : 'Failed to upload selfie',
+        }));
+      } finally {
+        setIsUploading(false);
+      }
+    }
   };
 
-  const handleCnicFrontChange = (file: File | null) => {
+  const handleCnicFrontChange = async (file: File | null) => {
     setFormData((prev) => ({ ...prev, cnicFrontImage: file }));
     if (errors.cnicFrontImage) setErrors((prev) => ({ ...prev, cnicFrontImage: "" }));
+
+    if (file) {
+      setIsUploading(true);
+      setUploadProgress((prev) => ({ ...prev, cnicFront: 0 }));
+      try {
+        const url = await uploadToCloudinary(file, 'worker-cnic');
+        setUploadedCnicFrontUrl(url);
+        setUploadProgress((prev) => ({ ...prev, cnicFront: 100 }));
+      } catch (error) {
+        console.error('CNIC front upload failed:', error);
+        setErrors((prev) => ({
+          ...prev,
+          cnicFrontImage: isUrdu ? 'شناختی کارڈ سامنے کی تصویر اپلوڈ نہیں ہو سکی' : 'Failed to upload CNIC front',
+        }));
+      } finally {
+        setIsUploading(false);
+      }
+    }
   };
 
-  const handleCnicBackChange = (file: File | null) => {
+  const handleCnicBackChange = async (file: File | null) => {
     setFormData((prev) => ({ ...prev, cnicBackImage: file }));
     if (errors.cnicBackImage) setErrors((prev) => ({ ...prev, cnicBackImage: "" }));
+
+    if (file) {
+      setIsUploading(true);
+      setUploadProgress((prev) => ({ ...prev, cnicBack: 0 }));
+      try {
+        const url = await uploadToCloudinary(file, 'worker-cnic');
+        setUploadedCnicBackUrl(url);
+        setUploadProgress((prev) => ({ ...prev, cnicBack: 100 }));
+      } catch (error) {
+        console.error('CNIC back upload failed:', error);
+        setErrors((prev) => ({
+          ...prev,
+          cnicBackImage: isUrdu ? 'شناختی کارڈ پیچھے کی تصویر اپلوڈ نہیں ہو سکی' : 'Failed to upload CNIC back',
+        }));
+      } finally {
+        setIsUploading(false);
+      }
+    }
   };
 
   // ─── Validation Per Step ───
@@ -108,12 +195,15 @@ export function WorkerSignupForm() {
     const errMsg = isUrdu
       ? {
           required: "ضروری ہے",
+          invalidEmail: "درست ای میل درج کریں",
+          fullName: "پہلا اور آخری نام درج کریں",
           invalidPhone: "درست فون نمبر درج کریں",
           weakPassword: "پاسورڈ کم از کم 6 حروف کا ہونا چاہیے",
           passwordMismatch: "پاسورڈ مماثل نہیں ہیں",
           otpInvalid: "6 ہندسوں کا کوڈ درج کریں",
           noServices: "کم از کم ایک سروس منتخب کریں",
           noAddress: "پتہ درج کریں",
+          noLocation: "مقام منتخب کریں",
           noCharges: "وزٹ چارجز درج کریں",
           noBio: "اپنے بارے میں لکھیں",
           minPhotos: "کم از کم 2 تصاویر ضروری ہیں",
@@ -124,12 +214,15 @@ export function WorkerSignupForm() {
         }
       : {
           required: "This field is required",
+          invalidEmail: "Enter a valid email address",
+          fullName: "Enter your first and last name",
           invalidPhone: "Enter a valid Pakistani phone number",
           weakPassword: "Password must be at least 6 characters",
           passwordMismatch: "Passwords do not match",
           otpInvalid: "Enter the 6-digit code",
           noServices: "Select at least one service",
           noAddress: "Address is required",
+          noLocation: "Select your location",
           noCharges: "Visiting charges are required",
           noBio: "Please write about yourself",
           minPhotos: "Minimum 2 work photos are required",
@@ -141,7 +234,14 @@ export function WorkerSignupForm() {
 
     switch (currentStep) {
       case 1:
-        if (!formData.fullName.trim()) newErrors.fullName = errMsg.required;
+        if (!formData.fullName.trim()) {
+          newErrors.fullName = errMsg.required;
+        } else if (formData.fullName.trim().split(/\s+/).length < 2) {
+          newErrors.fullName = errMsg.fullName;
+        }
+        if (formData.email && !validateEmail(formData.email)) {
+          newErrors.email = errMsg.invalidEmail;
+        }
         if (!validatePhoneNumber(formData.phoneNumber)) newErrors.phoneNumber = errMsg.invalidPhone;
         const pwdCheck = validatePassword(formData.password);
         if (!pwdCheck.valid) newErrors.password = errMsg.weakPassword;
@@ -151,10 +251,13 @@ export function WorkerSignupForm() {
         if (formData.otpCode.length !== 6) newErrors.otpCode = errMsg.otpInvalid;
         break;
       case 3:
-        if (formData.selectedServices.length === 0) newErrors.selectedServices = errMsg.noServices;
+        if (formData.selectedServiceIds.length === 0) {
+          newErrors.selectedServiceIds = errMsg.noServices;
+        }
         break;
       case 4:
         if (!formData.homeAddress.trim()) newErrors.homeAddress = errMsg.noAddress;
+        if (!formData.homeLat || !formData.homeLng) newErrors.homeAddress = errMsg.noLocation;
         break;
       case 5:
         if (formData.visitingCharges <= 0) newErrors.visitingCharges = errMsg.noCharges;
@@ -199,14 +302,88 @@ export function WorkerSignupForm() {
 
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // Build FormData and send to backend
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Ensure all images are uploaded before submitting
+      let workPhotoUrls = uploadedWorkPhotoUrls;
+      let selfieUrl = uploadedSelfieUrl;
+      let cnicFrontUrl = uploadedCnicFrontUrl;
+      let cnicBackUrl = uploadedCnicBackUrl;
+
+      // Upload any remaining images that haven't been uploaded yet (fallback)
+      if (formData.workPhotos.length > 0 && workPhotoUrls.length === 0) {
+        setIsUploading(true);
+        workPhotoUrls = await uploadMultipleToCloudinary(formData.workPhotos, 'worker-portfolio');
+      }
+      if (formData.selfieImage && !selfieUrl) {
+        setIsUploading(true);
+        selfieUrl = await uploadToCloudinary(formData.selfieImage, 'worker-selfie');
+      }
+      if (formData.cnicFrontImage && !cnicFrontUrl) {
+        setIsUploading(true);
+        cnicFrontUrl = await uploadToCloudinary(formData.cnicFrontImage, 'worker-cnic');
+      }
+      if (formData.cnicBackImage && !cnicBackUrl) {
+        setIsUploading(true);
+        cnicBackUrl = await uploadToCloudinary(formData.cnicBackImage, 'worker-cnic');
+      }
+
+      // Validate all URLs are present
+      if (!cnicFrontUrl || !cnicBackUrl) {
+        setErrors({
+          general: isUrdu
+            ? 'شناختی کارڈ کی تصاویر ضروری ہیں'
+            : 'CNIC images are required',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const registrationData = {
+        fullName: formData.fullName.trim(),
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+        cnicNumber: formData.cnicNumber.replace(/\D/g, ""),
+        cnicFrontUrl,      // Cloudinary URL
+        cnicBackUrl,       // Cloudinary URL
+        selfieUrl: selfieUrl || undefined,         // Cloudinary URL
+        workPhotosUrls: workPhotoUrls,  // Array of Cloudinary URLs
+        homeAddress: formData.homeAddress,
+        homeLat: formData.homeLat,
+        homeLng: formData.homeLng,
+        experienceYears: formData.experienceYears,
+        visitingCharges: formData.visitingCharges,
+        serviceIds: formData.selectedServiceIds,
+      };
+
+      // Call API to register worker
+      const result = await registerWorker(registrationData);
+
+      console.log('Worker registered successfully:', result);
+
+      // Redirect to worker dashboard
       router.push("/worker/dashboard");
-    } catch {
-      setErrors({ general: isUrdu ? "غلطی ہوئی، دوبارہ کوشش کریں" : "An error occurred. Please try again." });
+    } catch (error) {
+      if (error instanceof ApiRequestError) {
+        setErrors({
+          general: isUrdu
+            ? `خرابی: ${error.message}`
+            : `Error: ${error.message}`
+        });
+      } else if (error instanceof Error) {
+        setErrors({
+          general: isUrdu
+            ? `خرابی: ${error.message}`
+            : `Error: ${error.message}`
+        });
+      } else {
+        setErrors({
+          general: isUrdu
+            ? "غلطی ہوئی، دوبارہ کوشش کریں"
+            : "An error occurred. Please try again."
+        });
+      }
     } finally {
       setIsLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -311,7 +488,7 @@ export function WorkerSignupForm() {
         )}
         {currentStep === 3 && (
           <StepServiceSelection
-            selectedServices={formData.selectedServices}
+            selectedServiceIds={formData.selectedServiceIds}
             onServicesChange={handleServicesChange}
             errors={errors}
             lang={lang}
@@ -364,6 +541,109 @@ export function WorkerSignupForm() {
           />
         )}
       </div>
+
+      {/* Upload Progress Indicator */}
+      {isUploading && (
+        <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-lg text-sm mt-4">
+          <div className="flex items-center gap-2 text-blue-700">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="font-medium">
+              {isUrdu ? 'تصاویر اپلوڈ ہو رہی ہیں...' : 'Uploading images...'}
+            </span>
+          </div>
+          {/* Progress bars for each image type */}
+          <div className="mt-2 space-y-1">
+            {uploadProgress.workPhotos !== undefined && uploadProgress.workPhotos < 100 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-blue-600 w-24">
+                  {isUrdu ? 'کام کی تصاویر' : 'Work photos'}
+                </span>
+                <div className="flex-1 bg-blue-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress.workPhotos}%` }}
+                  />
+                </div>
+                <span className="text-blue-600">{uploadProgress.workPhotos}%</span>
+              </div>
+            )}
+            {uploadProgress.selfie !== undefined && uploadProgress.selfie < 100 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-blue-600 w-24">
+                  {isUrdu ? 'سیلفی' : 'Selfie'}
+                </span>
+                <div className="flex-1 bg-blue-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress.selfie}%` }}
+                  />
+                </div>
+                <span className="text-blue-600">{uploadProgress.selfie}%</span>
+              </div>
+            )}
+            {uploadProgress.cnicFront !== undefined && uploadProgress.cnicFront < 100 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-blue-600 w-24">
+                  {isUrdu ? 'شناختی کارڈ (آگے)' : 'CNIC Front'}
+                </span>
+                <div className="flex-1 bg-blue-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress.cnicFront}%` }}
+                  />
+                </div>
+                <span className="text-blue-600">{uploadProgress.cnicFront}%</span>
+              </div>
+            )}
+            {uploadProgress.cnicBack !== undefined && uploadProgress.cnicBack < 100 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-blue-600 w-24">
+                  {isUrdu ? 'شناختی کارڈ (پیچھے)' : 'CNIC Back'}
+                </span>
+                <div className="flex-1 bg-blue-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress.cnicBack}%` }}
+                  />
+                </div>
+                <span className="text-blue-600">{uploadProgress.cnicBack}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Success Indicators */}
+      {!isUploading && (
+        <div className="space-y-1 mt-4">
+          {uploadedWorkPhotoUrls.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>
+                {isUrdu ? `${uploadedWorkPhotoUrls.length} کام کی تصاویر اپلوڈ ہو گئیں` : `${uploadedWorkPhotoUrls.length} work photos uploaded`}
+              </span>
+            </div>
+          )}
+          {uploadedSelfieUrl && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>{isUrdu ? 'سیلفی اپلوڈ ہو گئی' : 'Selfie uploaded'}</span>
+            </div>
+          )}
+          {uploadedCnicFrontUrl && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>{isUrdu ? 'شناختی کارڈ (آگے) اپلوڈ ہو گیا' : 'CNIC front uploaded'}</span>
+            </div>
+          )}
+          {uploadedCnicBackUrl && (
+            <div className="flex items-center gap-2 text-xs text-green-600">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>{isUrdu ? 'شناختی کارڈ (پیچھے) اپلوڈ ہو گیا' : 'CNIC back uploaded'}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* General Error */}
       {errors.general && (

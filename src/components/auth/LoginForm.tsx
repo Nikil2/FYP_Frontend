@@ -36,19 +36,25 @@ export function LoginForm() {
       const response = await login(formData);
 
       if (response.success) {
-        // Redirect based on user role
-        if (response.data?.user.role === "WORKER") {
+        // Get user role to determine redirect path
+        const userRole = response.data?.user?.role;
+        
+        console.log('Login successful, redirecting. User role:', userRole);
+        
+        if (userRole === "WORKER") {
           router.push("/worker/dashboard");
-        } else if (response.data?.user.role === "CUSTOMER") {
-          router.push("/customer");
-        } else if (response.data?.user.role === "ADMIN") {
+        } else if (userRole === "ADMIN") {
           router.push("/admin/dashboard");
+        } else {
+          // Default to customer
+          router.push("/customer");
         }
       } else {
         setError(response.message || "Login failed. Please try again.");
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
