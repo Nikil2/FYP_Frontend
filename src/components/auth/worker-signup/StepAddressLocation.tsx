@@ -23,6 +23,10 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
   const [isSearching, setIsSearching] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(!!homeAddress);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [permissionState, setPermissionState] = useState<
+    "granted" | "denied" | "prompt" | "unknown"
+  >("unknown");
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -75,10 +79,27 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const checkPermission = async () => {
+      if (!("permissions" in navigator)) return;
+      try {
+        const status = await navigator.permissions.query({
+          name: "geolocation" as PermissionName,
+        });
+        setPermissionState(status.state);
+        status.onchange = () => setPermissionState(status.state);
+      } catch {
+        setPermissionState("unknown");
+      }
+    };
+    checkPermission();
+  }, []);
+
   // Mock search - simulates Google Places API autocomplete
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     setIsConfirmed(false);
+    setLocationError(null);
 
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
 
@@ -108,6 +129,7 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
     setSearchQuery(suggestion.description);
     setSuggestions([]);
     setShowSuggestions(false);
+    setLocationError(null);
     // Mock lat/lng - replace with geocoding
     onAddressChange(suggestion.description, 24.8607, 67.0011);
     setIsConfirmed(true);
@@ -117,10 +139,31 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
     const address = `${isUrdu ? city.nameUrdu : city.name}, Pakistan`;
     setSearchQuery(address);
     onAddressChange(address, city.lat, city.lng);
+    setLocationError(null);
     setIsConfirmed(true);
   };
 
   const handleUseCurrentLocation = () => {
+    setLocationError(null);
+
+    if (!window.isSecureContext) {
+      setLocationError(
+        isUrdu
+          ? "لوکیشن حاصل کرنے کے لیے محفوظ کنکشن (HTTPS) ضروری ہے"
+          : "Location requires a secure context (HTTPS)"
+      );
+      return;
+    }
+
+    if (permissionState === "denied") {
+      setLocationError(
+        isUrdu
+          ? "براہ کرم براؤزر سیٹنگز میں لوکیشن کی اجازت دیں"
+          : "Location permission is blocked in your browser settings"
+      );
+      return;
+    }
+
     if ("geolocation" in navigator) {
       setIsSearching(true);
       navigator.geolocation.getCurrentPosition(
@@ -130,12 +173,45 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
           const address = "Your Current Location, Pakistan";
           setSearchQuery(address);
           onAddressChange(address, latitude, longitude);
+          setLocationError(null);
           setIsConfirmed(true);
           setIsSearching(false);
         },
-        () => {
+        (err) => {
+          const message = (() => {
+            if (err.code === err.PERMISSION_DENIED) {
+              return isUrdu
+                ? "لوکیشن کی اجازت رد کر دی گئی ہے۔ براہ کرم اجازت دیں۔"
+                : "Location permission denied. Please allow access.";
+            }
+            if (err.code === err.POSITION_UNAVAILABLE) {
+              return isUrdu
+                ? "لوکیشن دستیاب نہیں۔ براہ کرم نیٹ ورک یا GPS چیک کریں۔"
+                : "Location unavailable. Check your network or GPS.";
+            }
+            if (err.code === err.TIMEOUT) {
+              return isUrdu
+                ? "لوکیشن کی درخواست ٹائم آؤٹ ہو گئی۔ دوبارہ کوشش کریں۔"
+                : "Location request timed out. Please try again.";
+            }
+            return isUrdu
+              ? "لوکیشن حاصل نہیں ہو سکی۔ دوبارہ کوشش کریں۔"
+              : "Unable to fetch location. Please try again.";
+          })();
+          setLocationError(message);
           setIsSearching(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
         }
+      );
+    } else {
+      setLocationError(
+        isUrdu
+          ? "یہ براؤزر لوکیشن سپورٹ نہیں کرتا"
+          : "This browser does not support geolocation"
       );
     }
   };
@@ -241,6 +317,7 @@ export function StepAddressLocation({ homeAddress, homeLat, homeLng, onAddressCh
       )}
 
       {errors.homeAddress && <p className="text-red-500 text-xs">{errors.homeAddress}</p>}
+      {locationError && <p className="text-red-500 text-xs">{locationError}</p>}
     </div>
   );
 }

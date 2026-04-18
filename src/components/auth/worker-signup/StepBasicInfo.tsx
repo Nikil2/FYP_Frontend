@@ -7,6 +7,7 @@ import {
   Phone,
   Lock,
   User,
+  Mail,
 } from "lucide-react";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
 
@@ -27,6 +28,8 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
       subtitle: "Enter your basic information to get started",
       fullName: "Full Name",
       fullNamePlaceholder: "Enter your full name",
+      email: "Email Address",
+      emailPlaceholder: "name@example.com",
       phone: "Phone Number",
       phonePlaceholder: "03XX-XXXXXXX",
       password: "Password",
@@ -39,6 +42,8 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
       subtitle: "شروع کرنے کے لیے بنیادی معلومات درج کریں",
       fullName: "پورا نام",
       fullNamePlaceholder: "اپنا پورا نام لکھیں",
+      email: "ای میل",
+      emailPlaceholder: "name@example.com",
       phone: "فون نمبر",
       phonePlaceholder: "03XX-XXXXXXX",
       password: "پاسورڈ",
@@ -72,6 +77,23 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
           />
         </div>
         {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
+      </div>
+
+      {/* Email */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-heading">{labels.email} *</label>
+        <div className="relative">
+          <Mail className={`absolute ${isUrdu ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-paragraph w-5 h-5`} />
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) => onChange("email", e.target.value)}
+            placeholder={labels.emailPlaceholder}
+            dir="ltr"
+            className={`w-full ${isUrdu ? "pr-10 pl-4" : "pl-10 pr-4"} py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent bg-white`}
+          />
+        </div>
+        {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
       </div>
 
       {/* Phone */}
