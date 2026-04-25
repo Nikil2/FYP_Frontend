@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Banknote, ClipboardList, ShieldCheck, Users } from "lucide-react";
+import { Activity, AlertTriangle, Banknote, ClipboardList, ShieldCheck, Star, Users } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,16 @@ import {
   bookingTrendSeed,
   complaintsSeed,
   dashboardStats,
+  reviewModerationSeed,
+  workerQualitySeed,
 } from "@/lib/admin-mock-data";
 
 export default function AdminDashboardPage() {
   const maxTrend = Math.max(...bookingTrendSeed.map((point) => point.total));
+  const averageWorkerRating =
+    workerQualitySeed.reduce((sum, worker) => sum + worker.averageRating, 0) /
+    Math.max(1, workerQualitySeed.length);
+  const flaggedReviewCount = reviewModerationSeed.filter((review) => review.isFlagged).length;
 
   return (
     <div>
@@ -42,6 +48,12 @@ export default function AdminDashboardPage() {
           value={`Rs. ${dashboardStats.revenueMonth.toLocaleString()}`}
           hint={`Rs. ${dashboardStats.revenueToday.toLocaleString()} today`}
           tone="good"
+        />
+        <MetricCard
+          label="Average Worker Rating"
+          value={averageWorkerRating.toFixed(1)}
+          hint={`${flaggedReviewCount} flagged reviews need moderation`}
+          tone={flaggedReviewCount > 0 ? "warn" : "good"}
         />
       </section>
 
@@ -110,6 +122,13 @@ export default function AdminDashboardPage() {
               </span>
               <span className="font-semibold text-heading">{dashboardStats.avgResolutionTime}</span>
             </div>
+            <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+              <span className="flex items-center gap-2 text-paragraph">
+                <Star className="h-4 w-4 text-amber-500" />
+                Flagged reviews
+              </span>
+              <span className="font-semibold text-heading">{flaggedReviewCount}</span>
+            </div>
           </div>
         </Card>
       </section>
@@ -161,6 +180,26 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
               ))}
+          </div>
+        </Card>
+      </section>
+
+      <section className="mt-6">
+        <Card className="rounded-2xl border-border/70 bg-card/95">
+          <h2 className="mb-4 text-lg font-semibold text-heading">Top Worker Quality Snapshot</h2>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {workerQualitySeed.map((worker) => (
+              <div key={worker.workerId} className="rounded-xl border border-border/70 p-3">
+                <p className="font-semibold text-heading">{worker.workerName}</p>
+                <p className="text-xs text-paragraph">{worker.service}</p>
+                <p className="mt-2 text-sm text-heading">
+                  Rating: <span className="font-semibold">{worker.averageRating.toFixed(1)}</span>
+                </p>
+                <p className="text-xs text-paragraph">
+                  Reviews: {worker.totalReviews} • Flagged: {worker.flaggedReviews}
+                </p>
+              </div>
+            ))}
           </div>
         </Card>
       </section>

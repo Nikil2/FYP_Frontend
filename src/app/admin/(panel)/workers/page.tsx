@@ -1,14 +1,17 @@
-import { UserCheck, Users } from "lucide-react";
+import { Star, UserCheck, Users } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { adminUsersSeed, pendingVerificationsSeed } from "@/lib/admin-mock-data";
+import { adminUsersSeed, pendingVerificationsSeed, workerQualitySeed } from "@/lib/admin-mock-data";
 
 export default function AdminWorkersPage() {
   const workers = adminUsersSeed.filter((user) => user.role === "WORKER");
   const verifiedWorkers = workers.filter((worker) => worker.isVerified).length;
   const blockedWorkers = workers.filter((worker) => worker.isBlocked).length;
+  const averageRating =
+    workerQualitySeed.reduce((sum, worker) => sum + worker.averageRating, 0) /
+    Math.max(workerQualitySeed.length, 1);
 
   return (
     <div>
@@ -30,6 +33,12 @@ export default function AdminWorkersPage() {
           value={blockedWorkers.toString()}
           hint={blockedWorkers > 0 ? "Review policy compliance" : "No blocks right now"}
           tone={blockedWorkers > 0 ? "warn" : "good"}
+        />
+        <MetricCard
+          label="Average Worker Rating"
+          value={averageRating.toFixed(1)}
+          hint="Based on latest moderated reviews"
+          tone="good"
         />
       </section>
 
@@ -74,6 +83,31 @@ export default function AdminWorkersPage() {
               <p className="font-semibold text-heading">{worker.fullName}</p>
               <p className="text-xs text-paragraph">{worker.services.join(" • ")}</p>
               <p className="mt-1 text-xs text-paragraph">Submitted {worker.submittedAt}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="mt-4 rounded-2xl border-border/70 bg-card/95">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-heading">
+          <Star className="h-5 w-5 text-amber-500" />
+          Worker Ratings Health
+        </h2>
+        <div className="space-y-3">
+          {workerQualitySeed.map((worker) => (
+            <div key={worker.workerId} className="rounded-xl border border-border/70 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-heading">{worker.workerName}</p>
+                  <p className="text-xs text-paragraph">{worker.service}</p>
+                </div>
+                <Badge className={worker.averageRating >= 4.5 ? "bg-emerald-100 text-emerald-700" : worker.averageRating >= 4 ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}>
+                  {worker.averageRating.toFixed(1)}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs text-paragraph">
+                {worker.totalReviews} reviews • {worker.flaggedReviews} flagged • completion {worker.completionRate}%
+              </p>
             </div>
           ))}
         </div>

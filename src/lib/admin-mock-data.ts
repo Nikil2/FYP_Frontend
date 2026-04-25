@@ -82,6 +82,30 @@ export interface AdminActivity {
   timeAgo: string;
 }
 
+export interface WorkerQualityItem {
+  workerId: string;
+  workerName: string;
+  service: string;
+  averageRating: number;
+  totalReviews: number;
+  flaggedReviews: number;
+  completionRate: number;
+}
+
+export interface ReviewModerationItem {
+  id: string;
+  workerId: string;
+  workerName: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  isFlagged: boolean;
+  status: "VISIBLE" | "HIDDEN";
+  reportReason?: string;
+}
+
+
 export const dashboardStats: AdminDashboardStats = {
   totalUsers: 1482,
   newUsersToday: 34,
@@ -282,3 +306,92 @@ export const adminActivitySeed: AdminActivity[] = [
     timeAgo: "42m ago",
   },
 ];
+
+export const workerQualitySeed: WorkerQualityItem[] = [
+  {
+    workerId: "W-101",
+    workerName: "Ayesha Malik",
+    service: "Electrician",
+    averageRating: 4.8,
+    totalReviews: 126,
+    flaggedReviews: 1,
+    completionRate: 96,
+  },
+  {
+    workerId: "W-102",
+    workerName: "Rabia Tahir",
+    service: "Painter",
+    averageRating: 4.1,
+    totalReviews: 48,
+    flaggedReviews: 4,
+    completionRate: 89,
+  },
+  {
+    workerId: "W-103",
+    workerName: "Bilal Mehmood",
+    service: "Plumber",
+    averageRating: 4.6,
+    totalReviews: 83,
+    flaggedReviews: 0,
+    completionRate: 94,
+  },
+  {
+    workerId: "W-104",
+    workerName: "Shah Nawaz",
+    service: "AC Technician",
+    averageRating: 3.9,
+    totalReviews: 37,
+    flaggedReviews: 5,
+    completionRate: 82,
+  },
+];
+
+export const reviewModerationSeed: ReviewModerationItem[] = [
+  {
+    id: "R-7001",
+    workerId: "W-101",
+    workerName: "Ayesha Malik",
+    customerName: "Hina Noor",
+    rating: 5,
+    comment: "Excellent wiring work, arrived on time and completed safely.",
+    createdAt: "2026-04-24 12:10",
+    isFlagged: false,
+    status: "VISIBLE",
+  },
+  {
+    id: "R-7002",
+    workerId: "W-104",
+    workerName: "Shah Nawaz",
+    customerName: "Abdullah Waheed",
+    rating: 1,
+    comment: "Used inappropriate language in chat and demanded extra cash.",
+    createdAt: "2026-04-25 09:05",
+    isFlagged: true,
+    status: "VISIBLE",
+    reportReason: "Abusive language",
+  },
+  {
+    id: "R-7003",
+    workerId: "W-102",
+    workerName: "Rabia Tahir",
+    customerName: "Komal Abbas",
+    rating: 2,
+    comment: "Job was incomplete but worker marked it as finished.",
+    createdAt: "2026-04-23 17:52",
+    isFlagged: true,
+    status: "HIDDEN",
+    reportReason: "Misleading claim",
+  },
+  {
+    id: "R-7004",
+    workerId: "W-103",
+    workerName: "Bilal Mehmood",
+    customerName: "Ali Raza",
+    rating: 4,
+    comment: "Good service overall, minor delay but quality was solid.",
+    createdAt: "2026-04-22 15:40",
+    isFlagged: false,
+    status: "VISIBLE",
+  },
+];
+
