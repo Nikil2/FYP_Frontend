@@ -14,7 +14,8 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const hideNavbarFooter =
     pathname.startsWith("/worker/dashboard") ||
     pathname.startsWith("/dummy") ||
-    pathname.startsWith("/customer");
+    pathname.startsWith("/customer") ||
+    pathname.startsWith("/admin");
 
   return (
     <>
