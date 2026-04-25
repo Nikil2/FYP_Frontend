@@ -84,7 +84,7 @@ export default function AdminSettingsPage() {
 
             <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
               <p className="text-sm text-paragraph">
-                This page is frontend-only for now. In backend integration phase, settings will map to protected admin config endpoints.
+                Security and operations preferences for admin moderation workflow.
               </p>
             </div>
 

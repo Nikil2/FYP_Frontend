@@ -1,23 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  getAdminDemoAccounts,
-  getAdminSession,
-  setAdminSession,
-  validateAdminCredentials,
-} from "@/lib/admin-auth";
+import { getAdminSession, setAdminSession, loginAdminViaApi } from "@/lib/admin-auth";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const demoAccounts = useMemo(() => getAdminDemoAccounts(), []);
 
-  const [email, setEmail] = useState("admin@mehnati.pk");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("n-admin");
+  const [password, setPassword] = useState("Adm12345");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,16 +27,21 @@ export default function AdminLoginPage() {
     setError("");
     setIsLoading(true);
 
-    const matchedAdmin = validateAdminCredentials(email, password);
+    try {
+      const matchedAdmin = await loginAdminViaApi(username, password);
 
-    if (!matchedAdmin) {
-      setError("Invalid admin credentials. Use one of the demo accounts.");
+      if (!matchedAdmin) {
+        setError("Invalid admin credentials.");
+        setIsLoading(false);
+        return;
+      }
+
+      setAdminSession(matchedAdmin);
+      router.replace("/admin/dashboard");
+    } catch {
+      setError("Login failed. Please try again.");
       setIsLoading(false);
-      return;
     }
-
-    setAdminSession(matchedAdmin);
-    router.replace("/admin/dashboard");
   };
 
   return (
@@ -62,48 +61,35 @@ export default function AdminLoginPage() {
 
           <h1 className="max-w-lg text-4xl font-bold leading-tight md:text-5xl">
             Mehnati Admin Console
-            <span className="block text-emerald-200">Secure and frontend-ready</span>
+            <span className="block text-emerald-200">Live backend authentication</span>
           </h1>
 
           <p className="max-w-lg text-base text-emerald-50/90 md:text-lg">
-            Dedicated admin login and dashboard flow is now isolated from customer and worker journeys. Use demo credentials to enter.
+            This admin login is connected to backend APIs. Sign in with your seeded admin credentials.
           </p>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {demoAccounts.map((account) => (
-              <div
-                key={account.email}
-                className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur"
-              >
-                <p className="text-xs uppercase tracking-[0.12em] text-emerald-200">{account.adminLevel}</p>
-                <p className="mt-2 text-sm font-semibold">{account.name}</p>
-                <p className="mt-1 text-xs text-emerald-100/90">{account.email}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
         <Card className="w-full rounded-3xl border-white/20 bg-white/95 p-6 text-heading shadow-2xl md:p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-heading">Sign in as Admin</h2>
-            <p className="mt-1 text-sm text-paragraph">This login is frontend-only for now. Backend auth will connect later.</p>
+            <p className="mt-1 text-sm text-paragraph">Use username and password from backend admin seed.</p>
           </div>
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="admin-email" className="mb-2 block text-sm font-medium text-heading">
-                Admin Email
+              <label htmlFor="admin-username" className="mb-2 block text-sm font-medium text-heading">
+                Admin Username
               </label>
               <div className="relative">
                 <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-paragraph" />
                 <input
-                  id="admin-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="admin@mehnati.pk"
+                  id="admin-username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="n-admin"
                   className="w-full rounded-xl border border-border bg-white px-10 py-3 text-sm outline-none ring-0 transition focus:border-emerald-400"
-                  autoComplete="email"
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -143,10 +129,6 @@ export default function AdminLoginPage() {
             <Button type="submit" className="w-full bg-[#0d1f1a] text-white hover:bg-[#13342b]" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Enter Admin Console"}
             </Button>
-
-            <p className="text-xs text-paragraph">
-              Demo passwords: admin@mehnati.pk uses admin123, moderator@mehnati.pk uses mod123.
-            </p>
           </form>
         </Card>
       </div>

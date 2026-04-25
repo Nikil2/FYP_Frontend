@@ -147,9 +147,9 @@ export function AdminShell({ children }: AdminShellProps) {
           </nav>
 
           <div className="mt-8 rounded-xl border border-emerald-200/20 bg-emerald-300/10 p-3 text-xs text-emerald-100/90">
-            <p className="font-semibold">Demo Mode</p>
+            <p className="font-semibold">Live Mode</p>
             <p className="mt-1 leading-relaxed">
-              This admin area is frontend-only right now. API integration can be connected when backend endpoints are ready.
+              Admin panel actions are connected to backend APIs.
             </p>
           </div>
         </aside>

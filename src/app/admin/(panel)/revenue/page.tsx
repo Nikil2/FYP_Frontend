@@ -1,42 +1,72 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { BanknoteArrowUp, CalendarClock, ReceiptText } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { Card } from "@/components/ui/card";
-import { dashboardStats, revenueBreakdownSeed } from "@/lib/admin-mock-data";
+import { getDashboardStats, getRevenueStats } from "@/api/services/admin";
+import type { DashboardResponse, RevenueStats } from "@/api/services/admin";
 
 export default function AdminRevenuePage() {
-  const grossRevenue = revenueBreakdownSeed.reduce(
-    (sum, point) => sum + point.revenue,
-    0,
-  );
-  const totalBookings = revenueBreakdownSeed.reduce(
-    (sum, point) => sum + point.bookings,
-    0,
-  );
-  const platformFee = Math.round(grossRevenue * 0.11);
-  const refunds = Math.round(grossRevenue * 0.018);
-  const netRevenue = grossRevenue - platformFee - refunds;
+  const [revenue, setRevenue] = useState<RevenueStats | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRevenue() {
+      try {
+        const [revenueRes, dashboardRes] = await Promise.all([
+          getRevenueStats(),
+          getDashboardStats(),
+        ]);
+        setRevenue(revenueRes.data);
+        setDashboard(dashboardRes.data);
+      } catch (error) {
+        console.error("Failed to load revenue stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadRevenue();
+  }, []);
+
+  if (loading || !revenue || !dashboard) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <p className="text-heading">Loading revenue...</p>
+      </div>
+    );
+  }
+
+  const grossRevenue = revenue.grossRevenue;
+  const platformFee = revenue.platformFee;
+  const refunds = revenue.refunds;
+  const netRevenue = revenue.netRevenue;
+  const totalBookings = revenue.totalTransactions;
+  const maxWeekValue = Math.max(...revenue.revenueByWeek.map((item) => item.amount), 1);
 
   return (
     <div>
       <AdminPageHeader
         title="Revenue Reports"
-        description="Financial dashboard preview with month-wise performance and fee snapshots."
+        description="Live financial performance and fee snapshots from completed bookings."
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Gross Revenue"
           value={`Rs. ${grossRevenue.toLocaleString()}`}
-          hint={`${totalBookings.toLocaleString()} bookings`}
+          hint={`${totalBookings.toLocaleString()} transactions`}
           tone="good"
         />
-        <MetricCard label="Platform Fee (11%)" value={`Rs. ${platformFee.toLocaleString()}`} />
+        <MetricCard label="Platform Fee" value={`Rs. ${platformFee.toLocaleString()}`} />
         <MetricCard label="Refunds" value={`Rs. ${refunds.toLocaleString()}`} tone="warn" />
         <MetricCard
           label="Net Revenue"
           value={`Rs. ${netRevenue.toLocaleString()}`}
-          hint={`Today Rs. ${dashboardStats.revenueToday.toLocaleString()}`}
+          hint="Current month"
           tone="good"
         />
       </section>
@@ -45,22 +75,21 @@ export default function AdminRevenuePage() {
         <Card className="xl:col-span-2 rounded-2xl border-border/70 bg-card/95">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-heading">
             <BanknoteArrowUp className="h-5 w-5 text-emerald-700" />
-            Month-wise Revenue
+            Week-wise Revenue
           </h2>
           <div className="space-y-3">
-            {revenueBreakdownSeed.map((point) => (
-              <div key={point.period}>
+            {revenue.revenueByWeek.map((point) => (
+              <div key={point.week}>
                 <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-paragraph">{point.period}</span>
-                  <span className="font-semibold text-heading">Rs. {point.revenue.toLocaleString()}</span>
+                  <span className="text-paragraph">{point.week}</span>
+                  <span className="font-semibold text-heading">Rs. {point.amount.toLocaleString()}</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-[#0d1f1a] to-emerald-500"
-                    style={{ width: `${(point.revenue / 4000000) * 100}%` }}
+                    style={{ width: `${(point.amount / maxWeekValue) * 100}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-paragraph">{point.bookings} bookings</p>
               </div>
             ))}
           </div>
@@ -74,7 +103,7 @@ export default function AdminRevenuePage() {
                 <CalendarClock className="h-4 w-4 text-sky-700" />
                 Pending payouts
               </span>
-              <span className="font-semibold text-heading">Rs. {dashboardStats.pendingPayouts.toLocaleString()}</span>
+              <span className="font-semibold text-heading">{dashboard.pendingPayouts.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2">
               <span className="inline-flex items-center gap-2 text-paragraph">
