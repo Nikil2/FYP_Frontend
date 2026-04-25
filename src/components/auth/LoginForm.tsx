@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { login } from "@/lib/auth";
+import { getUserRole, isAuthenticated, login } from "@/lib/auth";
 import { LoginFormData } from "@/interfaces/auth-interfaces";
 import { Eye, EyeOff, Phone, Lock, Loader2 } from "lucide-react";
 
@@ -18,6 +18,22 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      return;
+    }
+
+    const role = getUserRole();
+
+    if (role === "WORKER") {
+      router.replace("/worker/dashboard");
+    } else if (role === "ADMIN") {
+      router.replace("/admin/dashboard");
+    } else {
+      router.replace("/customer");
+    }
+  }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -42,12 +58,12 @@ export function LoginForm() {
         console.log('Login successful, redirecting. User role:', userRole);
         
         if (userRole === "WORKER") {
-          router.push("/worker/dashboard");
+          router.replace("/worker/dashboard");
         } else if (userRole === "ADMIN") {
-          router.push("/admin/dashboard");
+          router.replace("/admin/dashboard");
         } else {
           // Default to customer
-          router.push("/customer");
+          router.replace("/customer");
         }
       } else {
         setError(response.message || "Login failed. Please try again.");

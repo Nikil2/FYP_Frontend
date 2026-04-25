@@ -92,6 +92,22 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
         
         setAuthToken(token);
         setUserRole(result.role);
+
+        // Persist current dummy IDs when matching demo credentials,
+        // so dashboards retain profile data across navigation/refresh.
+        if (result.role === "WORKER") {
+          const worker = findWorkerByCredentials(data.phoneNumber, data.password);
+          if (worker) {
+            setCurrentWorkerId(worker.id);
+          }
+        }
+
+        if (result.role === "CUSTOMER") {
+          const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+          if (customer) {
+            setCurrentCustomerId(customer.id);
+          }
+        }
         
         console.log('Login successful, user role:', result.role);
         
@@ -139,12 +155,28 @@ export const signupCustomer = async (data: CustomerSignupFormData): Promise<Auth
 
     const result = await response.json();
 
-    if (response.ok && result.data?.accessToken) {
-      setAuthToken(result.data.accessToken);
+    // Backend currently returns user object directly on success.
+    if (response.ok && result.id && result.role) {
+      const token = `token-${result.id}-${Date.now()}`;
+
+      setAuthToken(token);
+      setUserRole(result.role);
+
+      if (result.role === "CUSTOMER") {
+        const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+        if (customer) {
+          setCurrentCustomerId(customer.id);
+        }
+      }
+
       return {
         success: true,
         message: "Signup successful",
-        data: result.data,
+        data: {
+          accessToken: token,
+          token,
+          user: result,
+        },
       };
     }
 

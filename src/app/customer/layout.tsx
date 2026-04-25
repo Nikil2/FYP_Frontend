@@ -1,5 +1,6 @@
 import { CustomerBottomNav } from "@/components/customer/bottom-nav";
 import { CustomerSidebar } from "@/components/customer/customer-sidebar";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function CustomerLayout({
   children,
@@ -7,21 +8,23 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        {/* Desktop Sidebar - hidden on mobile */}
-        <CustomerSidebar />
+    <RoleGuard allowedRoles={["CUSTOMER"]}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex">
+          {/* Desktop Sidebar - hidden on mobile */}
+          <CustomerSidebar />
 
-        {/* Main Content */}
-        <div className="flex-1 md:ml-64 overflow-x-hidden">
-          <div className="max-w-5xl mx-auto bg-white min-h-screen relative">
-            {children}
+          {/* Main Content */}
+          <div className="flex-1 md:ml-64 overflow-x-hidden">
+            <div className="max-w-5xl mx-auto bg-white min-h-screen relative">
+              {children}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Bottom Nav - hidden on desktop */}
-      <CustomerBottomNav />
-    </div>
+        {/* Mobile Bottom Nav - hidden on desktop */}
+        <CustomerBottomNav />
+      </div>
+    </RoleGuard>
   );
 }
