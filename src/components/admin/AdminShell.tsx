@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
+  BriefcaseBusiness,
   CircleDot,
   LayoutDashboard,
   LogOut,
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/workers", label: "Workers", icon: UserCheck },
+  { href: "/admin/jobs", label: "Jobs", icon: BriefcaseBusiness },
   {
     href: "/admin/workers/verification",
     label: "Verification",

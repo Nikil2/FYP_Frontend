@@ -66,6 +66,8 @@ export const API_CONFIG = {
     ADMIN_VERIFICATION: '/admin/workers/verification',
     ADMIN_APPROVE_WORKER: (workerId: string) => `/admin/workers/${workerId}/approve`,
     ADMIN_REJECT_WORKER: (workerId: string) => `/admin/workers/${workerId}/reject`,
+    ADMIN_JOBS: '/admin/jobs',
+    ADMIN_JOB_DETAIL: (jobId: string) => `/admin/jobs/${jobId}`,
     ADMIN_COMPLAINTS: '/admin/complaints',
     ADMIN_RESOLVE_COMPLAINT: (complaintId: string) => `/admin/complaints/${complaintId}/resolve`,
     ADMIN_ASSIGN_COMPLAINT: (complaintId: string) => `/admin/complaints/${complaintId}/assign`,

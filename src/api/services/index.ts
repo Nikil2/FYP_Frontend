@@ -24,6 +24,8 @@ export {
   getPendingVerifications,
   approveWorkerVerification,
   rejectWorkerVerification,
+  getAdminJobs,
+  getAdminJobById,
   getComplaints,
   resolveComplaint,
   assignComplaint,

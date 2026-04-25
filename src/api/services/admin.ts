@@ -153,6 +153,122 @@ export interface Complaint {
   };
 }
 
+export interface AdminJob {
+  id: string;
+  status: string;
+  description: string;
+  jobAddress: string;
+  finalPrice: number | null;
+  scheduledAt?: string | null;
+  createdAt: string;
+  customerId: string;
+  workerId: string;
+  serviceId: number;
+  customer: {
+    id: string;
+    fullName: string;
+    phoneNumber: string;
+    profilePicUrl?: string;
+  };
+  worker: {
+    id: string;
+    verificationStatus: string;
+    averageRating: number;
+    totalJobsCompleted: number;
+    isOnline: boolean;
+    user: {
+      id: string;
+      fullName: string;
+      phoneNumber: string;
+      profilePicUrl?: string;
+      isBlocked: boolean;
+    };
+  };
+  service: {
+    id: number;
+    name: string;
+    iconUrl?: string;
+  };
+  counts: {
+    messages: number;
+    proposals: number;
+    complaints: number;
+  };
+}
+
+export interface AdminJobDetail extends AdminJob {
+  jobLat: number;
+  jobLng: number;
+  worker: AdminJob["worker"] & {
+    cnicNumber: string;
+    experienceYears: number;
+    visitingCharges: number;
+    homeAddress: string;
+    services: Array<{
+      id: number;
+      name: string;
+      iconUrl?: string;
+    }>;
+    user: AdminJob["worker"]["user"] & {
+      isVerified: boolean;
+    };
+  };
+  proposals: Array<{
+    id: string;
+    bookingId: string;
+    proposedBy: string;
+    amount: number;
+    status: string;
+    parentId?: string | null;
+    createdAt: string;
+  }>;
+  messages: Array<{
+    id: string;
+    senderId: string;
+    content: string;
+    type: string;
+    createdAt: string;
+    sender: {
+      id: string;
+      fullName: string;
+      phoneNumber: string;
+    };
+  }>;
+  complaints: Array<{
+    id: string;
+    description: string;
+    isResolved: boolean;
+    evidenceUrls: string[];
+    createdAt: string;
+    admin?: {
+      id: string;
+      adminLevel: string;
+      user: {
+        fullName: string;
+      };
+    } | null;
+  }>;
+  feedback?: {
+    id: string;
+    bookingId: string;
+    userId: string;
+    rating: number;
+    comment?: string;
+    createdAt: string;
+    user: {
+      id: string;
+      fullName: string;
+      phoneNumber: string;
+    };
+  } | null;
+  summary: {
+    totalMessages: number;
+    totalProposals: number;
+    totalComplaints: number;
+    hasFeedback: boolean;
+  };
+}
+
 export interface Review {
   id: string;
   bookingId: string;
@@ -377,6 +493,35 @@ export async function getComplaints(
   return unwrapResponse(raw);
 }
 
+export async function getAdminJobs(
+  page: number = 1,
+  limit: number = 20,
+  status?: string,
+  search?: string,
+): Promise<{ data: AdminJob[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+    ...(status && { status }),
+    ...(search && { search }),
+  });
+
+  const raw = await apiClient.get<
+    WrappedResponse<{ data: AdminJob[]; meta: { total: number; page: number; limit: number; totalPages: number } }> |
+    { data: AdminJob[]; meta: { total: number; page: number; limit: number; totalPages: number } }
+  >(`${API_CONFIG.ENDPOINTS.ADMIN_JOBS}?${params.toString()}`);
+
+  return unwrapResponse(raw);
+}
+
+export async function getAdminJobById(jobId: string): Promise<{ data: AdminJobDetail }> {
+  const raw = await apiClient.get<WrappedResponse<{ data: AdminJobDetail }> | { data: AdminJobDetail }>(
+    API_CONFIG.ENDPOINTS.ADMIN_JOB_DETAIL(jobId),
+  );
+
+  return unwrapResponse(raw);
+}
+
 export async function resolveComplaint(complaintId: string): Promise<{ data: Complaint; message: string }> {
   const raw = await apiClient.post<WrappedResponse<{ data: Complaint; message: string }> | { data: Complaint; message: string }>(
     API_CONFIG.ENDPOINTS.ADMIN_RESOLVE_COMPLAINT(complaintId),
@@ -505,6 +650,8 @@ export default {
   getPendingVerifications,
   approveWorkerVerification,
   rejectWorkerVerification,
+  getAdminJobs,
+  getAdminJobById,
   getComplaints,
   resolveComplaint,
   assignComplaint,
