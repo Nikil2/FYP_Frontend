@@ -157,6 +157,9 @@ export default function AdminVerificationPage() {
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge className="bg-sky-100 text-sky-700">{worker.experienceYears}y exp</Badge>
                       <Badge className="bg-emerald-100 text-emerald-700">Rs. {worker.visitingCharges}</Badge>
+                      <Badge className="bg-amber-100 text-amber-700">
+                        Portfolio: {worker.portfolio?.length || 0}
+                      </Badge>
                     </div>
                   </div>
 

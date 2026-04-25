@@ -157,6 +157,47 @@ export async function getWorkerDetails(workerId: string): Promise<Worker> {
 }
 
 /**
+ * Get worker details by user ID
+ * @param userId - User UUID
+ * @returns Worker profile
+ */
+export async function getWorkerByUserId(userId: string): Promise<Worker> {
+  try {
+    const response = await apiClient.get<ApiResponse<Worker> | Worker>(
+      API_CONFIG.ENDPOINTS.WORKERS_BY_USER(userId)
+    );
+
+    const worker = extractPayload(response);
+
+    if (!worker) {
+      throw new Error('Worker not found');
+    }
+
+    return worker;
+  } catch (error) {
+    // Fallback for environments where /workers/user/:userId route is not available yet.
+    try {
+      const listResponse = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(
+        `${API_CONFIG.ENDPOINTS.WORKERS_GET_ALL}?skip=0&take=200`
+      );
+      const workers = extractPayload(listResponse) || [];
+      const matched = (workers as any[]).find(
+        (w) => w.id === userId || w.userId === userId
+      );
+
+      if (matched) {
+        return matched as Worker;
+      }
+    } catch (fallbackError) {
+      console.error(`Fallback lookup failed for user ${userId}:`, fallbackError);
+    }
+
+    console.error(`Error fetching worker by user ${userId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Update worker profile
  * @param workerId - Worker UUID
  * @param updateData - Profile data to update
@@ -381,6 +422,7 @@ export default {
   getAllWorkers,
   getVerifiedWorkers,
   getWorkerDetails,
+  getWorkerByUserId,
   updateWorkerProfile,
   addPortfolioImage,
   getPortfolioImages,

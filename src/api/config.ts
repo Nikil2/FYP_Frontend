@@ -37,6 +37,7 @@ export const API_CONFIG = {
     WORKERS_GET_ALL: '/workers',
     WORKERS_GET_VERIFIED: '/workers/verified',
     WORKERS_DETAIL: (workerId: string) => `/workers/${workerId}`,
+    WORKERS_BY_USER: (userId: string) => `/workers/user/${userId}`,
     WORKERS_UPDATE: (workerId: string) => `/workers/${workerId}`,
     WORKERS_PORTFOLIO: (workerId: string) => `/workers/${workerId}/portfolio`,
     WORKERS_PORTFOLIO_ADD: (workerId: string) => `/workers/${workerId}/portfolio`,
