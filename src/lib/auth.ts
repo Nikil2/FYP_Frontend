@@ -1,4 +1,4 @@
-import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, UserRole } from "@/interfaces/auth-interfaces";
+import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, UserRole, User } from "@/interfaces/auth-interfaces";
 import { findWorkerByCredentials, setCurrentWorkerId, clearCurrentWorkerId } from "@/app/dummy/dummy-workers";
 import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId } from "@/app/dummy/dummy-customers";
 
@@ -7,6 +7,40 @@ import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId
 // ============================================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const AUTH_USER_KEY = "authUser";
+
+const extractUserPayload = (payload: any): User | null => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  // 1) Direct user object
+  if (payload.id && payload.role) {
+    return payload as User;
+  }
+
+  // 2) Nest interceptor wrapper: { data: <something>, statusCode, ... }
+  if (payload.data && typeof payload.data === "object") {
+    const nested = payload.data;
+
+    // 2a) data is user object
+    if (nested.id && nested.role) {
+      return nested as User;
+    }
+
+    // 2b) data contains user object: { data: { user: ... } } or { user: ... }
+    if (nested.user && nested.user.id && nested.user.role) {
+      return nested.user as User;
+    }
+  }
+
+  // 3) Fallback shape: { user: ... }
+  if (payload.user && payload.user.id && payload.user.role) {
+    return payload.user as User;
+  }
+
+  return null;
+};
 
 // ============================================
 // USER ROLE MANAGEMENT
@@ -54,6 +88,35 @@ export const removeAuthToken = () => {
   }
 };
 
+export const setAuthUser = (user: unknown) => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  }
+};
+
+export const getAuthUser = (): User | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const raw = localStorage.getItem(AUTH_USER_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+};
+
+export const clearAuthUser = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(AUTH_USER_KEY);
+  }
+};
+
 export const isAuthenticated = (): boolean => {
   return !!getAuthToken();
 };
@@ -84,16 +147,32 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
 
     // Check if response is successful (200 OK)
     if (response.ok) {
-      // Backend returns user object directly, not wrapped in data
-      // Check if we got user data with role
-      if (result.id && result.role) {
+      const user = extractUserPayload(result);
+      if (user?.id && user?.role) {
         // Generate a token-like identifier from user data
-        const token = `token-${result.id}-${Date.now()}`;
-        
+        const token = `token-${user.id}-${Date.now()}`;
+
         setAuthToken(token);
-        setUserRole(result.role);
-        
-        console.log('Login successful, user role:', result.role);
+        setUserRole(user.role);
+        setAuthUser(user);
+
+        // Persist current dummy IDs when matching demo credentials,
+        // so dashboards retain profile data across navigation/refresh.
+        if (user.role === "WORKER") {
+          const worker = findWorkerByCredentials(data.phoneNumber, data.password);
+          if (worker) {
+            setCurrentWorkerId(worker.id);
+          }
+        }
+
+        if (user.role === "CUSTOMER") {
+          const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+          if (customer) {
+            setCurrentCustomerId(customer.id);
+          }
+        }
+
+        console.log('Login successful, user role:', user.role, 'isVerified:', user.isVerified);
         
         return {
           success: true,
@@ -101,7 +180,7 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
           data: {
             accessToken: token,
             token: token,
-            user: result,
+            user,
           },
         };
       }
@@ -139,12 +218,29 @@ export const signupCustomer = async (data: CustomerSignupFormData): Promise<Auth
 
     const result = await response.json();
 
-    if (response.ok && result.data?.accessToken) {
-      setAuthToken(result.data.accessToken);
+    const user = extractUserPayload(result);
+    if (response.ok && user?.id && user?.role) {
+      const token = `token-${user.id}-${Date.now()}`;
+
+      setAuthToken(token);
+      setUserRole(user.role);
+      setAuthUser(user);
+
+      if (user.role === "CUSTOMER") {
+        const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+        if (customer) {
+          setCurrentCustomerId(customer.id);
+        }
+      }
+
       return {
         success: true,
         message: "Signup successful",
-        data: result.data,
+        data: {
+          accessToken: token,
+          token,
+          user,
+        },
       };
     }
 
@@ -225,6 +321,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 export const logout = () => {
   removeAuthToken();
   clearUserRole();
+  clearAuthUser();
   clearCurrentWorkerId();
   clearCurrentCustomerId();
   if (typeof window !== "undefined") {

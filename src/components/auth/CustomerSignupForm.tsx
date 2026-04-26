@@ -97,7 +97,7 @@ export function CustomerSignupForm() {
       const response = await signupCustomer(signupData);
 
       if (response.success) {
-        router.push("/customer/dashboard");
+        router.replace("/customer");
       } else {
         setErrors({
           general: response.message || "Signup failed. Please try again.",

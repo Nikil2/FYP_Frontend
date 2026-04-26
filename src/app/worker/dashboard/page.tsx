@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/mock-provider";
 import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
 import { getCurrentWorker } from "@/app/dummy/dummy-workers";
+import { getAuthUser } from "@/lib/auth";
 import {
   Briefcase,
   ArrowRight,
@@ -26,6 +27,7 @@ import type { ProviderOrder } from "@/types/provider";
 export default function WorkerDashboardPage() {
   const { t } = useLanguage();
   const profile = useMemo(() => getProviderProfile(), []);
+  const [workerName, setWorkerName] = useState(profile.name);
   
   // Get current logged-in worker
   const currentWorker = getCurrentWorker();
@@ -43,11 +45,20 @@ export default function WorkerDashboardPage() {
 
   // Track verification and online status
   // Change to "pending" to see the under-verification screen
-  const [profileStatus, setProfileStatus] = useState<"pending" | "approved" | "rejected">(
-    profile.profileStatus
-  );
+  const [profileStatus, setProfileStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [isOnline, setIsOnline] = useState(profile.isOnline);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
+  useEffect(() => {
+    const authUser = getAuthUser();
+    if (!authUser) {
+      setProfileStatus(profile.profileStatus);
+      return;
+    }
+
+    setWorkerName(authUser.fullName || profile.name);
+    setProfileStatus(authUser.isVerified ? "approved" : "pending");
+  }, [profile.name, profile.profileStatus]);
 
   const handleGoLive = () => {
     setIsOnline(true);
@@ -69,13 +80,13 @@ export default function WorkerDashboardPage() {
           <div className="opacity-30 pointer-events-none select-none blur-[2px]">
             {/* Welcome Header */}
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-heading mb-1">
-                {t.dashboard}
-              </h1>
-              <p className="text-paragraph text-sm">
-                Welcome back, {profile.name}!
-              </p>
-            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-heading mb-1">
+              {t.dashboard}
+            </h1>
+            <p className="text-paragraph text-sm">
+              Welcome back, {workerName}!
+            </p>
+          </div>
 
             {/* Placeholder Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-4">
@@ -95,7 +106,7 @@ export default function WorkerDashboardPage() {
               {t.dashboard}
             </h1>
             <p className="text-paragraph text-sm">
-              Welcome back, {profile.name}! Here&apos;s your overview.
+              Welcome back, {workerName}! Here&apos;s your overview.
             </p>
           </div>
 
