@@ -213,7 +213,7 @@ export default function AdminJobsPage() {
                         <td className="px-4 py-3">
                           <Button
                             size="sm"
-                            variant={selectedJobId === job.id ? "default" : "outline"}
+                            variant={selectedJobId === job.id ? "primary" : "outline"}
                             onClick={() => setSelectedJobId(job.id)}
                           >
                             View detail
