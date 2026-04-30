@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useLanguage } from "@/lib/language-context";
-import { getProviderProfile } from "@/lib/mock-provider";
+import { getCachedWorkerDashboardProfile } from "@/api/services/worker-dashboard";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getNotifications, type ProviderNotification } from "@/lib/mock-notifications";
@@ -28,13 +28,29 @@ interface WorkerTopBarProps {
 
 export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
   const { language } = useLanguage();
-  const profile = getProviderProfile();
+  const [profile, setProfile] = useState<{
+    name: string;
+    category: string;
+    profileImage: string | null;
+  }>({
+    name: "Worker",
+    category: "Worker",
+    profileImage: null,
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<ProviderNotification[]>([]);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNotifications(getNotifications());
+    const cached = getCachedWorkerDashboardProfile();
+    if (cached) {
+      setProfile({
+        name: cached.fullName,
+        category: "Service Worker",
+        profileImage: cached.profilePicUrl || null,
+      });
+    }
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;

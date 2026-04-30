@@ -1,6 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { ComponentType } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
@@ -8,7 +10,7 @@ import { logout } from "@/lib/auth";
 import { Avatar } from "@/components/ui/avatar";
 import { LanguageToggle } from "@/components/worker-dashboard/language-toggle";
 import { OnlineToggle } from "@/components/worker-dashboard/online-toggle";
-import { getProviderProfile, getProviderStats } from "@/lib/mock-provider";
+import { getCachedWorkerDashboardProfile } from "@/api/services/worker-dashboard";
 import {
   LayoutDashboard,
   Briefcase,
@@ -25,13 +27,45 @@ interface WorkerSidebarProps {
   onClose?: () => void;
 }
 
+interface SidebarItem {
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  badge?: number;
+}
+
 export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const profile = getProviderProfile();
-  const stats = getProviderStats();
+  const [profile, setProfile] = useState({
+    name: "Worker",
+    profileImage: null as string | null,
+    rating: 0,
+    completedServices: 0,
+    profileStatus: "pending" as "approved" | "pending" | "rejected",
+    isOnline: false,
+  });
 
-  const sidebarItems = [
+  useEffect(() => {
+    const cached = getCachedWorkerDashboardProfile();
+    if (!cached) return;
+
+    setProfile({
+      name: cached.fullName,
+      profileImage: cached.profilePicUrl || null,
+      rating: cached.averageRating || 0,
+      completedServices: cached.totalJobsCompleted || 0,
+      profileStatus:
+        cached.verificationStatus === "APPROVED"
+          ? "approved"
+          : cached.verificationStatus === "REJECTED"
+          ? "rejected"
+          : "pending",
+      isOnline: cached.isOnline,
+    });
+  }, []);
+
+  const sidebarItems: SidebarItem[] = [
     {
       href: "/worker/dashboard",
       label: t.dashboard,
@@ -41,7 +75,6 @@ export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
       href: "/worker/dashboard/orders",
       label: t.orders,
       icon: Briefcase,
-      badge: stats.activeOrders > 0 ? stats.activeOrders : undefined,
     },
     {
       href: "/worker/dashboard/wallet",

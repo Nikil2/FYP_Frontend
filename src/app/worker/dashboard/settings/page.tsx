@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
 import { logout } from "@/lib/auth";
 import { LanguageToggle } from "@/components/worker-dashboard/language-toggle";
 import { OnlineToggle } from "@/components/worker-dashboard/online-toggle";
+import { getCachedWorkerDashboardProfile } from "@/api/services/worker-dashboard";
 import {
   Bell,
   Globe,
@@ -23,6 +24,14 @@ export default function SettingsPage() {
   const { t } = useLanguage();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+  const [isOnline, setIsOnline] = useState(false);
+
+  useEffect(() => {
+    const cached = getCachedWorkerDashboardProfile();
+    if (cached) {
+      setIsOnline(cached.isOnline);
+    }
+  }, []);
 
   const settingsSections = [
     {
@@ -125,9 +134,9 @@ export default function SettingsPage() {
                   {item.type === "availability" && (
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium text-tertiary">
-                        Online
+                        {isOnline ? "Online" : "Offline"}
                       </span>
-                      <OnlineToggle initialStatus={true} showLabel={false} />
+                      <OnlineToggle initialStatus={isOnline} showLabel={false} />
                     </div>
                   )}
 

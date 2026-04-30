@@ -1,10 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
-import { getProviderEarnings, getProviderTransactions } from "@/lib/mock-provider";
+import {
+  getCachedWorkerDashboardProfile,
+  getWorkerDashboardProfileByUserId,
+  getWorkerWalletSummary,
+  getWorkerWalletTransactions,
+  resolveWorkerUserId,
+  type WorkerWalletSummary,
+  type WorkerWalletTransaction,
+} from "@/api/services/worker-dashboard";
 import { cn } from "@/lib/utils";
 import {
   DollarSign,
@@ -18,8 +26,43 @@ import {
 
 export default function WalletPage() {
   const { t } = useLanguage();
-  const earnings = useMemo(() => getProviderEarnings(), []);
-  const transactions = useMemo(() => getProviderTransactions(), []);
+  const [earnings, setEarnings] = useState<WorkerWalletSummary>({
+    totalEarnings: 0,
+    availableBalance: 0,
+    pendingBalance: 0,
+    thisMonthEarnings: 0,
+  });
+  const [transactions, setTransactions] = useState<WorkerWalletTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const userId = resolveWorkerUserId();
+        if (!userId) {
+          setError("Worker user ID missing. Set NEXT_PUBLIC_WORKER_USER_ID or login first.");
+          return;
+        }
+
+        const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
+        const [summary, txns] = await Promise.all([
+          getWorkerWalletSummary(profile.workerId),
+          getWorkerWalletTransactions(profile.workerId),
+        ]);
+        setEarnings(summary);
+        setTransactions(txns);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load wallet");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
@@ -40,6 +83,16 @@ export default function WalletPage() {
       </h1>
 
       {/* Earnings Overview Cards */}
+      {loading && (
+        <Card className="p-4">
+          <p className="text-sm text-paragraph">Loading wallet...</p>
+        </Card>
+      )}
+      {error && (
+        <Card className="p-4 border-red-200 bg-red-50">
+          <p className="text-sm text-red-600">{error}</p>
+        </Card>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Earnings */}
         <Card className="p-0 overflow-hidden">
@@ -81,12 +134,9 @@ export default function WalletPage() {
           <p className="text-3xl font-bold text-yellow-600">
             Rs. {earnings.pendingBalance.toLocaleString()}
           </p>
-          {earnings.lastWithdrawal && (
-            <p className="text-xs text-muted-foreground mt-3">
-              Last withdrawal: Rs. {earnings.lastWithdrawal.amount.toLocaleString()}{" "}
-              via {earnings.lastWithdrawal.method}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-3">
+            Pending clears when bookings are completed
+          </p>
         </Card>
       </div>
 
