@@ -56,6 +56,11 @@ interface WorkerProfileResponse {
   averageRating: number;
   totalJobsCompleted: number;
 }
+interface OnlineStatusResponse {
+  workerId: string;
+  isOnline: boolean;
+  updatedAt: string;
+}
 
 function extractPayload<T>(response: T | { data?: T }): T {
   if (response && typeof response === 'object' && 'data' in (response as Record<string, unknown>)) {
@@ -163,23 +168,21 @@ export async function getWorkerDashboardOrders(
 }
 
 export async function setWorkerOnlineStatus(workerId: string, isOnline: boolean): Promise<WorkerDashboardProfile> {
-  const response = await apiClient.put<WorkerProfileResponse | { data?: WorkerProfileResponse }>(
+  const response = await apiClient.put<OnlineStatusResponse | { data?: OnlineStatusResponse }>(
     `/workers/${workerId}/online-status`,
     { isOnline }
   );
 
   const updated = extractPayload(response);
+  const cached = getCachedWorkerDashboardProfile();
+  if (!cached) {
+    throw new Error('Worker profile cache is missing');
+  }
 
   const mapped = {
-    userId: updated.id,
+    ...cached,
     workerId: updated.workerId,
-    fullName: updated.fullName,
-    phoneNumber: updated.phoneNumber,
-    profilePicUrl: updated.profilePicUrl,
-    verificationStatus: updated.verificationStatus,
     isOnline: updated.isOnline,
-    averageRating: updated.averageRating,
-    totalJobsCompleted: updated.totalJobsCompleted,
   };
 
   if (typeof window !== 'undefined') {
