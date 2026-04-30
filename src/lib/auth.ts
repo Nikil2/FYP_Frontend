@@ -9,6 +9,7 @@ import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const AUTH_USER_KEY = "authUser";
 const PK_COUNTRY_CODE = "+92";
+const WORKER_PROFILE_CACHE_KEY = "worker-dashboard-profile:v1";
 
 const isUserLike = (value: unknown): value is User => {
   if (!value || typeof value !== "object") {
@@ -89,6 +90,55 @@ const normalizePhoneNumber = (phoneNumber: string): string => {
   }
 
   return phoneNumber.trim();
+};
+
+const warmWorkerDashboardProfile = async (userId: string): Promise<void> => {
+  if (typeof window === "undefined") return;
+
+  const tryFetch = async (url: string) => {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("fetch failed");
+    return res.json();
+  };
+
+  const unwrap = (payload: unknown): Record<string, unknown> | null => {
+    if (!payload || typeof payload !== "object") return null;
+    const root = payload as Record<string, unknown>;
+    if (root.data && typeof root.data === "object") return root.data as Record<string, unknown>;
+    return root;
+  };
+
+  try {
+    let raw: unknown;
+    try {
+      raw = await tryFetch(`${API_BASE_URL}/workers/me/${userId}`);
+    } catch {
+      raw = await tryFetch(`${API_BASE_URL}/workers/user/${userId}`);
+    }
+
+    const profile = unwrap(raw);
+    if (!profile) return;
+
+    const mapped = {
+      userId: String(profile.id || ""),
+      workerId: String(profile.workerId || ""),
+      fullName: String(profile.fullName || "Worker"),
+      phoneNumber: String(profile.phoneNumber || ""),
+      profilePicUrl: profile.profilePicUrl ? String(profile.profilePicUrl) : undefined,
+      verificationStatus: String(profile.verificationStatus || "PENDING"),
+      isOnline: Boolean(profile.isOnline),
+      averageRating: Number(profile.averageRating || 0),
+      totalJobsCompleted: Number(profile.totalJobsCompleted || 0),
+    };
+
+    localStorage.setItem(WORKER_PROFILE_CACHE_KEY, JSON.stringify(mapped));
+  } catch {
+    // Non-blocking warmup; login should still succeed.
+  }
 };
 
 // ============================================
@@ -214,6 +264,7 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
           if (worker) {
             setCurrentWorkerId(worker.id);
           }
+          await warmWorkerDashboardProfile(user.id);
         }
 
         if (user.role === "CUSTOMER") {

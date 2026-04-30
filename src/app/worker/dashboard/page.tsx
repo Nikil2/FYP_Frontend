@@ -10,9 +10,11 @@ import { useLanguage } from "@/lib/language-context";
 import { VerificationBanner } from "@/components/worker-dashboard/verification-banner";
 import { OrderDetailModal } from "@/components/worker-dashboard/order-detail-modal";
 import {
+  getCachedWorkerDashboardProfile,
   getWorkerDashboardProfileByUserId,
   getWorkerDashboardOrders,
   resolveWorkerUserId,
+  setWorkerOnlineStatus,
 } from "@/api/services/worker-dashboard";
 import {
   Briefcase,
@@ -47,7 +49,8 @@ export default function WorkerDashboardPage() {
           return;
         }
 
-        const profile = await getWorkerDashboardProfileByUserId(userId);
+        const cachedProfile = getCachedWorkerDashboardProfile();
+        const profile = cachedProfile || await getWorkerDashboardProfileByUserId(userId);
         setWorkerName(profile.fullName);
         setWorkerId(profile.workerId);
         setIsOnline(profile.isOnline);
@@ -77,8 +80,13 @@ export default function WorkerDashboardPage() {
       return;
     }
 
-    // Keep optimistic local update for now
-    setIsOnline(true);
+    try {
+      setError(null);
+      const updated = await setWorkerOnlineStatus(workerId, true);
+      setIsOnline(updated.isOnline);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to go live");
+    }
   };
 
   return (
