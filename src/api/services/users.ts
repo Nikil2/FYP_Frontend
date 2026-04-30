@@ -12,6 +12,24 @@ import {
   CustomerRegistrationData,
 } from '../types';
 
+function normalizePhoneNumber(phoneNumber: string): string {
+  const digits = phoneNumber.replace(/\D/g, '');
+
+  if (digits.startsWith('92') && digits.length === 12) {
+    return `+92${digits.slice(2)}`;
+  }
+
+  if (digits.startsWith('0') && digits.length === 11) {
+    return `+92${digits.slice(1)}`;
+  }
+
+  if (digits.length === 10 && digits.startsWith('3')) {
+    return `+92${digits}`;
+  }
+
+  return phoneNumber.trim();
+}
+
 // ============================================
 // CUSTOMER AUTHENTICATION
 // ============================================
@@ -25,7 +43,10 @@ export async function registerCustomer(userData: CustomerRegistrationData): Prom
   try {
     const response = await apiClient.post<ApiResponse<AuthTokens>>(
       API_CONFIG.ENDPOINTS.USERS_REGISTER,
-      userData
+      {
+        ...userData,
+        phoneNumber: normalizePhoneNumber(userData.phoneNumber),
+      }
     );
 
     if (!response.data) {
@@ -56,7 +77,10 @@ export async function loginCustomer(credentials: {
   try {
     const response = await apiClient.post<ApiResponse<AuthTokens>>(
       API_CONFIG.ENDPOINTS.USERS_LOGIN,
-      credentials
+      {
+        ...credentials,
+        phoneNumber: normalizePhoneNumber(credentials.phoneNumber),
+      }
     );
 
     if (!response.data) {

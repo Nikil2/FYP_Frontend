@@ -17,6 +17,7 @@ import {
   validatePassword,
   validateCNIC,
   validateEmail,
+  login,
 } from "@/lib/auth";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
 import { registerWorker, ApiRequestError } from "@/api";
@@ -354,10 +355,18 @@ export function WorkerSignupForm() {
         serviceIds: formData.selectedServiceIds,
       };
 
-      // Call API to register worker
-      const result = await registerWorker(registrationData);
+      // Register worker profile
+      await registerWorker(registrationData);
 
-      console.log('Worker registered successfully:', result);
+      // Create authenticated session for immediate dashboard access
+      const loginResponse = await login({
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+      });
+
+      if (!loginResponse.success) {
+        throw new Error(loginResponse.message || "Worker created but login failed");
+      }
 
       // Redirect to worker dashboard
       router.push("/worker/dashboard");

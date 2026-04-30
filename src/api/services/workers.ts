@@ -16,6 +16,24 @@ import {
   PortfolioDeleteResponse,
 } from '../types';
 
+function normalizePhoneNumber(phoneNumber: string): string {
+  const digits = phoneNumber.replace(/\D/g, '');
+
+  if (digits.startsWith('92') && digits.length === 12) {
+    return `+92${digits.slice(2)}`;
+  }
+
+  if (digits.startsWith('0') && digits.length === 11) {
+    return `+92${digits.slice(1)}`;
+  }
+
+  if (digits.length === 10 && digits.startsWith('3')) {
+    return `+92${digits}`;
+  }
+
+  return phoneNumber.trim();
+}
+
 function extractPayload<T>(response: ApiResponse<T> | T): T {
   // Some backend routes return wrapped responses ({ data: ... }) while others return raw payloads.
   if (response && typeof response === 'object' && 'data' in (response as Record<string, unknown>)) {
@@ -27,6 +45,8 @@ function extractPayload<T>(response: ApiResponse<T> | T): T {
 
   return response as T;
 }
+
+type WorkerWithOptionalUserId = Worker & { userId?: string };
 
 // ============================================
 // WORKER REGISTRATION
@@ -71,6 +91,7 @@ export async function registerWorker(
       API_CONFIG.ENDPOINTS.WORKERS_REGISTER,
       {
         ...workerData,
+        phoneNumber: normalizePhoneNumber(workerData.phoneNumber),
         cnicNumber: workerData.cnicNumber.replace(/\D/g, ''),
       }
     );
@@ -180,8 +201,8 @@ export async function getWorkerByUserId(userId: string): Promise<Worker> {
       const listResponse = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(
         `${API_CONFIG.ENDPOINTS.WORKERS_GET_ALL}?skip=0&take=200`
       );
-      const workers = extractPayload(listResponse) || [];
-      const matched = (workers as any[]).find(
+      const workers = (extractPayload(listResponse) || []) as WorkerWithOptionalUserId[];
+      const matched = workers.find(
         (w) => w.id === userId || w.userId === userId
       );
 

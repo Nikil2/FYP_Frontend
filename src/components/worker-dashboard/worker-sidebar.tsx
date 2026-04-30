@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
+import { logout } from "@/lib/auth";
 import { Avatar } from "@/components/ui/avatar";
 import { LanguageToggle } from "@/components/worker-dashboard/language-toggle";
 import { OnlineToggle } from "@/components/worker-dashboard/online-toggle";
@@ -184,9 +185,7 @@ export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
       <div className="p-4 border-t border-border">
         <button
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-paragraph hover:bg-muted transition-colors animation-standard"
-          onClick={() => {
-            window.location.href = "/";
-          }}
+          onClick={logout}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">Logout</span>

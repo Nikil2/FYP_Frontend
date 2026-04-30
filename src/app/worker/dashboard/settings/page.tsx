@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
+import { logout } from "@/lib/auth";
 import { LanguageToggle } from "@/components/worker-dashboard/language-toggle";
 import { OnlineToggle } from "@/components/worker-dashboard/online-toggle";
 import {
@@ -144,9 +145,7 @@ export default function SettingsPage() {
       <Card className="p-0 overflow-hidden">
         <button
           className="w-full flex items-center justify-center gap-2 p-4 text-red-500 hover:bg-red-50 animation-standard font-medium"
-          onClick={() => {
-            window.location.href = "/";
-          }}
+          onClick={logout}
         >
           <LogOut className="w-5 h-5" />
           Logout
