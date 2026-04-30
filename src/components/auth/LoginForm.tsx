@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getUserRole, isAuthenticated, login } from "@/lib/auth";
+import { clearAuthUser, getUserRole, isAuthenticated, login, removeAuthToken, clearUserRole } from "@/lib/auth";
 import { LoginFormData } from "@/interfaces/auth-interfaces";
 import { Eye, EyeOff, Phone, Lock, Loader2 } from "lucide-react";
 
@@ -30,8 +30,13 @@ export function LoginForm() {
       router.replace("/worker/dashboard");
     } else if (role === "ADMIN") {
       router.replace("/admin/dashboard");
-    } else {
+    } else if (role === "CUSTOMER") {
       router.replace("/customer");
+    } else {
+      // Corrupted/partial session (token exists but role missing/invalid) can cause redirect loops.
+      removeAuthToken();
+      clearUserRole();
+      clearAuthUser();
     }
   }, [router]);
 
