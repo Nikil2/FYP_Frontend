@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
-import { getActiveOrders, getPastOrders } from "@/lib/mock-provider";
+import {
+  getCachedWorkerDashboardProfile,
+  getWorkerDashboardOrders,
+  getWorkerDashboardProfileByUserId,
+  resolveWorkerUserId,
+} from "@/api/services/worker-dashboard";
 import { cn } from "@/lib/utils";
 import { MapPin, Clock, FileText } from "lucide-react";
 import type { ProviderOrder, OrderStatus } from "@/types/provider";
@@ -15,9 +20,39 @@ export default function OrdersPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"active" | "past">("active");
   const [selectedOrder, setSelectedOrder] = useState<ProviderOrder | null>(null);
+  const [activeOrders, setActiveOrders] = useState<ProviderOrder[]>([]);
+  const [pastOrders, setPastOrders] = useState<ProviderOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const activeOrders = useMemo(() => getActiveOrders(), []);
-  const pastOrders = useMemo(() => getPastOrders(), []);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const userId = resolveWorkerUserId();
+        if (!userId) {
+          setError("Worker user ID missing. Set NEXT_PUBLIC_WORKER_USER_ID or login first.");
+          return;
+        }
+
+        const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
+        const [active, past] = await Promise.all([
+          getWorkerDashboardOrders(profile.workerId, "active"),
+          getWorkerDashboardOrders(profile.workerId, "past"),
+        ]);
+
+        setActiveOrders(active as ProviderOrder[]);
+        setPastOrders(past as ProviderOrder[]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load orders");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
 
   const currentOrders = activeTab === "active" ? activeOrders : pastOrders;
 
@@ -90,6 +125,16 @@ export default function OrdersPage() {
 
       {/* Orders List */}
       <div className="space-y-4">
+        {loading && (
+          <Card className="p-4">
+            <p className="text-sm text-paragraph">Loading orders...</p>
+          </Card>
+        )}
+        {error && (
+          <Card className="p-4 border-red-200 bg-red-50">
+            <p className="text-sm text-red-600">{error}</p>
+          </Card>
+        )}
         {currentOrders.length > 0 ? (
           currentOrders.map((order) => (
             <Card key={order.id} className="p-4 lg:p-5">

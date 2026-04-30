@@ -1,11 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { useLanguage } from "@/lib/language-context";
-import { getProviderProfile, getProviderVerification } from "@/lib/mock-provider";
+import {
+  getCachedWorkerDashboardProfile,
+  getWorkerDashboardProfileByUserId,
+  resolveWorkerUserId,
+} from "@/api/services/worker-dashboard";
 import { cn } from "@/lib/utils";
 import {
   User,
@@ -23,9 +27,92 @@ import type { VerificationStatus } from "@/types/provider";
 
 export default function ProfilePage() {
   const { t } = useLanguage();
-  const profile = useMemo(() => getProviderProfile(), []);
-  const verification = useMemo(() => getProviderVerification(), []);
+  const [profile, setProfile] = useState({
+    name: "Worker",
+    phone: "",
+    profileImage: null as string | null,
+    rating: 0,
+    completedServices: 0,
+    profileStatus: "pending" as "approved" | "pending" | "rejected",
+    city: "Pakistan",
+    category: "Service Worker",
+    experienceYears: 0,
+    bio: "",
+  });
+  const [verification, setVerification] = useState({
+    phoneNumber: "pending" as VerificationStatus,
+    identityVerification: "pending" as VerificationStatus,
+    professionalInfo: "pending" as VerificationStatus,
+  });
   const [activeModal, setActiveModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hydrate = async () => {
+      const cached = getCachedWorkerDashboardProfile();
+      if (cached) {
+        const mappedStatus =
+          cached.verificationStatus === "APPROVED"
+            ? "approved"
+            : cached.verificationStatus === "REJECTED"
+            ? "rejected"
+            : "pending";
+        const vStatus: VerificationStatus =
+          mappedStatus === "approved"
+            ? "verified"
+            : mappedStatus === "rejected"
+            ? "not-verified"
+            : "pending";
+
+        setProfile((prev) => ({
+          ...prev,
+          name: cached.fullName,
+          phone: cached.phoneNumber,
+          profileImage: cached.profilePicUrl || null,
+          rating: cached.averageRating || 0,
+          completedServices: cached.totalJobsCompleted || 0,
+          profileStatus: mappedStatus,
+        }));
+        setVerification({
+          phoneNumber: "verified",
+          identityVerification: vStatus,
+          professionalInfo: vStatus,
+        });
+        return;
+      }
+
+      const userId = resolveWorkerUserId();
+      if (!userId) return;
+      const live = await getWorkerDashboardProfileByUserId(userId);
+      const mappedStatus =
+        live.verificationStatus === "APPROVED"
+          ? "approved"
+          : live.verificationStatus === "REJECTED"
+          ? "rejected"
+          : "pending";
+      const vStatus: VerificationStatus =
+        mappedStatus === "approved"
+          ? "verified"
+          : mappedStatus === "rejected"
+          ? "not-verified"
+          : "pending";
+      setProfile((prev) => ({
+        ...prev,
+        name: live.fullName,
+        phone: live.phoneNumber,
+        profileImage: live.profilePicUrl || null,
+        rating: live.averageRating || 0,
+        completedServices: live.totalJobsCompleted || 0,
+        profileStatus: mappedStatus,
+      }));
+      setVerification({
+        phoneNumber: "verified",
+        identityVerification: vStatus,
+        professionalInfo: vStatus,
+      });
+    };
+
+    hydrate();
+  }, []);
 
   const handleSettingClick = (action: string) => {
     switch (action) {

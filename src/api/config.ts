@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   // Backend API URL
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:4000',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
 
   // Request timeout (ms)
   TIMEOUT: 30000,

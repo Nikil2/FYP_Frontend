@@ -11,6 +11,7 @@ export * from './services';
 
 // Workers API
 export * from './workers';
+export * from './worker-dashboard';
 
 // Admin API
 export {

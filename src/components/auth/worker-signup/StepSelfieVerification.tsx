@@ -5,18 +5,20 @@ import { Camera, RefreshCw, UserCheck, Upload } from "lucide-react";
 
 interface Props {
   selfieImage: File | null;
+  uploadedSelfieUrl?: string | null;
   onSelfieChange: (file: File | null) => void;
   errors: Record<string, string>;
   lang: "en" | "ur";
 }
 
-export function StepSelfieVerification({ selfieImage, onSelfieChange, errors, lang }: Props) {
+export function StepSelfieVerification({ selfieImage, uploadedSelfieUrl, onSelfieChange, errors, lang }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [ignorePersistedSelfie, setIgnorePersistedSelfie] = useState(false);
 
   const isUrdu = lang === "ur";
 
@@ -72,6 +74,14 @@ export function StepSelfieVerification({ selfieImage, onSelfieChange, errors, la
     };
   }, [stream]);
 
+  useEffect(() => {
+    if (ignorePersistedSelfie || previewUrl || selfieImage || !uploadedSelfieUrl) {
+      return;
+    }
+
+    setPreviewUrl(uploadedSelfieUrl);
+  }, [ignorePersistedSelfie, previewUrl, selfieImage, uploadedSelfieUrl]);
+
   const startCamera = async () => {
     try {
       // Stop any existing stream first
@@ -85,6 +95,7 @@ export function StepSelfieVerification({ selfieImage, onSelfieChange, errors, la
       });
 
       // Set state first so the video element renders, then the effect will attach the stream
+      setIgnorePersistedSelfie(true);
       setPreviewUrl(null);
       onSelfieChange(null);
       setIsCameraActive(true);
@@ -125,6 +136,7 @@ export function StepSelfieVerification({ selfieImage, onSelfieChange, errors, la
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIgnorePersistedSelfie(true);
       onSelfieChange(file);
       setPreviewUrl(URL.createObjectURL(file));
       setIsCameraActive(false);
@@ -136,6 +148,7 @@ export function StepSelfieVerification({ selfieImage, onSelfieChange, errors, la
   };
 
   const handleRetake = () => {
+    setIgnorePersistedSelfie(true);
     setPreviewUrl(null);
     onSelfieChange(null);
     startCamera();

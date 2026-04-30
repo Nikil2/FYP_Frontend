@@ -1,4 +1,4 @@
-import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, UserRole, User } from "@/interfaces/auth-interfaces";
+import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, User } from "@/interfaces/auth-interfaces";
 import { findWorkerByCredentials, setCurrentWorkerId, clearCurrentWorkerId } from "@/app/dummy/dummy-workers";
 import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId } from "@/app/dummy/dummy-customers";
 
@@ -8,38 +8,137 @@ import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const AUTH_USER_KEY = "authUser";
+const PK_COUNTRY_CODE = "+92";
+const WORKER_PROFILE_CACHE_KEY = "worker-dashboard-profile:v1";
 
-const extractUserPayload = (payload: any): User | null => {
+const isUserLike = (value: unknown): value is User => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return typeof record.id === "string" && typeof record.role === "string";
+};
+
+const extractUserPayload = (payload: unknown): User | null => {
   if (!payload || typeof payload !== "object") {
     return null;
   }
+  const parsed = payload as Record<string, unknown>;
 
   // 1) Direct user object
-  if (payload.id && payload.role) {
-    return payload as User;
+  if (isUserLike(parsed)) {
+    return parsed;
   }
 
   // 2) Nest interceptor wrapper: { data: <something>, statusCode, ... }
-  if (payload.data && typeof payload.data === "object") {
-    const nested = payload.data;
+  if (parsed.data && typeof parsed.data === "object") {
+    const nested = parsed.data as Record<string, unknown>;
 
     // 2a) data is user object
-    if (nested.id && nested.role) {
-      return nested as User;
+    if (isUserLike(nested)) {
+      return nested;
     }
 
     // 2b) data contains user object: { data: { user: ... } } or { user: ... }
-    if (nested.user && nested.user.id && nested.user.role) {
-      return nested.user as User;
+    if (isUserLike(nested.user)) {
+      return nested.user;
     }
   }
 
   // 3) Fallback shape: { user: ... }
-  if (payload.user && payload.user.id && payload.user.role) {
-    return payload.user as User;
+  if (isUserLike(parsed.user)) {
+    return parsed.user;
   }
 
   return null;
+};
+
+const extractTokenPayload = (payload: unknown): string | null => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const parsed = payload as Record<string, unknown>;
+
+  if (typeof parsed.token === "string" && parsed.token) {
+    return parsed.token;
+  }
+
+  if (parsed.data && typeof parsed.data === "object") {
+    const nested = parsed.data as Record<string, unknown>;
+    if (typeof nested.token === "string" && nested.token) {
+      return nested.token;
+    }
+  }
+
+  return null;
+};
+
+const normalizePhoneNumber = (phoneNumber: string): string => {
+  const digits = phoneNumber.replace(/\D/g, "");
+
+  if (digits.startsWith("92") && digits.length === 12) {
+    return `${PK_COUNTRY_CODE}${digits.slice(2)}`;
+  }
+
+  if (digits.startsWith("0") && digits.length === 11) {
+    return `${PK_COUNTRY_CODE}${digits.slice(1)}`;
+  }
+
+  if (digits.length === 10 && digits.startsWith("3")) {
+    return `${PK_COUNTRY_CODE}${digits}`;
+  }
+
+  return phoneNumber.trim();
+};
+
+const warmWorkerDashboardProfile = async (userId: string): Promise<void> => {
+  if (typeof window === "undefined") return;
+
+  const tryFetch = async (url: string) => {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("fetch failed");
+    return res.json();
+  };
+
+  const unwrap = (payload: unknown): Record<string, unknown> | null => {
+    if (!payload || typeof payload !== "object") return null;
+    const root = payload as Record<string, unknown>;
+    if (root.data && typeof root.data === "object") return root.data as Record<string, unknown>;
+    return root;
+  };
+
+  try {
+    let raw: unknown;
+    try {
+      raw = await tryFetch(`${API_BASE_URL}/workers/me/${userId}`);
+    } catch {
+      raw = await tryFetch(`${API_BASE_URL}/workers/user/${userId}`);
+    }
+
+    const profile = unwrap(raw);
+    if (!profile) return;
+
+    const mapped = {
+      userId: String(profile.id || ""),
+      workerId: String(profile.workerId || ""),
+      fullName: String(profile.fullName || "Worker"),
+      phoneNumber: String(profile.phoneNumber || ""),
+      profilePicUrl: profile.profilePicUrl ? String(profile.profilePicUrl) : undefined,
+      verificationStatus: String(profile.verificationStatus || "PENDING"),
+      isOnline: Boolean(profile.isOnline),
+      averageRating: Number(profile.averageRating || 0),
+      totalJobsCompleted: Number(profile.totalJobsCompleted || 0),
+    };
+
+    localStorage.setItem(WORKER_PROFILE_CACHE_KEY, JSON.stringify(mapped));
+  } catch {
+    // Non-blocking warmup; login should still succeed.
+  }
 };
 
 // ============================================
@@ -127,30 +226,32 @@ export const isAuthenticated = (): boolean => {
 
 export const login = async (data: LoginFormData): Promise<AuthResponse> => {
   try {
+    const normalizedPhoneNumber = normalizePhoneNumber(data.phoneNumber);
+
     const response = await fetch(`${API_BASE_URL}/users/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        phoneNumber: data.phoneNumber,
+        phoneNumber: normalizedPhoneNumber,
         password: data.password,
       }),
     });
 
     const result = await response.json();
 
-    // Debug: Log the actual response
-    console.log('Login response:', result);
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
     // Check if response is successful (200 OK)
     if (response.ok) {
       const user = extractUserPayload(result);
+      const token = extractTokenPayload(result);
       if (user?.id && user?.role) {
-        // Generate a token-like identifier from user data
-        const token = `token-${user.id}-${Date.now()}`;
+        if (!token) {
+          return {
+            success: false,
+            message: "Login failed - Missing auth token from server",
+          };
+        }
 
         setAuthToken(token);
         setUserRole(user.role);
@@ -159,20 +260,19 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
         // Persist current dummy IDs when matching demo credentials,
         // so dashboards retain profile data across navigation/refresh.
         if (user.role === "WORKER") {
-          const worker = findWorkerByCredentials(data.phoneNumber, data.password);
+          const worker = findWorkerByCredentials(normalizedPhoneNumber, data.password);
           if (worker) {
             setCurrentWorkerId(worker.id);
           }
+          await warmWorkerDashboardProfile(user.id);
         }
 
         if (user.role === "CUSTOMER") {
-          const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+          const customer = findCustomerByCredentials(normalizedPhoneNumber, data.password);
           if (customer) {
             setCurrentCustomerId(customer.id);
           }
         }
-
-        console.log('Login successful, user role:', user.role, 'isVerified:', user.isVerified);
         
         return {
           success: true,
@@ -193,7 +293,6 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
       error: result.error,
     };
   } catch (error) {
-    console.error('Login error:', error);
     return {
       success: false,
       message: "Network error. Please try again.",
@@ -204,6 +303,8 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
 
 export const signupCustomer = async (data: CustomerSignupFormData): Promise<AuthResponse> => {
   try {
+    const normalizedPhoneNumber = normalizePhoneNumber(data.phoneNumber);
+
     const response = await fetch(`${API_BASE_URL}/users/register`, {
       method: "POST",
       headers: {
@@ -211,7 +312,7 @@ export const signupCustomer = async (data: CustomerSignupFormData): Promise<Auth
       },
       body: JSON.stringify({
         fullName: data.fullName,
-        phoneNumber: data.phoneNumber,
+        phoneNumber: normalizedPhoneNumber,
         password: data.password,
       }),
     });
@@ -219,15 +320,21 @@ export const signupCustomer = async (data: CustomerSignupFormData): Promise<Auth
     const result = await response.json();
 
     const user = extractUserPayload(result);
+    const token = extractTokenPayload(result);
     if (response.ok && user?.id && user?.role) {
-      const token = `token-${user.id}-${Date.now()}`;
+      if (!token) {
+        return {
+          success: false,
+          message: "Signup failed - Missing auth token from server",
+        };
+      }
 
       setAuthToken(token);
       setUserRole(user.role);
       setAuthUser(user);
 
       if (user.role === "CUSTOMER") {
-        const customer = findCustomerByCredentials(data.phoneNumber, data.password);
+        const customer = findCustomerByCredentials(normalizedPhoneNumber, data.password);
         if (customer) {
           setCurrentCustomerId(customer.id);
         }
@@ -292,7 +399,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 
     // Work photos
     if (data.workPhotos && data.workPhotos.length > 0) {
-      data.workPhotos.forEach((photo, index) => {
+      data.workPhotos.forEach((photo) => {
         formData.append(`workPhotos`, photo);
       });
     }

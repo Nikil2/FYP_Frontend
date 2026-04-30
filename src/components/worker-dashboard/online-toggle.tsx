@@ -7,17 +7,36 @@ import { cn } from "@/lib/utils";
 interface OnlineToggleProps {
   initialStatus?: boolean;
   showLabel?: boolean;
+  onToggle?: (nextStatus: boolean) => Promise<void> | void;
 }
 
-export function OnlineToggle({ initialStatus = true, showLabel = true }: OnlineToggleProps) {
+export function OnlineToggle({ initialStatus = true, showLabel = true, onToggle }: OnlineToggleProps) {
   const [isOnline, setIsOnline] = useState(initialStatus);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { t } = useLanguage();
+
+  const handleToggle = async () => {
+    const nextStatus = !isOnline;
+    setIsOnline(nextStatus);
+
+    if (!onToggle) return;
+    try {
+      setIsUpdating(true);
+      await onToggle(nextStatus);
+    } catch {
+      setIsOnline(!nextStatus);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <button
-      onClick={() => setIsOnline(!isOnline)}
+      onClick={handleToggle}
+      disabled={isUpdating}
       className={cn(
         "flex items-center gap-2",
+        isUpdating && "opacity-60",
         showLabel ? "w-full" : "flex-shrink-0"
       )}
     >
