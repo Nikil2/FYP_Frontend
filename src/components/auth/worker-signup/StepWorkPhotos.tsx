@@ -5,14 +5,17 @@ import { ImagePlus, X, Camera } from "lucide-react";
 
 interface Props {
   workPhotos: File[];
+  uploadedPhotoUrls?: string[];
   onPhotosChange: (photos: File[]) => void;
   errors: Record<string, string>;
   lang: "en" | "ur";
 }
 
-export function StepWorkPhotos({ workPhotos, onPhotosChange, errors, lang }: Props) {
+export function StepWorkPhotos({ workPhotos, uploadedPhotoUrls, onPhotosChange, errors, lang }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isUrdu = lang === "ur";
+  const uploadedCount = uploadedPhotoUrls?.length || 0;
+  const effectiveCount = workPhotos.length > 0 ? workPhotos.length : uploadedCount;
 
   const t = {
     en: {
@@ -116,11 +119,17 @@ export function StepWorkPhotos({ workPhotos, onPhotosChange, errors, lang }: Pro
 
       {/* Counter */}
       <p className="text-center text-sm text-paragraph">
-        <span className={`font-bold ${workPhotos.length >= 2 ? "text-green-600" : "text-red-500"}`}>
-          {workPhotos.length}
+        <span className={`font-bold ${effectiveCount >= 2 ? "text-green-600" : "text-red-500"}`}>
+          {effectiveCount}
         </span>
         /6 {labels.photosAdded}
       </p>
+
+      {workPhotos.length === 0 && uploadedCount > 0 && (
+        <p className="text-center text-xs text-green-600">
+          {isUrdu ? "پہلے سے اپلوڈ تصاویر استعمال ہوں گی" : "Previously uploaded photos will be used"}
+        </p>
+      )}
 
       {/* Tips */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

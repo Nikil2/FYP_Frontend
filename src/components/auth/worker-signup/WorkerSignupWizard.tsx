@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -33,11 +33,48 @@ import { StepCnicIdentity } from "./StepCnicIdentity";
 import { uploadToCloudinary, uploadMultipleToCloudinary } from "@/lib/cloudinary";
 
 const TOTAL_STEPS = 8;
+const WORKER_SIGNUP_DRAFT_KEY = "worker-signup-draft:v1";
 
 const STEP_LABELS = {
   en: ["Account", "OTP", "Services", "Location", "Experience", "Work Photos", "Selfie", "CNIC"],
   ur: ["اکاؤنٹ", "او ٹی پی", "سروسز", "مقام", "تجربہ", "کام کی تصاویر", "سیلفی", "شناختی کارڈ"],
 };
+
+type PersistedFormData = Omit<
+  WorkerSignupFormData,
+  | "otpCode"
+  | "workPhotos"
+  | "selfieImage"
+  | "cnicFrontImage"
+  | "cnicBackImage"
+>;
+
+type WorkerSignupDraft = {
+  version: 1;
+  currentStep: number;
+  lang: "en" | "ur";
+  formData: PersistedFormData;
+  uploadedWorkPhotoUrls: string[];
+  uploadedSelfieUrl: string | null;
+  uploadedCnicFrontUrl: string | null;
+  uploadedCnicBackUrl: string | null;
+};
+
+const buildPersistedFormData = (data: WorkerSignupFormData): PersistedFormData => ({
+  fullName: data.fullName,
+  email: data.email,
+  phoneNumber: data.phoneNumber,
+  password: data.password,
+  confirmPassword: data.confirmPassword,
+  selectedServiceIds: data.selectedServiceIds,
+  homeAddress: data.homeAddress,
+  homeLat: data.homeLat,
+  homeLng: data.homeLng,
+  experienceYears: data.experienceYears,
+  visitingCharges: data.visitingCharges,
+  bio: data.bio,
+  cnicNumber: data.cnicNumber,
+});
 
 export function WorkerSignupForm() {
   const router = useRouter();
@@ -76,6 +113,65 @@ export function WorkerSignupForm() {
   const [uploadedCnicBackUrl, setUploadedCnicBackUrl] = useState<string | null>(null);
 
   const isUrdu = lang === "ur";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const raw = sessionStorage.getItem(WORKER_SIGNUP_DRAFT_KEY);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw) as WorkerSignupDraft;
+      if (draft.version !== 1) {
+        return;
+      }
+
+      const safeStep = Math.min(Math.max(draft.currentStep || 1, 1), TOTAL_STEPS);
+      setCurrentStep(safeStep);
+      setLang(draft.lang || "en");
+      setFormData((prev) => ({
+        ...prev,
+        ...draft.formData,
+      }));
+      setUploadedWorkPhotoUrls(draft.uploadedWorkPhotoUrls || []);
+      setUploadedSelfieUrl(draft.uploadedSelfieUrl || null);
+      setUploadedCnicFrontUrl(draft.uploadedCnicFrontUrl || null);
+      setUploadedCnicBackUrl(draft.uploadedCnicBackUrl || null);
+    } catch {
+      sessionStorage.removeItem(WORKER_SIGNUP_DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const draft: WorkerSignupDraft = {
+      version: 1,
+      currentStep,
+      lang,
+      formData: buildPersistedFormData(formData),
+      uploadedWorkPhotoUrls,
+      uploadedSelfieUrl,
+      uploadedCnicFrontUrl,
+      uploadedCnicBackUrl,
+    };
+
+    sessionStorage.setItem(WORKER_SIGNUP_DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    currentStep,
+    lang,
+    formData,
+    uploadedWorkPhotoUrls,
+    uploadedSelfieUrl,
+    uploadedCnicFrontUrl,
+    uploadedCnicBackUrl,
+  ]);
 
   // ─── Field Change Handlers ───
 
@@ -265,15 +361,23 @@ export function WorkerSignupForm() {
         if (!formData.bio.trim()) newErrors.bio = errMsg.noBio;
         break;
       case 6:
-        if (formData.workPhotos.length < 2) newErrors.workPhotos = errMsg.minPhotos;
+        if (formData.workPhotos.length < 2 && uploadedWorkPhotoUrls.length < 2) {
+          newErrors.workPhotos = errMsg.minPhotos;
+        }
         break;
       case 7:
-        if (!formData.selfieImage) newErrors.selfieImage = errMsg.noSelfie;
+        if (!formData.selfieImage && !uploadedSelfieUrl) {
+          newErrors.selfieImage = errMsg.noSelfie;
+        }
         break;
       case 8:
         if (!validateCNIC(formData.cnicNumber)) newErrors.cnicNumber = errMsg.invalidCnic;
-        if (!formData.cnicFrontImage) newErrors.cnicFrontImage = errMsg.noCnicFront;
-        if (!formData.cnicBackImage) newErrors.cnicBackImage = errMsg.noCnicBack;
+        if (!formData.cnicFrontImage && !uploadedCnicFrontUrl) {
+          newErrors.cnicFrontImage = errMsg.noCnicFront;
+        }
+        if (!formData.cnicBackImage && !uploadedCnicBackUrl) {
+          newErrors.cnicBackImage = errMsg.noCnicBack;
+        }
         break;
     }
 
@@ -366,6 +470,10 @@ export function WorkerSignupForm() {
 
       if (!loginResponse.success) {
         throw new Error(loginResponse.message || "Worker created but login failed");
+      }
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(WORKER_SIGNUP_DRAFT_KEY);
       }
 
       // Redirect to worker dashboard
@@ -524,6 +632,7 @@ export function WorkerSignupForm() {
         {currentStep === 6 && (
           <StepWorkPhotos
             workPhotos={formData.workPhotos}
+            uploadedPhotoUrls={uploadedWorkPhotoUrls}
             onPhotosChange={handleWorkPhotosChange}
             errors={errors}
             lang={lang}
@@ -532,6 +641,7 @@ export function WorkerSignupForm() {
         {currentStep === 7 && (
           <StepSelfieVerification
             selfieImage={formData.selfieImage}
+            uploadedSelfieUrl={uploadedSelfieUrl}
             onSelfieChange={handleSelfieChange}
             errors={errors}
             lang={lang}
@@ -542,6 +652,8 @@ export function WorkerSignupForm() {
             cnicNumber={formData.cnicNumber}
             cnicFrontImage={formData.cnicFrontImage}
             cnicBackImage={formData.cnicBackImage}
+            uploadedCnicFrontUrl={uploadedCnicFrontUrl}
+            uploadedCnicBackUrl={uploadedCnicBackUrl}
             onCnicNumberChange={(val) => handleFieldChange("cnicNumber", val)}
             onCnicFrontChange={handleCnicFrontChange}
             onCnicBackChange={handleCnicBackChange}

@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreditCard, Upload, ShieldCheck, X } from "lucide-react";
 
 interface Props {
   cnicNumber: string;
   cnicFrontImage: File | null;
   cnicBackImage: File | null;
+  uploadedCnicFrontUrl?: string | null;
+  uploadedCnicBackUrl?: string | null;
   onCnicNumberChange: (value: string) => void;
   onCnicFrontChange: (file: File | null) => void;
   onCnicBackChange: (file: File | null) => void;
@@ -18,6 +20,8 @@ export function StepCnicIdentity({
   cnicNumber,
   cnicFrontImage,
   cnicBackImage,
+  uploadedCnicFrontUrl,
+  uploadedCnicBackUrl,
   onCnicNumberChange,
   onCnicFrontChange,
   onCnicBackChange,
@@ -28,6 +32,8 @@ export function StepCnicIdentity({
   const backInputRef = useRef<HTMLInputElement>(null);
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [backPreview, setBackPreview] = useState<string | null>(null);
+  const [ignorePersistedFront, setIgnorePersistedFront] = useState(false);
+  const [ignorePersistedBack, setIgnorePersistedBack] = useState(false);
 
   const isUrdu = lang === "ur";
 
@@ -60,6 +66,22 @@ export function StepCnicIdentity({
 
   const labels = t[lang];
 
+  useEffect(() => {
+    if (ignorePersistedFront || frontPreview || cnicFrontImage || !uploadedCnicFrontUrl) {
+      return;
+    }
+
+    setFrontPreview(uploadedCnicFrontUrl);
+  }, [ignorePersistedFront, frontPreview, cnicFrontImage, uploadedCnicFrontUrl]);
+
+  useEffect(() => {
+    if (ignorePersistedBack || backPreview || cnicBackImage || !uploadedCnicBackUrl) {
+      return;
+    }
+
+    setBackPreview(uploadedCnicBackUrl);
+  }, [ignorePersistedBack, backPreview, cnicBackImage, uploadedCnicBackUrl]);
+
   // Format CNIC as user types: XXXXX-XXXXXXX-X
   const handleCnicInput = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 13);
@@ -76,6 +98,7 @@ export function StepCnicIdentity({
   const handleFrontUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIgnorePersistedFront(true);
       onCnicFrontChange(file);
       setFrontPreview(URL.createObjectURL(file));
     }
@@ -84,6 +107,7 @@ export function StepCnicIdentity({
   const handleBackUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setIgnorePersistedBack(true);
       onCnicBackChange(file);
       setBackPreview(URL.createObjectURL(file));
     }
@@ -131,7 +155,11 @@ export function StepCnicIdentity({
               />
               <button
                 type="button"
-                onClick={() => { onCnicFrontChange(null); setFrontPreview(null); }}
+                onClick={() => {
+                  setIgnorePersistedFront(true);
+                  onCnicFrontChange(null);
+                  setFrontPreview(null);
+                }}
                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
               >
                 <X className="w-3.5 h-3.5" />
@@ -164,7 +192,11 @@ export function StepCnicIdentity({
               />
               <button
                 type="button"
-                onClick={() => { onCnicBackChange(null); setBackPreview(null); }}
+                onClick={() => {
+                  setIgnorePersistedBack(true);
+                  onCnicBackChange(null);
+                  setBackPreview(null);
+                }}
                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
               >
                 <X className="w-3.5 h-3.5" />
