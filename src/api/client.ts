@@ -66,17 +66,15 @@ class ApiClient {
   }
 
   /**
-   * Handle 401 Unauthorized — clear auth and redirect to login
+   * Handle 401 Unauthorized — clear all auth state.
+   * Does NOT redirect — lets page-level guards (AdminShell, RoleGuard) handle navigation.
    */
   private handleUnauthorized(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken');
       localStorage.removeItem('authUser');
       localStorage.removeItem('userRole');
-      // Only redirect if not already on auth page
-      if (!window.location.pathname.startsWith('/auth')) {
-        window.location.href = '/auth/login';
-      }
+      localStorage.removeItem('adminSession');
     }
   }
 
