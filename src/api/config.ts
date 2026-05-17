@@ -24,9 +24,11 @@ export const API_CONFIG = {
     // ==================== CUSTOMERS (USERS) ====================
     USERS_REGISTER: '/users/register',
     USERS_LOGIN: '/users/login',
+    USERS_ME: '/users/me',
     USERS_GET_ALL: '/users',
     USERS_DETAIL: (userId: string) => `/users/${userId}`,
     USERS_UPDATE: (userId: string) => `/users/${userId}`,
+    USERS_UPDATE_ME: '/users/me',
     USERS_VERIFY: (userId: string) => `/users/${userId}/verify`,
     USERS_BLOCK: (userId: string) => `/users/${userId}/block`,
     USERS_UNBLOCK: (userId: string) => `/users/${userId}/unblock`,
@@ -38,7 +40,12 @@ export const API_CONFIG = {
     WORKERS_GET_VERIFIED: '/workers/verified',
     WORKERS_DETAIL: (workerId: string) => `/workers/${workerId}`,
     WORKERS_BY_USER: (userId: string) => `/workers/user/${userId}`,
+    WORKERS_ME_PROFILE: '/workers/me/profile',
     WORKERS_UPDATE: (workerId: string) => `/workers/${workerId}`,
+    WORKERS_ONLINE_STATUS: (workerId: string) => `/workers/${workerId}/online-status`,
+    WORKERS_ORDERS: (workerId: string) => `/workers/${workerId}/orders`,
+    WORKERS_WALLET_SUMMARY: (workerId: string) => `/workers/${workerId}/wallet/summary`,
+    WORKERS_WALLET_TRANSACTIONS: (workerId: string) => `/workers/${workerId}/wallet/transactions`,
     WORKERS_PORTFOLIO: (workerId: string) => `/workers/${workerId}/portfolio`,
     WORKERS_PORTFOLIO_ADD: (workerId: string) => `/workers/${workerId}/portfolio`,
     WORKERS_PORTFOLIO_ITEM: (workerId: string, portfolioId: string) =>
@@ -54,6 +61,60 @@ export const API_CONFIG = {
     SERVICES_LIST: '/services/list/all',
     SERVICES_DETAIL: (serviceId: number) => `/services/${serviceId}`,
     SERVICES_CREATE: '/services',
+
+    // ==================== BOOKINGS ====================
+    BOOKINGS_CREATE: '/bookings',
+    BOOKINGS_MY: '/bookings/my',
+    BOOKINGS_GET_ALL: '/bookings',
+    BOOKINGS_DETAIL: (bookingId: string) => `/bookings/${bookingId}`,
+    BOOKINGS_CUSTOMER: (customerId: string) => `/bookings/customer/${customerId}`,
+    BOOKINGS_WORKER: (workerId: string) => `/bookings/worker/${workerId}`,
+    BOOKINGS_UPDATE_STATUS: (bookingId: string) => `/bookings/${bookingId}/status`,
+    BOOKINGS_CANCEL: (bookingId: string) => `/bookings/${bookingId}/cancel`,
+    BOOKINGS_PROPOSALS: (bookingId: string) => `/bookings/${bookingId}/proposals`,
+    BOOKINGS_ACCEPT_PROPOSAL: (bookingId: string, proposalId: string) =>
+      `/bookings/${bookingId}/proposals/${proposalId}/accept`,
+
+    // ==================== MESSAGES ====================
+    MESSAGES_SEND: '/messages',
+    MESSAGES_BOOKING: (bookingId: string) => `/messages/booking/${bookingId}`,
+    MESSAGES_DETAIL: (messageId: string) => `/messages/${messageId}`,
+
+    // ==================== FEEDBACK ====================
+    FEEDBACK_SUBMIT: '/feedback',
+    FEEDBACK_WORKER: (workerId: string) => `/feedback/worker/${workerId}`,
+    FEEDBACK_WORKER_STATS: (workerId: string) => `/feedback/worker/${workerId}/stats`,
+    FEEDBACK_BOOKING: (bookingId: string) => `/feedback/booking/${bookingId}`,
+
+    // ==================== COMPLAINTS ====================
+    COMPLAINTS_FILE: '/complaints',
+    COMPLAINTS_GET_ALL: '/complaints',
+    COMPLAINTS_BOOKING: (bookingId: string) => `/complaints/booking/${bookingId}`,
+    COMPLAINTS_DETAIL: (complaintId: string) => `/complaints/${complaintId}`,
+    COMPLAINTS_RESOLVE: (complaintId: string) => `/complaints/${complaintId}/resolve`,
+
+    // ==================== NOTIFICATIONS ====================
+    NOTIFICATIONS: '/notifications',
+    NOTIFICATIONS_UNREAD: '/notifications/unread',
+    NOTIFICATIONS_READ: (notificationId: string) => `/notifications/${notificationId}/read`,
+    NOTIFICATIONS_READ_ALL: '/notifications/read-all',
+    NOTIFICATIONS_DELETE: (notificationId: string) => `/notifications/${notificationId}`,
+    NOTIFICATIONS_DELETE_ALL: '/notifications/all',
+    NOTIFICATIONS_FCM_TOKEN: '/notifications/fcm-token',
+
+    // ==================== SAVED LOCATIONS ====================
+    LOCATIONS: '/locations',
+    LOCATIONS_DETAIL: (locationId: string) => `/locations/${locationId}`,
+
+    // ==================== WORKER SCHEDULE ====================
+    SCHEDULE: (workerId: string) => `/workers/${workerId}/schedule`,
+    SCHEDULE_DAY: (workerId: string, day: number) => `/workers/${workerId}/schedule/${day}`,
+
+    // ==================== FILE UPLOADS ====================
+    UPLOADS_PROFILE_PICTURE: '/uploads/profile-picture',
+    UPLOADS_CNIC: '/uploads/cnic',
+    UPLOADS_PORTFOLIO: '/uploads/portfolio',
+    UPLOADS_EVIDENCE: '/uploads/evidence',
 
     // ==================== ADMIN ====================
     ADMIN_LOGIN: '/admin/login',
