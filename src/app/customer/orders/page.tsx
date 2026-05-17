@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -13,13 +13,12 @@ import {
   ChevronRight,
   User,
   Star,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
-import {
-  getCurrentCustomer,
-  type CustomerBooking,
-} from "@/app/dummy/dummy-customers";
+import { getMyBookings, type Booking } from "@/api/services/bookings";
 
 const TABS = [
   { id: "active", label: "Active" },
@@ -29,54 +28,32 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-function getStatusBadge(status: CustomerBooking["status"]) {
+function getStatusBadge(status: Booking["status"]) {
   switch (status) {
-    case "pending":
-      return {
-        label: "Pending",
-        bg: "bg-amber-50",
-        text: "text-amber-700",
-        icon: Clock,
-      };
-    case "confirmed":
-      return {
-        label: "Confirmed",
-        bg: "bg-blue-50",
-        text: "text-blue-700",
-        icon: CheckCircle2,
-      };
-    case "in-progress":
-      return {
-        label: "In Progress",
-        bg: "bg-tertiary/10",
-        text: "text-tertiary",
-        icon: Clock,
-      };
-    case "completed":
-      return {
-        label: "Completed",
-        bg: "bg-green-50",
-        text: "text-green-700",
-        icon: CheckCircle2,
-      };
-    case "cancelled":
-      return {
-        label: "Cancelled",
-        bg: "bg-red-50",
-        text: "text-red-600",
-        icon: XCircle,
-      };
+    case "PENDING":
+      return { label: "Pending", bg: "bg-amber-50", text: "text-amber-700", icon: Clock };
+    case "NEGOTIATION":
+      return { label: "Negotiating", bg: "bg-purple-50", text: "text-purple-700", icon: Clock };
+    case "ACCEPTED":
+      return { label: "Accepted", bg: "bg-blue-50", text: "text-blue-700", icon: CheckCircle2 };
+    case "IN_PROGRESS":
+      return { label: "In Progress", bg: "bg-tertiary/10", text: "text-tertiary", icon: Clock };
+    case "COMPLETED":
+      return { label: "Completed", bg: "bg-green-50", text: "text-green-700", icon: CheckCircle2 };
+    case "CANCELLED":
+      return { label: "Cancelled", bg: "bg-red-50", text: "text-red-600", icon: XCircle };
+    case "DISPUTED":
+      return { label: "Disputed", bg: "bg-orange-50", text: "text-orange-700", icon: AlertTriangle };
     default:
-      return {
-        label: status,
-        bg: "bg-gray-50",
-        text: "text-gray-700",
-        icon: Clock,
-      };
+      return { label: status, bg: "bg-gray-50", text: "text-gray-700", icon: Clock };
   }
 }
 
-function BookingCard({ booking }: { booking: CustomerBooking }) {
+function isActiveStatus(status: Booking["status"]): boolean {
+  return ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS"].includes(status);
+}
+
+function BookingCard({ booking }: { booking: Booking }) {
   const router = useRouter();
   const badge = getStatusBadge(booking.status);
   const BadgeIcon = badge.icon;
@@ -90,10 +67,10 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
           <h3 className="text-sm font-semibold text-heading leading-tight">
-            {booking.serviceName}
+            {booking.service?.name || "Service"}
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {booking.categoryName}
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+            {booking.description}
           </p>
         </div>
         <span
@@ -110,17 +87,25 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
 
       {/* Worker Info */}
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-full bg-tertiary/20 flex items-center justify-center">
-          <User className="w-3.5 h-3.5 text-tertiary" />
+        <div className="w-7 h-7 rounded-full bg-tertiary/20 flex items-center justify-center overflow-hidden">
+          {booking.worker?.user?.profilePicUrl ? (
+            <img
+              src={booking.worker.user.profilePicUrl}
+              alt={booking.worker.user.fullName}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User className="w-3.5 h-3.5 text-tertiary" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-heading truncate">
-            {booking.workerName}
+            {booking.worker?.user?.fullName || "Worker"}
           </p>
           <div className="flex items-center gap-1">
             <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
             <span className="text-[10px] text-muted-foreground">
-              {booking.workerRating}
+              {booking.worker?.averageRating?.toFixed(1) || "N/A"}
             </span>
           </div>
         </div>
@@ -131,24 +116,23 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
         <div className="flex items-center gap-1">
           <Calendar className="w-3 h-3" />
           <span>
-            {new Date(booking.scheduledDate).toLocaleDateString("en-PK", {
+            {new Date(booking.createdAt).toLocaleDateString("en-PK", {
               month: "short",
               day: "numeric",
             })}
           </span>
-          <span>• {booking.scheduledTime}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-1 text-[11px] text-muted-foreground mt-1">
         <MapPin className="w-3 h-3 flex-shrink-0" />
-        <span className="truncate">{booking.location}</span>
+        <span className="truncate">{booking.jobAddress}</span>
       </div>
 
       {/* Bottom Row: Price + Arrow */}
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-border">
         <span className="text-sm font-bold text-heading">
-          Rs. {booking.price.toLocaleString()}
+          {booking.finalPrice ? `Rs. ${Number(booking.finalPrice).toLocaleString()}` : "Price TBD"}
         </span>
         <div className="flex items-center gap-1 text-xs text-tertiary font-medium">
           View Details
@@ -157,7 +141,7 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
       </div>
 
       {/* Rating if completed */}
-      {booking.status === "completed" && booking.rating && (
+      {booking.status === "COMPLETED" && booking.feedback && (
         <div className="flex items-center gap-1 mt-2">
           <span className="text-[10px] text-muted-foreground">Your rating:</span>
           {Array.from({ length: 5 }).map((_, i) => (
@@ -165,7 +149,7 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
               key={i}
               className={cn(
                 "w-3 h-3",
-                i < booking.rating!
+                i < (booking.feedback?.rating || 0)
                   ? "text-amber-400 fill-amber-400"
                   : "text-gray-200"
               )}
@@ -180,26 +164,34 @@ function BookingCard({ booking }: { booking: CustomerBooking }) {
 export default function OrdersPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("active");
-  const [activeBookings, setActiveBookings] = useState<CustomerBooking[]>([]);
-  const [completedBookings, setCompletedBookings] = useState<
-    CustomerBooking[]
-  >([]);
-  const [cancelledBookings, setCancelledBookings] = useState<
-    CustomerBooking[]
-  >([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const customer = getCurrentCustomer();
-    if (customer) {
-      setActiveBookings(customer.activeBookings);
-      setCompletedBookings(
-        customer.pastBookings.filter((b) => b.status === "completed")
-      );
-      setCancelledBookings(
-        customer.pastBookings.filter((b) => b.status === "cancelled")
-      );
+  const fetchBookings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getMyBookings(0, 100);
+      // Handle both array and paginated response
+      const bookingList = Array.isArray(result) ? result : (result.data || []);
+      setBookings(bookingList);
+    } catch (err: any) {
+      setError(err.message || "Failed to load bookings");
+    } finally {
+      setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  const activeBookings = bookings.filter((b) => isActiveStatus(b.status));
+  const completedBookings = bookings.filter((b) => b.status === "COMPLETED");
+  const cancelledBookings = bookings.filter(
+    (b) => b.status === "CANCELLED" || b.status === "DISPUTED"
+  );
 
   const getBookings = () => {
     switch (activeTab) {
@@ -267,38 +259,59 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div className="p-4 space-y-3 md:p-6 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
-        {currentBookings.length > 0 ? (
-          currentBookings.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-16 h-16 rounded-full bg-tertiary/10 flex items-center justify-center mb-4">
-              <ClipboardList className="w-8 h-8 text-tertiary" />
-            </div>
-            <h2 className="text-base font-semibold text-heading mb-1">
-              No {activeTab} orders
-            </h2>
-            <p className="text-xs text-muted-foreground text-center max-w-xs">
-              {activeTab === "active"
-                ? "You don't have any active orders. Browse services to book one!"
-                : activeTab === "completed"
-                ? "No completed orders yet. Your finished orders will appear here."
-                : "No cancelled orders. Great job keeping your bookings!"}
-            </p>
-            {activeTab === "active" && (
-              <a
-                href="/customer"
-                className="mt-3 text-sm font-medium text-tertiary hover:text-tertiary-hover transition-colors"
-              >
-                Browse Services →
-              </a>
-            )}
+      {/* Content */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-tertiary animate-spin mb-3" />
+          <p className="text-sm text-muted-foreground">Loading your orders...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <XCircle className="w-8 h-8 text-red-500" />
           </div>
-        )}
-      </div>
+          <h2 className="text-base font-semibold text-heading mb-1">Something went wrong</h2>
+          <p className="text-xs text-muted-foreground text-center max-w-xs mb-3">{error}</p>
+          <button
+            onClick={fetchBookings}
+            className="text-sm font-medium text-tertiary hover:text-tertiary-hover"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : (
+        <div className="p-4 space-y-3 md:p-6 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+          {currentBookings.length > 0 ? (
+            currentBookings.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 px-4 md:col-span-2">
+              <div className="w-16 h-16 rounded-full bg-tertiary/10 flex items-center justify-center mb-4">
+                <ClipboardList className="w-8 h-8 text-tertiary" />
+              </div>
+              <h2 className="text-base font-semibold text-heading mb-1">
+                No {activeTab} orders
+              </h2>
+              <p className="text-xs text-muted-foreground text-center max-w-xs">
+                {activeTab === "active"
+                  ? "You don't have any active orders. Browse services to book one!"
+                  : activeTab === "completed"
+                  ? "No completed orders yet. Your finished orders will appear here."
+                  : "No cancelled orders. Great job keeping your bookings!"}
+              </p>
+              {activeTab === "active" && (
+                <a
+                  href="/customer"
+                  className="mt-3 text-sm font-medium text-tertiary hover:text-tertiary-hover transition-colors"
+                >
+                  Browse Services →
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <FloatingButtons />
     </div>

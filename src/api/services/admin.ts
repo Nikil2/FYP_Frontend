@@ -300,6 +300,9 @@ export interface ServiceCategory {
   id: number;
   name: string;
   iconUrl?: string;
+  categoryId: string;
+  categoryName: string;
+  categoryIcon?: string;
   isActive: boolean;
 }
 
@@ -584,10 +587,13 @@ export async function getAllServices(): Promise<{ data: ServiceCategory[]; total
 export async function createService(
   name: string,
   iconUrl?: string,
+  categoryId?: string,
+  categoryName?: string,
+  categoryIcon?: string,
 ): Promise<{ data: ServiceCategory; message: string }> {
   const raw = await apiClient.post<WrappedResponse<{ data: ServiceCategory; message: string }> | { data: ServiceCategory; message: string }>(
     API_CONFIG.ENDPOINTS.ADMIN_SERVICES,
-    { name, iconUrl },
+    { name, iconUrl, categoryId, categoryName, categoryIcon },
   );
 
   return unwrapResponse(raw);

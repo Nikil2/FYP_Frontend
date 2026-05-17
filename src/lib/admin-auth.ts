@@ -33,12 +33,21 @@ export const loginAdminViaApi = async (
     return null;
   }
 
+  // The response.data may contain { admin, accessToken } or be the admin profile directly
+  const adminData = (response.data as any).admin || response.data;
+  const accessToken = (response.data as any).accessToken;
+
+  // Store JWT token so API client sends it on all subsequent requests
+  if (accessToken && typeof window !== 'undefined') {
+    localStorage.setItem('authToken', accessToken);
+  }
+
   return {
-    email: response.data.phoneNumber,
-    name: response.data.fullName,
-    adminLevel: response.data.adminLevel as AdminLevel,
-    userId: response.data.userId,
-    adminId: response.data.id,
+    email: adminData.phoneNumber,
+    name: adminData.fullName,
+    adminLevel: adminData.adminLevel as AdminLevel,
+    userId: adminData.userId,
+    adminId: adminData.id,
   };
 };
 
@@ -87,4 +96,5 @@ export const clearAdminSession = (): void => {
   }
 
   window.localStorage.removeItem(ADMIN_SESSION_KEY);
+  window.localStorage.removeItem('authToken');
 };

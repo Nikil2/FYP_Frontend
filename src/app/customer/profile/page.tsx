@@ -8,9 +8,7 @@ import {
   User,
   MapPin,
   Phone,
-  Mail,
   Calendar,
-  Star,
   Award,
   ClipboardList,
   Settings,
@@ -20,13 +18,12 @@ import {
   Bell,
   Heart,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  getCurrentCustomer,
-  type DummyCustomerAccount,
-} from "@/app/dummy/dummy-customers";
-import { logout } from "@/lib/auth";
+import { getAuthUser, logout } from "@/lib/auth";
+import { getUnreadCount } from "@/api/services/notifications";
+import type { User as AuthUser } from "@/interfaces/auth-interfaces";
 
 interface MenuItem {
   icon: React.ElementType;
@@ -39,11 +36,23 @@ interface MenuItem {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [customer, setCustomer] = useState<DummyCustomerAccount | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const c = getCurrentCustomer();
-    setCustomer(c);
+    const authUser = getAuthUser();
+    setUser(authUser);
+    setLoading(false);
+
+    // Fetch real notification count
+    const fetchUnread = async () => {
+      try {
+        const result = await getUnreadCount();
+        setUnreadNotifications(result.unreadCount);
+      } catch { /* skip */ }
+    };
+    fetchUnread();
   }, []);
 
   const menuSections: { title: string; items: MenuItem[] }[] = [
@@ -54,16 +63,11 @@ export default function ProfilePage() {
           icon: ClipboardList,
           label: "My Orders",
           href: "/customer/orders",
-          badge:
-            customer && customer.activeBookings.length > 0
-              ? `${customer.activeBookings.length} active`
-              : undefined,
         },
         {
           icon: Award,
           label: "Rewards",
           href: "/customer/rewards",
-          badge: customer ? `${customer.profile.rewardPoints} pts` : undefined,
         },
         {
           icon: Heart,
@@ -74,11 +78,7 @@ export default function ProfilePage() {
           icon: Bell,
           label: "Notifications",
           href: "/customer/notifications",
-          badge:
-            customer &&
-            customer.notifications.filter((n) => !n.read).length > 0
-              ? `${customer.notifications.filter((n) => !n.read).length} new`
-              : undefined,
+          badge: unreadNotifications > 0 ? `${unreadNotifications} new` : undefined,
         },
       ],
     },
@@ -125,6 +125,14 @@ export default function ProfilePage() {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
       {/* Header */}
@@ -141,17 +149,17 @@ export default function ProfilePage() {
       {/* Profile Card */}
       <div className="bg-white p-6 border-b border-border">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center border-2 border-tertiary">
-            {customer?.profile.profileImage ? (
+          <div className="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center border-2 border-tertiary overflow-hidden">
+            {user?.profilePicUrl ? (
               <img
-                src={customer.profile.profileImage}
-                alt={customer.profile.name}
+                src={user.profilePicUrl}
+                alt={user.fullName}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
               <span className="text-xl font-bold text-tertiary">
-                {customer?.profile.name
-                  .split(" ")
+                {user?.fullName
+                  ?.split(" ")
                   .map((n) => n[0])
                   .join("")
                   .toUpperCase() || "G"}
@@ -160,50 +168,35 @@ export default function ProfilePage() {
           </div>
           <div className="flex-1">
             <h2 className="text-lg font-bold text-heading">
-              {customer?.profile.name || "Guest User"}
+              {user?.fullName || "Guest User"}
             </h2>
             <p className="text-xs text-muted-foreground">
-              {customer?.profile.phone || "Not logged in"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {customer?.profile.city || ""}
+              {user?.phoneNumber || "Not logged in"}
             </p>
           </div>
         </div>
 
         {/* Stats Row */}
-        {customer && (
+        {user && (
           <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border">
             <div className="flex-1 text-center">
-              <p className="text-lg font-bold text-heading">
-                {customer.profile.totalBookings}
+              <div className="flex items-center justify-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-tertiary" />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Member since{" "}
+                {new Date(user.createdAt).toLocaleDateString("en-PK", {
+                  month: "short",
+                  year: "numeric",
+                })}
               </p>
-              <p className="text-[10px] text-muted-foreground">
-                Total Bookings
-              </p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="flex-1 text-center">
-              <p className="text-lg font-bold text-tertiary">
-                {customer.profile.rewardPoints}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Reward Points
-              </p>
-            </div>
-            <div className="w-px h-8 bg-border" />
-            <div className="flex-1 text-center">
-              <p className="text-lg font-bold text-heading">
-                {customer.activeBookings.length}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Active</p>
             </div>
           </div>
         )}
       </div>
 
       {/* Personal Info */}
-      {customer && (
+      {user && (
         <div className="bg-white mt-3 p-4 border-y border-border">
           <h3 className="text-sm font-semibold text-heading mb-3">
             Personal Information
@@ -213,50 +206,25 @@ export default function ProfilePage() {
               <User className="w-4 h-4 text-tertiary" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Full Name</p>
-                <p className="text-sm text-heading">{customer.profile.name}</p>
+                <p className="text-sm text-heading">{user.fullName}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Phone className="w-4 h-4 text-tertiary" />
               <div>
                 <p className="text-[10px] text-muted-foreground">Phone</p>
-                <p className="text-sm text-heading">
-                  {customer.profile.phone}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Mail className="w-4 h-4 text-tertiary" />
-              <div>
-                <p className="text-[10px] text-muted-foreground">Email</p>
-                <p className="text-sm text-heading">
-                  {customer.profile.email}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-tertiary" />
-              <div>
-                <p className="text-[10px] text-muted-foreground">Address</p>
-                <p className="text-sm text-heading">
-                  {customer.profile.address}
-                </p>
+                <p className="text-sm text-heading">{user.phoneNumber}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Calendar className="w-4 h-4 text-tertiary" />
               <div>
-                <p className="text-[10px] text-muted-foreground">
-                  Member Since
-                </p>
+                <p className="text-[10px] text-muted-foreground">Member Since</p>
                 <p className="text-sm text-heading">
-                  {new Date(customer.profile.joinedDate).toLocaleDateString(
-                    "en-PK",
-                    {
-                      month: "long",
-                      year: "numeric",
-                    }
-                  )}
+                  {new Date(user.createdAt).toLocaleDateString("en-PK", {
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
             </div>
@@ -266,10 +234,7 @@ export default function ProfilePage() {
 
       {/* Menu Sections */}
       {menuSections.map((section) => (
-        <div
-          key={section.title}
-          className="bg-white mt-3 border-y border-border"
-        >
+        <div key={section.title} className="bg-white mt-3 border-y border-border">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-4 pt-3 pb-1">
             {section.title}
           </p>
@@ -284,22 +249,11 @@ export default function ProfilePage() {
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors",
-                  idx < section.items.length - 1 &&
-                    "border-b border-border"
+                  idx < section.items.length - 1 && "border-b border-border"
                 )}
               >
-                <Icon
-                  className={cn(
-                    "w-5 h-5",
-                    item.color || "text-muted-foreground"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "flex-1 text-sm font-medium text-left",
-                    item.color || "text-heading"
-                  )}
-                >
+                <Icon className={cn("w-5 h-5", item.color || "text-muted-foreground")} />
+                <span className={cn("flex-1 text-sm font-medium text-left", item.color || "text-heading")}>
                   {item.label}
                 </span>
                 {item.badge && (

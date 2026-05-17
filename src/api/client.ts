@@ -1,7 +1,7 @@
 /**
  * API Client
  * Base HTTP client for all API requests
- * Handles CORS, error handling, request/response formatting
+ * Handles CORS, error handling, request/response formatting, JWT auth
  */
 
 import API_CONFIG from './config';
@@ -26,6 +26,16 @@ class ApiClient {
    */
   setBaseURL(url: string): void {
     this.baseURL = url;
+  }
+
+  /**
+   * Get JWT token from localStorage
+   */
+  private getAuthToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('authToken');
+    }
+    return null;
   }
 
   /**
@@ -56,6 +66,19 @@ class ApiClient {
   }
 
   /**
+   * Handle 401 Unauthorized — clear all auth state.
+   * Does NOT redirect — lets page-level guards (AdminShell, RoleGuard) handle navigation.
+   */
+  private handleUnauthorized(): void {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('adminSession');
+    }
+  }
+
+  /**
    * Execute HTTP request with timeout
    */
   private async withTimeout<T>(promise: Promise<T>): Promise<T> {
@@ -78,6 +101,7 @@ class ApiClient {
 
   /**
    * Internal method to make HTTP requests
+   * Automatically includes JWT Bearer token if available
    */
   private async doRequest<T>(
     endpoint: string,
@@ -89,6 +113,12 @@ class ApiClient {
       ...API_CONFIG.CORS.headers,
       ...(options.headers as Record<string, string>),
     };
+
+    // Add JWT Bearer token if available
+    const token = this.getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     // Build fetch options
     const fetchOptions: RequestInit = {
@@ -105,6 +135,12 @@ class ApiClient {
     try {
       // Make request with timeout
       const response = await this.withTimeout(fetch(url, fetchOptions));
+
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        this.handleUnauthorized();
+        throw new ApiRequestError(401, 'Session expired. Please login again.');
+      }
 
       // Handle successful response
       if (response.ok) {
@@ -198,6 +234,7 @@ class ApiClient {
   /**
    * Upload files using FormData
    * Don't set Content-Type header - browser will set it with boundary
+   * Includes JWT token for authenticated uploads
    */
   async upload<T = unknown>(
     endpoint: string,
@@ -206,7 +243,12 @@ class ApiClient {
     const url = `${this.baseURL}${endpoint}`;
 
     const headers: Record<string, string> = {};
-    // Don't set Content-Type for FormData - browser will set it automatically
+
+    // Add JWT Bearer token for authenticated uploads
+    const token = this.getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     try {
       const response = await this.withTimeout(
@@ -217,6 +259,12 @@ class ApiClient {
           credentials: 'include',
         })
       );
+
+      // Handle 401
+      if (response.status === 401) {
+        this.handleUnauthorized();
+        throw new ApiRequestError(401, 'Session expired. Please login again.');
+      }
 
       if (response.ok) {
         return (await this.safeJson(response)) as T;

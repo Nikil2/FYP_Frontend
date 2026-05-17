@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -16,180 +16,298 @@ import {
   AlertCircle,
   FileText,
   Ban,
+  Send,
+  Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  getCurrentCustomer,
-  type CustomerBooking,
-} from "@/app/dummy/dummy-customers";
+import { getBookingById, cancelBooking, type Booking } from "@/api/services/bookings";
+import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
+import { submitFeedback } from "@/api/services/feedback";
+import { fileComplaint } from "@/api/services/complaints";
+import { getAuthUser } from "@/lib/auth";
+import { socketClient } from "@/lib/socket";
 
-function getStatusConfig(status: CustomerBooking["status"]) {
+type BookingStatus = Booking["status"];
+
+function getStatusConfig(status: BookingStatus) {
   switch (status) {
-    case "pending":
-      return {
-        label: "Pending Confirmation",
-        color: "text-amber-700",
-        bg: "bg-amber-50",
-        border: "border-amber-200",
-        icon: AlertCircle,
-        description: "Waiting for worker to confirm your booking",
-      };
-    case "confirmed":
-      return {
-        label: "Confirmed",
-        color: "text-blue-700",
-        bg: "bg-blue-50",
-        border: "border-blue-200",
-        icon: CheckCircle2,
-        description: "Worker has accepted. They will arrive at scheduled time",
-      };
-    case "in-progress":
-      return {
-        label: "In Progress",
-        color: "text-tertiary",
-        bg: "bg-tertiary/5",
-        border: "border-tertiary/20",
-        icon: Clock,
-        description: "Worker is currently working on your service",
-      };
-    case "completed":
-      return {
-        label: "Completed",
-        color: "text-green-700",
-        bg: "bg-green-50",
-        border: "border-green-200",
-        icon: CheckCircle2,
-        description: "This service has been completed",
-      };
-    case "cancelled":
-      return {
-        label: "Cancelled",
-        color: "text-red-600",
-        bg: "bg-red-50",
-        border: "border-red-200",
-        icon: XCircle,
-        description: "This booking was cancelled",
-      };
+    case "PENDING":
+      return { label: "Pending Confirmation", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", icon: AlertCircle, description: "Waiting for worker to confirm your booking" };
+    case "NEGOTIATION":
+      return { label: "Price Negotiation", color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200", icon: Clock, description: "Negotiating price with the worker" };
+    case "ACCEPTED":
+      return { label: "Accepted", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: CheckCircle2, description: "Worker has accepted. They will arrive at scheduled time" };
+    case "IN_PROGRESS":
+      return { label: "In Progress", color: "text-tertiary", bg: "bg-tertiary/5", border: "border-tertiary/20", icon: Clock, description: "Worker is currently working on your service" };
+    case "COMPLETED":
+      return { label: "Completed", color: "text-green-700", bg: "bg-green-50", border: "border-green-200", icon: CheckCircle2, description: "This service has been completed" };
+    case "CANCELLED":
+      return { label: "Cancelled", color: "text-red-600", bg: "bg-red-50", border: "border-red-200", icon: XCircle, description: "This booking was cancelled" };
+    case "DISPUTED":
+      return { label: "Disputed", color: "text-orange-700", bg: "bg-orange-50", border: "border-orange-200", icon: AlertTriangle, description: "A complaint has been filed for this booking" };
     default:
-      return {
-        label: status,
-        color: "text-gray-700",
-        bg: "bg-gray-50",
-        border: "border-gray-200",
-        icon: AlertCircle,
-        description: "",
-      };
+      return { label: status, color: "text-gray-700", bg: "bg-gray-50", border: "border-gray-200", icon: AlertCircle, description: "" };
   }
 }
 
-// Status timeline steps
-function StatusTimeline({ status }: { status: CustomerBooking["status"] }) {
+function StatusTimeline({ status }: { status: BookingStatus }) {
   const steps = [
-    { key: "pending", label: "Booking Placed" },
-    { key: "confirmed", label: "Worker Confirmed" },
-    { key: "in-progress", label: "Work Started" },
-    { key: "completed", label: "Completed" },
+    { key: "PENDING", label: "Booking Placed" },
+    { key: "ACCEPTED", label: "Worker Confirmed" },
+    { key: "IN_PROGRESS", label: "Work Started" },
+    { key: "COMPLETED", label: "Completed" },
   ];
-
-  const statusOrder = ["pending", "confirmed", "in-progress", "completed"];
+  const statusOrder = ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS", "COMPLETED"];
   const currentIndex = statusOrder.indexOf(status);
-  const isCancelled = status === "cancelled";
+  const isCancelled = status === "CANCELLED";
+  const isDisputed = status === "DISPUTED";
 
   return (
     <div className="space-y-0">
       {steps.map((step, index) => {
-        const isCompleted = !isCancelled && index <= currentIndex;
-        const isCurrent = !isCancelled && index === currentIndex;
-
+        const isCompleted = !isCancelled && !isDisputed && index <= currentIndex;
+        const isCurrent = !isCancelled && !isDisputed && statusOrder[currentIndex] === step.key;
         return (
           <div key={step.key} className="flex items-start gap-3">
-            {/* Dot + Line */}
             <div className="flex flex-col items-center">
-              <div
-                className={cn(
-                  "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                  isCompleted
-                    ? "bg-tertiary border-tertiary"
-                    : isCancelled && index === 0
-                    ? "bg-red-500 border-red-500"
-                    : "bg-white border-gray-300"
-                )}
-              >
-                {isCompleted && (
-                  <CheckCircle2 className="w-3 h-3 text-white" />
-                )}
+              <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", isCompleted ? "bg-tertiary border-tertiary" : "bg-white border-gray-300")}>
+                {isCompleted && <CheckCircle2 className="w-3 h-3 text-white" />}
               </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "w-0.5 h-8",
-                    isCompleted && index < currentIndex
-                      ? "bg-tertiary"
-                      : "bg-gray-200"
-                  )}
-                />
-              )}
+              {index < steps.length - 1 && <div className={cn("w-0.5 h-8", isCompleted && index < currentIndex ? "bg-tertiary" : "bg-gray-200")} />}
             </div>
-            {/* Label */}
             <div className="pb-6">
-              <p
-                className={cn(
-                  "text-xs font-medium",
-                  isCurrent
-                    ? "text-tertiary"
-                    : isCompleted
-                    ? "text-heading"
-                    : "text-muted-foreground"
-                )}
-              >
+              <p className={cn("text-xs font-medium", isCurrent ? "text-tertiary" : isCompleted ? "text-heading" : "text-muted-foreground")}>
                 {step.label}
-                {isCurrent && (
-                  <span className="ml-2 text-[10px] bg-tertiary/10 text-tertiary px-1.5 py-0.5 rounded-full">
-                    Current
-                  </span>
-                )}
+                {isCurrent && <span className="ml-2 text-[10px] bg-tertiary/10 text-tertiary px-1.5 py-0.5 rounded-full">Current</span>}
               </p>
             </div>
           </div>
         );
       })}
-
-      {isCancelled && (
+      {(isCancelled || isDisputed) && (
         <div className="flex items-start gap-3">
           <div className="flex flex-col items-center">
-            <div className="w-4 h-4 rounded-full bg-red-500 border-2 border-red-500 flex items-center justify-center">
-              <XCircle className="w-3 h-3 text-white" />
+            <div className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center", isCancelled ? "bg-red-500 border-red-500" : "bg-orange-500 border-orange-500")}>
+              {isCancelled ? <XCircle className="w-3 h-3 text-white" /> : <AlertTriangle className="w-3 h-3 text-white" />}
             </div>
           </div>
-          <p className="text-xs font-medium text-red-600">Cancelled</p>
+          <p className={cn("text-xs font-medium", isCancelled ? "text-red-600" : "text-orange-600")}>{isCancelled ? "Cancelled" : "Disputed"}</p>
         </div>
       )}
     </div>
   );
 }
 
-export default function OrderDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const router = useRouter();
-  const [booking, setBooking] = useState<CustomerBooking | null>(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
+// ==================== CHAT SECTION ====================
+function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    const customer = getCurrentCustomer();
-    if (customer) {
-      const allBookings = [
-        ...customer.activeBookings,
-        ...customer.pastBookings,
-      ];
-      const found = allBookings.find((b) => b.id === id);
-      if (found) setBooking(found);
-    }
+    const loadMessages = async () => {
+      try {
+        const result = await getBookingMessages(bookingId);
+        const messageList = Array.isArray(result) ? result : (result.data || []);
+        setMessages(messageList);
+      } catch { /* skip */ }
+    };
+    loadMessages();
+
+    // Join booking room for real-time
+    socketClient.joinBooking(bookingId);
+
+    // Listen for new messages via Socket.IO
+    const unsubscribe = socketClient.onNewMessage((message: ChatMessage) => {
+      if (message.bookingId === bookingId) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+    });
+
+    return () => {
+      socketClient.leaveBooking(bookingId);
+      unsubscribe();
+    };
+  }, [bookingId]);
+
+  useEffect(scrollToBottom, [messages]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending) return;
+    setSending(true);
+    try {
+      await sendMessage({ bookingId, content: newMessage.trim() });
+      setNewMessage("");
+    } catch { /* skip */ }
+    setSending(false);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className="px-4 py-3 border-b border-border">
+        <h3 className="text-sm font-semibold text-heading flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-tertiary" /> Chat
+        </h3>
+      </div>
+      <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
+        {messages.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-8">No messages yet. Start a conversation!</p>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.senderId === currentUserId;
+            return (
+              <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
+                <div className={cn("max-w-[75%] rounded-2xl px-3 py-2", isMe ? "bg-tertiary text-white rounded-br-sm" : "bg-white border border-border rounded-bl-sm")}>
+                  {!isMe && <p className="text-[10px] font-medium text-tertiary mb-0.5">{msg.sender?.fullName}</p>}
+                  <p className={cn("text-xs", isMe ? "text-white" : "text-heading")}>{msg.content}</p>
+                  <p className={cn("text-[9px] mt-1", isMe ? "text-white/60" : "text-muted-foreground")}>
+                    {new Date(msg.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="p-3 border-t border-border flex gap-2">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type a message..."
+          className="flex-1 text-sm bg-gray-50 border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!newMessage.trim() || sending}
+          className="w-9 h-9 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-50 hover:bg-tertiary-hover transition-colors"
+        >
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== REVIEW FORM ====================
+function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted: () => void }) {
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (rating === 0 || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitFeedback({ bookingId, rating, comment: comment || undefined });
+      onSubmitted();
+    } catch { /* skip */ }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-border p-4">
+      <h3 className="text-sm font-semibold text-heading mb-3">Leave a Review</h3>
+      <div className="flex items-center gap-1 mb-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <button key={i} onMouseEnter={() => setHoverRating(i + 1)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRating(i + 1)}>
+            <Star className={cn("w-7 h-7 transition-colors", i < (hoverRating || rating) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
+          </button>
+        ))}
+        <span className="text-xs text-muted-foreground ml-2">{rating > 0 ? `${rating}/5` : "Select rating"}</span>
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Write your review (optional)..."
+        className="w-full text-sm bg-gray-50 border border-border rounded-lg px-3 py-2 h-20 resize-none focus:outline-none focus:ring-2 focus:ring-tertiary/30 mb-3"
+      />
+      <Button variant="tertiary" size="sm" className="w-full" onClick={handleSubmit} disabled={rating === 0 || submitting}>
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Review"}
+      </Button>
+    </div>
+  );
+}
+
+// ==================== MAIN PAGE ====================
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [complaintDesc, setComplaintDesc] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [filingComplaint, setFilingComplaint] = useState(false);
+  const currentUser = getAuthUser();
+
+  const fetchBooking = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getBookingById(id);
+      setBooking(data);
+    } catch { /* skip */ }
+    setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    fetchBooking();
+  }, [fetchBooking]);
+
+  // Listen for real-time booking status updates
+  useEffect(() => {
+    const unsub = socketClient.onBookingStatusUpdate((data) => {
+      if (data.bookingId === id) {
+        fetchBooking();
+      }
+    });
+    return unsub;
+  }, [id, fetchBooking]);
+
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelBooking(id);
+      await fetchBooking();
+      setShowCancelModal(false);
+    } catch { /* skip */ }
+    setCancelling(false);
+  };
+
+  const handleFileComplaint = async () => {
+    if (!complaintDesc.trim() || filingComplaint) return;
+    setFilingComplaint(true);
+    try {
+      await fileComplaint({ bookingId: id, description: complaintDesc.trim() });
+      setShowComplaintModal(false);
+      setComplaintDesc("");
+      await fetchBooking();
+    } catch { /* skip */ }
+    setFilingComplaint(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
+      </div>
+    );
+  }
 
   if (!booking) {
     return (
@@ -197,10 +315,7 @@ export default function OrderDetailPage({
         <div className="text-center">
           <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Booking not found</p>
-          <button
-            onClick={() => router.push("/customer/orders")}
-            className="mt-3 text-sm text-tertiary font-medium"
-          >
+          <button onClick={() => router.push("/customer/orders")} className="mt-3 text-sm text-tertiary font-medium">
             Back to Orders
           </button>
         </div>
@@ -210,83 +325,54 @@ export default function OrderDetailPage({
 
   const statusConfig = getStatusConfig(booking.status);
   const StatusIcon = statusConfig.icon;
-  const isActive = ["pending", "confirmed", "in-progress"].includes(
-    booking.status
-  );
+  const isActive = ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS"].includes(booking.status);
+  const canReview = booking.status === "COMPLETED" && !booking.feedback;
+  const canComplaint = ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(booking.status);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
-        <button
-          onClick={() => router.push("/customer/orders")}
-          className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors md:hidden"
-        >
+        <button onClick={() => router.push("/customer/orders")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors md:hidden">
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
         <div>
-          <h1 className="text-base font-semibold text-heading">
-            Order Details
-          </h1>
-          <p className="text-[10px] text-muted-foreground">{booking.id}</p>
+          <h1 className="text-base font-semibold text-heading">Order Details</h1>
+          <p className="text-[10px] text-muted-foreground">{booking.id.slice(0, 8)}...</p>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         {/* Status Banner */}
-        <div
-          className={cn(
-            "rounded-xl p-4 border",
-            statusConfig.bg,
-            statusConfig.border
-          )}
-        >
+        <div className={cn("rounded-xl p-4 border", statusConfig.bg, statusConfig.border)}>
           <div className="flex items-center gap-3">
             <StatusIcon className={cn("w-8 h-8", statusConfig.color)} />
             <div>
-              <h2
-                className={cn("text-sm font-bold", statusConfig.color)}
-              >
-                {statusConfig.label}
-              </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {statusConfig.description}
-              </p>
+              <h2 className={cn("text-sm font-bold", statusConfig.color)}>{statusConfig.label}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{statusConfig.description}</p>
             </div>
           </div>
         </div>
 
         {/* Status Timeline */}
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="text-sm font-semibold text-heading mb-4">
-            Order Timeline
-          </h3>
+          <h3 className="text-sm font-semibold text-heading mb-4">Order Timeline</h3>
           <StatusTimeline status={booking.status} />
         </div>
 
         {/* Service Details */}
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="text-sm font-semibold text-heading mb-3">
-            Service Details
-          </h3>
+          <h3 className="text-sm font-semibold text-heading mb-3">Service Details</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Service</span>
-              <span className="text-sm font-medium text-heading">
-                {booking.serviceName}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Category</span>
-              <span className="text-xs text-muted-foreground">
-                {booking.categoryName}
-              </span>
+              <span className="text-sm font-medium text-heading">{booking.service?.name || "Service"}</span>
             </div>
             <div className="border-t border-border" />
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Price</span>
               <span className="text-base font-bold text-heading">
-                Rs. {booking.price.toLocaleString()}
+                {booking.finalPrice ? `Rs. ${Number(booking.finalPrice).toLocaleString()}` : "Price TBD"}
               </span>
             </div>
           </div>
@@ -294,30 +380,14 @@ export default function OrderDetailPage({
 
         {/* Schedule & Location */}
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="text-sm font-semibold text-heading mb-3">
-            Schedule & Location
-          </h3>
+          <h3 className="text-sm font-semibold text-heading mb-3">Schedule & Location</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Calendar className="w-4 h-4 text-tertiary flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Date</p>
                 <p className="text-sm font-medium text-heading">
-                  {new Date(booking.scheduledDate).toLocaleDateString("en-PK", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Clock className="w-4 h-4 text-tertiary flex-shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Time</p>
-                <p className="text-sm font-medium text-heading">
-                  {booking.scheduledTime}
+                  {new Date(booking.scheduledAt || booking.createdAt).toLocaleDateString("en-PK", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
             </div>
@@ -325,9 +395,7 @@ export default function OrderDetailPage({
               <MapPin className="w-4 h-4 text-tertiary flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Location</p>
-                <p className="text-sm font-medium text-heading">
-                  {booking.location}
-                </p>
+                <p className="text-sm font-medium text-heading">{booking.jobAddress}</p>
               </div>
             </div>
           </div>
@@ -335,112 +403,70 @@ export default function OrderDetailPage({
 
         {/* Description */}
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="text-sm font-semibold text-heading mb-2">
-            Work Description
-          </h3>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {booking.description}
-          </p>
+          <h3 className="text-sm font-semibold text-heading mb-2">Work Description</h3>
+          <p className="text-xs text-muted-foreground leading-relaxed">{booking.description}</p>
         </div>
 
         {/* Worker Info */}
         <div className="bg-white rounded-xl border border-border p-4">
-          <h3 className="text-sm font-semibold text-heading mb-3">
-            Assigned Worker
-          </h3>
+          <h3 className="text-sm font-semibold text-heading mb-3">Assigned Worker</h3>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-tertiary/20 flex items-center justify-center">
-              <User className="w-6 h-6 text-tertiary" />
+            <div className="w-12 h-12 rounded-full bg-tertiary/20 flex items-center justify-center overflow-hidden">
+              {booking.worker?.user?.profilePicUrl ? (
+                <img src={booking.worker.user.profilePicUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-6 h-6 text-tertiary" />
+              )}
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-heading">
-                {booking.workerName}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {booking.workerCategory}
-              </p>
+              <p className="text-sm font-semibold text-heading">{booking.worker?.user?.fullName || "Worker"}</p>
               <div className="flex items-center gap-1 mt-0.5">
                 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                <span className="text-xs text-muted-foreground">
-                  {booking.workerRating} rating
-                </span>
+                <span className="text-xs text-muted-foreground">{booking.worker?.averageRating?.toFixed(1) || "N/A"} rating</span>
               </div>
             </div>
           </div>
-
-          {/* Action Buttons */}
           {isActive && (
             <div className="flex gap-2 mt-4">
-              <a
-                href={`tel:${booking.workerPhone}`}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary/10 text-tertiary rounded-lg text-xs font-medium"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                Call
+              <a href={`tel:${booking.worker?.user?.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary/10 text-tertiary rounded-lg text-xs font-medium">
+                <Phone className="w-3.5 h-3.5" /> Call
               </a>
-              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-medium">
-                <MessageCircle className="w-3.5 h-3.5" />
-                Message
-              </button>
             </div>
           )}
         </div>
 
-        {/* Cancel Reason (if cancelled) */}
-        {booking.status === "cancelled" && booking.cancelReason && (
-          <div className="bg-red-50 rounded-xl border border-red-200 p-4">
-            <h3 className="text-sm font-semibold text-red-700 mb-1">
-              Cancellation Reason
-            </h3>
-            <p className="text-xs text-red-600">{booking.cancelReason}</p>
-          </div>
-        )}
+        {/* Chat Section */}
+        {isActive && currentUser && <ChatSection bookingId={booking.id} currentUserId={currentUser.id} />}
 
-        {/* Review (if completed and rated) */}
-        {booking.status === "completed" && booking.rating && (
+        {/* Review Section */}
+        {canReview && <ReviewForm bookingId={booking.id} onSubmitted={fetchBooking} />}
+
+        {/* Existing Review */}
+        {booking.feedback && (
           <div className="bg-white rounded-xl border border-border p-4">
-            <h3 className="text-sm font-semibold text-heading mb-2">
-              Your Review
-            </h3>
+            <h3 className="text-sm font-semibold text-heading mb-2">Your Review</h3>
             <div className="flex items-center gap-1 mb-2">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star
-                  key={i}
-                  className={cn(
-                    "w-4 h-4",
-                    i < booking.rating!
-                      ? "text-amber-400 fill-amber-400"
-                      : "text-gray-200"
-                  )}
-                />
+                <Star key={i} className={cn("w-4 h-4", i < (booking.feedback?.rating || 0) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
               ))}
             </div>
-            {booking.review && (
-              <p className="text-xs text-muted-foreground">
-                {booking.review}
-              </p>
-            )}
+            {booking.feedback.comment && <p className="text-xs text-muted-foreground">{booking.feedback.comment}</p>}
           </div>
         )}
       </div>
 
       {/* Bottom Actions */}
       {isActive && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4">
+        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4 md:bottom-0">
           <div className="max-w-lg mx-auto flex gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-              onClick={() => setShowCancelModal(true)}
-            >
-              <Ban className="w-4 h-4" />
-              Cancel Booking
+            <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancelModal(true)}>
+              <Ban className="w-4 h-4" /> Cancel Booking
             </Button>
-            <Button variant="tertiary" size="sm" className="flex-1">
-              <MessageCircle className="w-4 h-4" />
-              Chat with Worker
-            </Button>
+            {canComplaint && (
+              <Button variant="outline" size="sm" className="flex-1 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => setShowComplaintModal(true)}>
+                <AlertTriangle className="w-4 h-4" /> File Complaint
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -449,30 +475,34 @@ export default function OrderDetailPage({
       {showCancelModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
           <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 animate-slide-in-right">
-            <h3 className="text-lg font-bold text-heading mb-2">
-              Cancel Booking?
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Are you sure you want to cancel this booking? This action cannot
-              be undone.
-            </p>
+            <h3 className="text-lg font-bold text-heading mb-2">Cancel Booking?</h3>
+            <p className="text-sm text-muted-foreground mb-6">Are you sure you want to cancel this booking? This action cannot be undone.</p>
             <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowCancelModal(false)}
-              >
-                Keep Booking
+              <Button variant="outline" className="flex-1" onClick={() => setShowCancelModal(false)}>Keep Booking</Button>
+              <Button variant="primary" className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleCancel} disabled={cancelling}>
+                {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Cancel"}
               </Button>
-              <Button
-                variant="primary"
-                className="flex-1 bg-red-600 hover:bg-red-700"
-                onClick={() => {
-                  setShowCancelModal(false);
-                  router.push("/customer/orders");
-                }}
-              >
-                Yes, Cancel
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complaint Modal */}
+      {showComplaintModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 animate-slide-in-right">
+            <h3 className="text-lg font-bold text-heading mb-2">File a Complaint</h3>
+            <p className="text-sm text-muted-foreground mb-4">Describe the issue with this booking.</p>
+            <textarea
+              value={complaintDesc}
+              onChange={(e) => setComplaintDesc(e.target.value)}
+              placeholder="Describe the problem..."
+              className="w-full text-sm bg-gray-50 border border-border rounded-lg px-3 py-2 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-tertiary/30 mb-4"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowComplaintModal(false)}>Cancel</Button>
+              <Button variant="primary" className="flex-1 bg-orange-600 hover:bg-orange-700" onClick={handleFileComplaint} disabled={!complaintDesc.trim() || filingComplaint}>
+                {filingComplaint ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Complaint"}
               </Button>
             </div>
           </div>
