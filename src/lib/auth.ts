@@ -1,6 +1,7 @@
 import { AuthResponse, LoginFormData, CustomerSignupFormData, WorkerSignupFormData, User } from "@/interfaces/auth-interfaces";
 import { findWorkerByCredentials, setCurrentWorkerId, clearCurrentWorkerId } from "@/app/dummy/dummy-workers";
 import { findCustomerByCredentials, setCurrentCustomerId, clearCurrentCustomerId } from "@/app/dummy/dummy-customers";
+import { socketClient } from "@/lib/socket";
 
 // ============================================
 // API BASE URL
@@ -257,6 +258,9 @@ export const login = async (data: LoginFormData): Promise<AuthResponse> => {
         setUserRole(user.role);
         setAuthUser(user);
 
+        // Connect Socket.IO for real-time messaging & notifications
+        socketClient.connect();
+
         // Persist current dummy IDs when matching demo credentials,
         // so dashboards retain profile data across navigation/refresh.
         if (user.role === "WORKER") {
@@ -426,6 +430,9 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
 };
 
 export const logout = () => {
+  // Disconnect Socket.IO
+  socketClient.disconnect();
+
   removeAuthToken();
   clearUserRole();
   clearAuthUser();
