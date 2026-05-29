@@ -1,25 +1,29 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ChevronLeft, Search } from "lucide-react";
-import {
-  getCategoryById,
-  getSubCategoriesByCategoryId,
-  getPopularServicesByCategory,
-} from "@/lib/customer-data";
 import { CitySelector } from "@/components/customer/city-selector";
 import { ServiceCard } from "@/components/customer/service-card";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import * as Icons from "lucide-react";
+import { getActiveServices } from "@/api/services/services";
+import { Service } from "@/api/types";
 
 // Map category IDs to icons for the banner
 const CATEGORY_ICONS: Record<string, keyof typeof Icons> = {
-  "home-maintenance": "Wrench",
+  "electrician": "Zap",
+  "plumber": "Droplet",
+  "carpenter": "Hammer",
+  "painter": "Palette",
+  "ac_technician": "Snowflake",
+  "mason": "Grid",
+  "mechanic": "Settings",
+  "home_cleaner": "Sparkles",
   "tailoring": "Scissors",
-  "car-care": "Car",
-  "home-construction": "HardHat",
+  "car_care": "Car",
+  "home_construction": "HardHat",
+  "pest_control": "Bug",
 };
 
 interface CategoryPageProps {
@@ -30,38 +34,41 @@ export default function CategoryPage({ categoryId }: CategoryPageProps) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState("karachi");
-  const [activeTab, setActiveTab] = useState<"popular" | "all">("popular");
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const category = getCategoryById(categoryId);
-  const subCategories = getSubCategoriesByCategoryId(categoryId);
-  const popularServices = getPopularServicesByCategory(categoryId);
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const allServices = await getActiveServices();
+        const filtered = allServices.filter(s => s.categoryId === categoryId);
+        setServices(filtered);
+      } catch (error) {
+        console.error("Failed to load category services:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, [categoryId]);
 
-  const filteredSubCategories = useMemo(() => {
-    if (!searchQuery.trim()) return subCategories;
+  const categoryName = useMemo(() => {
+    if (services.length > 0) {
+      return services[0].categoryName;
+    }
+    // Fallback formatting
+    return categoryId
+      .replace(/[-_]/g, " ")
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }, [services, categoryId]);
+
+  const filteredServices = useMemo(() => {
+    if (!searchQuery.trim()) return services;
     const q = searchQuery.toLowerCase();
-    return subCategories.filter(
-      (sub) =>
-        sub.name.toLowerCase().includes(q) || sub.nameUrdu.includes(q)
-    );
-  }, [subCategories, searchQuery]);
+    return services.filter((s) => s.name.toLowerCase().includes(q));
+  }, [services, searchQuery]);
 
-  const filteredPopularServices = useMemo(() => {
-    if (!searchQuery.trim()) return popularServices;
-    const q = searchQuery.toLowerCase();
-    return popularServices.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.nameUrdu.includes(q)
-    );
-  }, [popularServices, searchQuery]);
-
-  if (!category) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-muted-foreground">Category not found</p>
-      </div>
-    );
-  }
-
-  const iconName = CATEGORY_ICONS[categoryId] || "Grid3X3";
+  const iconName = CATEGORY_ICONS[categoryId] || "Wrench";
   const Icon = Icons[iconName] as React.ComponentType<{
     className?: string;
   }>;
@@ -73,12 +80,12 @@ export default function CategoryPage({ categoryId }: CategoryPageProps) {
         <div className="px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="md:hidden w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
           >
             <ChevronLeft className="w-5 h-5 text-heading" />
           </button>
           <h1 className="text-base font-semibold text-heading flex-1 truncate">
-            {category.name}
+            {categoryName}
           </h1>
         </div>
 
@@ -87,7 +94,7 @@ export default function CategoryPage({ categoryId }: CategoryPageProps) {
           <div className="relative">
             <input
               type="text"
-              placeholder="Search"
+              placeholder={`Search ${categoryName.toLowerCase()} services`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-border rounded-lg px-4 py-2.5 pr-10 text-sm text-heading placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-tertiary/40"
@@ -103,7 +110,7 @@ export default function CategoryPage({ categoryId }: CategoryPageProps) {
           <div className="text-center">
             {Icon && <Icon className="w-12 h-12 text-tertiary mx-auto mb-2" />}
             <h2 className="text-xl font-bold text-heading">
-              {category.name.split(" ")[0]} Service
+              {categoryName} Services
             </h2>
           </div>
         </div>
@@ -112,71 +119,24 @@ export default function CategoryPage({ categoryId }: CategoryPageProps) {
       {/* City Selector */}
       <CitySelector selectedCity={selectedCity} onCityChange={setSelectedCity} />
 
-      {/* Tabs */}
-      <div className="px-4 flex items-center gap-4 mb-4">
-        <button
-          onClick={() => setActiveTab("popular")}
-          className={`text-sm font-semibold pb-1 border-b-2 transition-colors ${
-            activeTab === "popular"
-              ? "text-tertiary border-tertiary"
-              : "text-muted-foreground border-transparent hover:text-heading"
-          }`}
-        >
-          Popular Services
-        </button>
-        <button
-          onClick={() => setActiveTab("all")}
-          className={`text-sm font-semibold pb-1 border-b-2 transition-colors ${
-            activeTab === "all"
-              ? "text-tertiary border-tertiary"
-              : "text-muted-foreground border-transparent hover:text-heading"
-          }`}
-        >
-          All Services
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="px-4">
-        {activeTab === "popular" ? (
-          <>
-            {filteredPopularServices.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredPopularServices.map((service) => (
-                  <ServiceCard key={service.id} service={service} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                No popular services found
-              </p>
-            )}
-          </>
+      {/* Services Grid */}
+      <div className="px-4 mt-4">
+        <h3 className="text-sm font-bold text-heading mb-4">Available Services</h3>
+        
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tertiary"></div>
+          </div>
+        ) : filteredServices.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {filteredServices.map((service) => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
         ) : (
-          <>
-            {filteredSubCategories.length > 0 ? (
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                {filteredSubCategories.map((sub) => (
-                  <Link
-                    key={sub.id}
-                    href={`/customer/services/${sub.id}`}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-white hover:border-tertiary/30 hover:shadow-sm transition-all"
-                  >
-                    <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-tertiary/10 to-tertiary/5 flex items-center justify-center">
-                      <span className="text-2xl">🔧</span>
-                    </div>
-                    <p className="text-xs font-medium text-heading text-center line-clamp-2">
-                      {sub.name}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                No services found
-              </p>
-            )}
-          </>
+          <p className="text-center text-muted-foreground py-8">
+            No services found under this category
+          </p>
         )}
       </div>
 

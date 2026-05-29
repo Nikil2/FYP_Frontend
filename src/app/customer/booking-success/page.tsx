@@ -6,25 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Suspense, useEffect, useState } from "react";
 import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
 
+import { getBookingById } from "@/api/services/bookings";
+
 function BookingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bookingId = searchParams.get("id") || "CB-XXXX";
+  const bookingId = searchParams.get("id") || "";
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Find booking in array
-    const foundBooking = MOCK_BOOKINGS.find((b) => b.id === bookingId);
-    if (!foundBooking) {
-      // Try to load from localStorage
-      const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
-      const storedBooking = stored.find((b: any) => b.id === bookingId);
-      setBooking(storedBooking || null);
-    } else {
-      setBooking(foundBooking);
+    if (!bookingId) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    const fetchBooking = async () => {
+      try {
+        const data = await getBookingById(bookingId);
+        setBooking(data);
+      } catch (error) {
+        console.error("Failed to load booking success details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooking();
   }, [bookingId]);
 
   if (loading) {
@@ -36,7 +44,21 @@ function BookingSuccessContent() {
   }
 
   const worker = booking?.worker;
-  const serviceName = booking?.serviceName || "Service";
+  const serviceName = booking?.service?.name || "Service";
+  const workerName = worker?.user?.fullName || "";
+  const workerRating = worker?.averageRating || 5.0;
+  const workerPic = worker?.user?.profilePicUrl;
+  const workerCategory = worker?.services && worker.services.length > 0 && worker.services[0].service
+    ? worker.services[0].service.name
+    : "Provider";
+
+  let dateStr = "Not scheduled";
+  if (booking?.scheduledAt) {
+    const d = new Date(booking.scheduledAt);
+    dateStr = d.toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }) + " at " + d.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const cost = booking?.finalPrice ? `Rs ${Number(booking.finalPrice).toLocaleString()}` : "Variable";
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -53,14 +75,14 @@ function BookingSuccessContent() {
         </h1>
         <p className="text-sm text-muted-foreground text-center max-w-xs mb-6">
           Your booking has been submitted successfully.
-          {worker && ` ${worker.name} will handle your service.`}
+          {workerName && ` ${workerName} will handle your service.`}
         </p>
 
         {/* Booking Details Card */}
         <div className="w-full max-w-sm bg-gray-50 rounded-xl p-4 space-y-3 border border-border">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Booking ID</span>
-            <span className="text-sm font-semibold text-heading">
+            <span className="text-xs font-semibold text-heading truncate max-w-[200px]">
               {bookingId}
             </span>
           </div>
@@ -79,56 +101,56 @@ function BookingSuccessContent() {
             </span>
           </div>
 
-          {/* Booking Details - NEW */}
+          {/* Booking Details */}
           {booking && (
             <>
               <div className="border-t border-border" />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Date & Time</span>
-                <span className="text-sm font-medium text-heading">
-                  {booking.scheduledDate} at {booking.scheduledTime}
+                <span className="text-sm font-medium text-heading text-right">
+                  {dateStr}
                 </span>
               </div>
               <div className="border-t border-border" />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Cost</span>
+                <span className="text-xs text-muted-foreground">Price Estimate</span>
                 <span className="text-sm font-semibold text-tertiary">
-                  Rs {booking.estimatedCost}
+                  {cost}
                 </span>
               </div>
             </>
           )}
         </div>
 
-        {/* Assigned Worker Card - NEW */}
+        {/* Assigned Worker Card */}
         {worker && (
           <div className="w-full max-w-sm mt-6 bg-white rounded-xl border-2 border-tertiary/30 p-4">
             <h3 className="text-sm font-semibold text-heading mb-3">
               Assigned Worker
             </h3>
             <div className="flex items-center gap-3">
-              {worker.profileImage ? (
+              {workerPic ? (
                 <img
-                  src={worker.profileImage}
-                  alt={worker.name}
+                  src={workerPic}
+                  alt={workerName}
                   className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center">
                   <span className="font-semibold text-tertiary">
-                    {worker.name.charAt(0)}
+                    {workerName.charAt(0)}
                   </span>
                 </div>
               )}
               <div className="flex-1">
-                <p className="font-semibold text-heading">{worker.name}</p>
+                <p className="font-semibold text-heading">{workerName}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                   <span className="text-xs font-semibold text-heading">
-                    {worker.rating}
+                    {workerRating}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    • {worker.category}
+                    • {workerCategory}
                   </span>
                 </div>
               </div>

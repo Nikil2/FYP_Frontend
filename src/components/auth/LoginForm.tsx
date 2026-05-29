@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { clearAuthUser, getUserRole, isAuthenticated, login, removeAuthToken, clearUserRole } from "@/lib/auth";
@@ -11,6 +11,8 @@ import { Eye, EyeOff, Phone, Lock, Loader2 } from "lucide-react";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const [formData, setFormData] = useState<LoginFormData>({
     phoneNumber: "",
     password: "",
@@ -31,14 +33,18 @@ export function LoginForm() {
     } else if (role === "ADMIN") {
       router.replace("/admin/dashboard");
     } else if (role === "CUSTOMER") {
-      router.replace("/customer");
+      if (redirect) {
+        router.replace(redirect);
+      } else {
+        router.replace("/customer");
+      }
     } else {
       // Corrupted/partial session (token exists but role missing/invalid) can cause redirect loops.
       removeAuthToken();
       clearUserRole();
       clearAuthUser();
     }
-  }, [router]);
+  }, [router, redirect]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -68,7 +74,11 @@ export function LoginForm() {
           router.replace("/admin/dashboard");
         } else {
           // Default to customer
-          router.replace("/customer");
+          if (redirect) {
+            router.replace(redirect);
+          } else {
+            router.replace("/customer");
+          }
         }
       } else {
         setError(response.message || "Login failed. Please try again.");
@@ -162,7 +172,10 @@ export function LoginForm() {
         {/* Sign Up Link */}
         <p className="text-center text-sm text-paragraph mt-4">
           Don't have an account?{" "}
-          <Link href="/" className="text-tertiary hover:underline font-medium">
+          <Link 
+            href={redirect ? `/auth/signup/customer?redirect=${encodeURIComponent(redirect)}` : "/auth/signup/customer"}
+            className="text-tertiary hover:underline font-medium"
+          >
             Sign up
           </Link>
         </p>

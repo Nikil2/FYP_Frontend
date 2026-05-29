@@ -14,9 +14,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TIME_SLOTS, REFERRAL_SOURCES } from "@/lib/customer-data";
-import { MOCK_BOOKINGS as BOOKINGS_ARRAY } from "@/lib/mock-bookings";
-import { MOCK_WORKERS } from "@/lib/mock-data";
-import type { Booking } from "@/types/booking";
+import { getWorkerDetails } from "@/api/services/workers";
+import { createBooking } from "@/api/services/bookings";
 
 interface BookingFormProps {
   serviceId: string;
@@ -27,11 +26,28 @@ interface BookingFormProps {
 export function BookingForm({ serviceId, serviceName, workerId }: BookingFormProps) {
   const router = useRouter();
   const [worker, setWorker] = useState<any>(null);
+  const [loadingWorker, setLoadingWorker] = useState(false);
 
   useEffect(() => {
     if (workerId) {
-      const foundWorker = MOCK_WORKERS.find((w) => w.id === workerId);
-      setWorker(foundWorker);
+      setLoadingWorker(true);
+      getWorkerDetails(workerId)
+        .then((w: any) => {
+          setWorker({
+            id: w.workerId || w.id,
+            name: w.fullName,
+            category: w.services && w.services.length > 0 ? w.services[0].name : "Worker",
+            rating: w.averageRating || 5.0,
+            profileImage: w.profilePicUrl,
+            visitingCharges: w.visitingCharges || 1000,
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to load worker details:", err);
+        })
+        .finally(() => {
+          setLoadingWorker(false);
+        });
     }
   }, [workerId]);
 
@@ -44,6 +60,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
   });
   const [images, setImages] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -93,51 +110,54 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const formatTimeTo24h = (timeStr: string): string => {
+    if (!timeStr) return "12:00";
+    const [time, modifier] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":");
+    if (hours === "12") {
+      hours = "00";
+    }
+    if (modifier === "PM") {
+      hours = (parseInt(hours, 10) + 12).toString();
+    }
+    return `${hours.padStart(2, "0")}:${minutes}`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validate()) return;
+    if (!validate() || !workerId) return;
 
-    // Create booking object with workerId
-    const bookingId = `BK-${Date.now()}`;
-    
-    const newBooking: any = {
-      id: bookingId,
-      customerId: "customer-1",
-      workerId: workerId || "unknown",
-      worker: worker ? {
-        id: worker.id,
-        name: worker.name,
-        category: worker.category,
-        rating: worker.rating,
-        profileImage: worker.profileImage,
-        isOnline: worker.isOnline,
-      } : null,
-      serviceId: serviceId,
-      serviceName: serviceName,
-      status: "pending",
-      scheduledDate: formData.serviceDate,
-      scheduledTime: formData.serviceTime,
-      location: {
-        address: formData.location,
-        lat: 24.8607,
-        lng: 67.0011,
-      },
-      jobDescription: formData.workDescription,
-      estimatedCost: 1500,
-      createdAt: new Date().toISOString(),
-    };
+    setSubmitting(true);
 
-    // Add to MOCK_BOOKINGS array
-    BOOKINGS_ARRAY.push(newBooking);
+    try {
+      const time24h = formatTimeTo24h(formData.serviceTime);
+      const scheduledAt = new Date(`${formData.serviceDate}T${time24h}:00`).toISOString();
+      const initialPrice = worker ? Number(worker.visitingCharges) : 1000;
 
-    // Save to localStorage
-    const existingBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]");
-    existingBookings.push(newBooking);
-    localStorage.setItem("user_bookings", JSON.stringify(existingBookings));
+      // Create booking via backend API client
+      const booking = await createBooking({
+        workerId,
+        serviceId: parseInt(serviceId),
+        description: formData.workDescription,
+        jobAddress: formData.location,
+        jobLat: 24.8607,
+        jobLng: 67.0011,
+        scheduledAt,
+        initialPrice,
+      });
 
-    // Redirect to success page
-    router.push(`/customer/booking-success?id=${bookingId}`);
+      // Redirect to success page
+      router.push(`/customer/booking-success?id=${booking.id}`);
+    } catch (err: any) {
+      console.error("Booking creation failed:", err);
+      setErrors((prev) => ({
+        ...prev,
+        submit: err.message || "Failed to create booking. Please try again.",
+      }));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -158,6 +178,11 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-5 max-w-2xl">
+        {errors.submit && (
+          <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm border border-red-100">
+            {errors.submit}
+          </div>
+        )}
         {/* Service Name (readonly) */}
         <div>
           <div className="bg-gray-100 rounded-lg px-4 py-3">
@@ -376,11 +401,18 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
             size="md"
             onClick={handleCancel}
             className="w-full"
+            disabled={submitting}
           >
             Cancel
           </Button>
-          <Button type="submit" variant="tertiary" size="md" className="w-full">
-            Submit
+          <Button 
+            type="submit" 
+            variant="tertiary" 
+            size="md" 
+            className="w-full"
+            disabled={submitting}
+          >
+            {submitting ? "Submitting..." : "Submit"}
           </Button>
         </div>
       </form>

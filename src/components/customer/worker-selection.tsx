@@ -82,7 +82,18 @@ export function WorkerSelection({
                 )}
 
                 <div className="flex-1">
-                  <h3 className="font-semibold text-heading">{worker.name}</h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-heading">{worker.name}</h3>
+                    {worker.isVerified ? (
+                      <span className="inline-flex items-center bg-green-50 text-green-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-green-200">
+                        ✓ Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-200">
+                        Pending
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{worker.category}</p>
 
                   {/* Rating */}

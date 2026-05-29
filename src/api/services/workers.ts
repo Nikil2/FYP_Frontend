@@ -117,12 +117,16 @@ export async function registerWorker(
  */
 export async function getAllWorkers(
   skip: number = 0,
-  take: number = 10
+  take: number = 10,
+  serviceId?: number,
+  categoryId?: string
 ): Promise<Worker[]> {
   try {
-    const response = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(
-      `${API_CONFIG.ENDPOINTS.WORKERS_GET_ALL}?skip=${skip}&take=${take}`
-    );
+    let url = `${API_CONFIG.ENDPOINTS.WORKERS_GET_ALL}?skip=${skip}&take=${take}`;
+    if (serviceId) url += `&serviceId=${serviceId}`;
+    if (categoryId) url += `&categoryId=${categoryId}`;
+
+    const response = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(url);
 
     return extractPayload(response) || [];
   } catch (error) {
@@ -139,12 +143,16 @@ export async function getAllWorkers(
  */
 export async function getVerifiedWorkers(
   skip: number = 0,
-  take: number = 10
+  take: number = 10,
+  serviceId?: number,
+  categoryId?: string
 ): Promise<Worker[]> {
   try {
-    const response = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(
-      `${API_CONFIG.ENDPOINTS.WORKERS_GET_VERIFIED}?skip=${skip}&take=${take}`
-    );
+    let url = `${API_CONFIG.ENDPOINTS.WORKERS_GET_VERIFIED}?skip=${skip}&take=${take}`;
+    if (serviceId) url += `&serviceId=${serviceId}`;
+    if (categoryId) url += `&categoryId=${categoryId}`;
+
+    const response = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(url);
 
     return extractPayload(response) || [];
   } catch (error) {
