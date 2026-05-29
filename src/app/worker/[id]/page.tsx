@@ -10,7 +10,7 @@ import { ReviewsSection } from "@/components/worker-detail/reviews-section";
 import { BookingPanel } from "@/components/worker-detail/booking-panel";
 import { ChatModal } from "@/components/modals/chat-modal";
 
-import { getWorkerById } from "@/lib/mock-data";
+import { getWorkerDetails } from "@/api/services/workers";
 
 import type { WorkerDetail } from "@/types/worker";
 
@@ -23,11 +23,47 @@ export default function WorkerDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get worker data from centralized mock data
-    const workerId = params.id as string;
-    const workerData = getWorkerById(workerId);
-    setWorker(workerData);
-    setIsLoading(false);
+    const fetchWorker = async () => {
+      try {
+        setIsLoading(true);
+        const workerId = params.id as string;
+        const data = await getWorkerDetails(workerId) as any;
+        const mapped: WorkerDetail = {
+          id: data.workerId || data.id,
+          name: data.fullName,
+          category: data.services && data.services.length > 0 ? data.services[0].name : "Service Worker",
+          rating: data.averageRating || 5.0,
+          reviewCount: data.totalJobsCompleted || 0,
+          distance: 1.5,
+          visitingFee: data.visitingCharges || 1000,
+          isOnline: data.isOnline,
+          isVerified: data.verificationStatus === "APPROVED",
+          bio: data.bio || "Available for booking",
+          experienceYears: data.experienceYears || 1,
+          specializations: data.services ? data.services.map((s: any) => s.name) : [],
+          services: data.services ? data.services.map((s: any) => ({
+            id: s.id.toString(),
+            name: s.name,
+            price: data.visitingCharges || 1000
+          })) : [],
+          reviews: [],
+          profileImage: data.profilePicUrl,
+          location: {
+            lat: data.homeLat || 24.8607,
+            lng: data.homeLng || 67.0011,
+          }
+        };
+        setWorker(mapped);
+      } catch (error) {
+        console.error("Failed to load worker details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchWorker();
+    }
   }, [params.id]);
 
   // Handle loading state

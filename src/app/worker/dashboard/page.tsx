@@ -226,6 +226,12 @@ export default function WorkerDashboardPage() {
           order={selectedOrder}
           isOpen={!!selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onOrderUpdate={async () => {
+            if (workerId) {
+              const orders = await getWorkerDashboardOrders(workerId, "active");
+              setActiveOrders(orders);
+            }
+          }}
         />
       )}
     </div>

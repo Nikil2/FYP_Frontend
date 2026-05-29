@@ -237,6 +237,22 @@ export default function OrdersPage() {
           order={selectedOrder}
           isOpen={!!selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onOrderUpdate={async () => {
+            const userId = resolveWorkerUserId();
+            if (userId) {
+              try {
+                const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
+                const [active, past] = await Promise.all([
+                  getWorkerDashboardOrders(profile.workerId, "active"),
+                  getWorkerDashboardOrders(profile.workerId, "past"),
+                ]);
+                setActiveOrders(active as ProviderOrder[]);
+                setPastOrders(past as ProviderOrder[]);
+              } catch (err) {
+                console.error("Failed to refresh orders list:", err);
+              }
+            }
+          }}
         />
       )}
     </div>

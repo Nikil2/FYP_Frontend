@@ -6,8 +6,35 @@ import { useLanguage } from "@/lib/language-context";
 import { getCachedWorkerDashboardProfile } from "@/api/services/worker-dashboard";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { getNotifications, type ProviderNotification } from "@/lib/mock-notifications";
+import {
+  getNotifications as fetchRestNotifications,
+  markAsRead as apiMarkAsRead,
+  markAllAsRead as apiMarkAllAsRead
+} from "@/api/services/notifications";
+import { socketClient } from "@/lib/socket";
 import { logout } from "@/lib/auth";
+
+interface ProviderNotification {
+  id: string;
+  type: "new-job" | "job-accepted" | "job-cancelled" | "payment" | "review" | "message" | "system";
+  title: string;
+  body: string;
+  titleUrdu: string;
+  bodyUrdu: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+function getNotificationType(title: string, body: string): "new-job" | "job-accepted" | "job-cancelled" | "payment" | "review" | "message" | "system" {
+  const t = (title || "").toLowerCase() + " " + (body || "").toLowerCase();
+  if (t.includes("message") || t.includes("chat") || t.includes("پیغام")) return "message";
+  if (t.includes("cancel") || t.includes("منسوخ")) return "job-cancelled";
+  if (t.includes("accept") || t.includes("منظور")) return "job-accepted";
+  if (t.includes("payment") || t.includes("ادائیگی") || t.includes("earning")) return "payment";
+  if (t.includes("review") || t.includes("درجہ بندی")) return "review";
+  if (t.includes("job") || t.includes("booking") || t.includes("آرڈر") || t.includes("کام")) return "new-job";
+  return "system";
+}
 import {
   Menu,
   Bell,
@@ -42,7 +69,44 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setNotifications(getNotifications());
+    const loadNotifications = async () => {
+      try {
+        const response = await fetchRestNotifications(0, 20);
+        const mapped: ProviderNotification[] = (response.data || []).map((n: any) => ({
+          id: n.id,
+          type: getNotificationType(n.title, n.body),
+          title: n.title,
+          body: n.body,
+          titleUrdu: n.title,
+          bodyUrdu: n.body,
+          isRead: n.isRead,
+          createdAt: n.createdAt,
+        }));
+        setNotifications(mapped);
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+    loadNotifications();
+
+    socketClient.connect();
+    const unsubscribe = socketClient.onNotification((notification) => {
+      setNotifications((prev) => {
+        if (prev.find((n) => n.id === notification.id)) return prev;
+        const newNotif: ProviderNotification = {
+          id: notification.id,
+          type: getNotificationType(notification.title, notification.body),
+          title: notification.title,
+          body: notification.body,
+          titleUrdu: notification.title,
+          bodyUrdu: notification.body,
+          isRead: notification.isRead || false,
+          createdAt: notification.createdAt || new Date().toISOString(),
+        };
+        return [newNotif, ...prev];
+      });
+    });
+
     const cached = getCachedWorkerDashboardProfile();
     if (cached) {
       setProfile({
@@ -51,6 +115,10 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
         profileImage: cached.profilePicUrl || null,
       });
     }
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -73,14 +141,24 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await apiMarkAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const markAllRead = async () => {
+    try {
+      await apiMarkAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
   };
 
   const notifIconMap: Record<ProviderNotification["type"], React.ReactNode> = {
