@@ -4,11 +4,33 @@ import { useState, useEffect } from "react";
 import { WorkerSelection } from "@/components/customer/worker-selection";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { getServiceById } from "@/api/services/services";
-import { getVerifiedWorkers, getAllWorkers } from "@/api/services/workers";
+import { getVerifiedWorkers } from "@/api/services/workers";
 import { WorkerDetail } from "@/types/worker";
 
 interface WorkersPageProps {
   serviceId: string;
+}
+
+interface CustomerWorkerService {
+  id: number;
+  name: string;
+}
+
+interface CustomerWorkerApi {
+  id: string;
+  workerId?: string;
+  fullName: string;
+  services?: CustomerWorkerService[];
+  averageRating?: number;
+  totalJobsCompleted?: number;
+  visitingCharges?: number;
+  isOnline: boolean;
+  verificationStatus: string;
+  bio?: string | null;
+  experienceYears?: number;
+  profilePicUrl?: string | null;
+  homeLat?: number;
+  homeLng?: number;
 }
 
 export default function WorkersPage({ serviceId }: WorkersPageProps) {
@@ -25,19 +47,15 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
         const serviceData = await getServiceById(numericServiceId);
         setServiceName(serviceData.name);
 
-        // 2. Fetch Workers registered for this service
-        let backendWorkers = await getVerifiedWorkers(0, 10, numericServiceId);
-        
-        if (backendWorkers.length === 0) {
-          console.log("No verified workers found, falling back to all workers for testing.");
-          backendWorkers = await getAllWorkers(0, 10, numericServiceId);
-        }
+        // 2. Fetch approved workers linked to this exact service in WorkerService.
+        const backendWorkers = await getVerifiedWorkers(0, 10, numericServiceId);
         
         // 3. Map to WorkerDetail format for UI
-        const mapped: WorkerDetail[] = backendWorkers.map((w: any) => ({
+        const customerWorkers = backendWorkers as unknown as CustomerWorkerApi[];
+        const mapped: WorkerDetail[] = customerWorkers.map((w) => ({
           id: w.workerId || w.id,
           name: w.fullName,
-          category: w.services && w.services.length > 0 ? w.services[0].name : serviceData.name,
+          category: serviceData.name,
           rating: w.averageRating || 5.0,
           reviewCount: w.totalJobsCompleted || 0,
           distance: 1.5, // Mocked local distance
@@ -46,12 +64,12 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
           isVerified: w.verificationStatus === "APPROVED",
           bio: w.bio || "Available for booking",
           experienceYears: w.experienceYears || 1,
-          specializations: w.services ? w.services.map((s: any) => s.name) : [serviceData.name],
-          services: w.services ? w.services.map((s: any) => ({
-            id: s.id.toString(),
-            name: s.name,
+          specializations: [serviceData.name],
+          services: [{
+            id: serviceData.id.toString(),
+            name: serviceData.name,
             price: w.visitingCharges || 1000
-          })) : [],
+          }],
           reviews: [],
           profileImage: w.profilePicUrl,
           location: {

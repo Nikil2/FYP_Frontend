@@ -12,7 +12,7 @@ import API_CONFIG from '../config';
 
 export interface CreateBookingData {
   workerId: string;
-  serviceId: string;
+  serviceId: number;
   description: string;
   jobAddress: string;
   jobLat: number;

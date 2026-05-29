@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   MapPin,
-  Calendar,
-  Clock,
   Upload,
   X,
   ChevronDown,
@@ -23,16 +21,35 @@ interface BookingFormProps {
   workerId?: string;
 }
 
+interface BookingWorkerApi {
+  id: string;
+  workerId?: string;
+  fullName: string;
+  services?: Array<{ name: string }>;
+  averageRating?: number;
+  profilePicUrl?: string | null;
+  visitingCharges?: number;
+}
+
+interface SelectedWorker {
+  id: string;
+  name: string;
+  category: string;
+  rating: number;
+  profileImage?: string | null;
+  visitingCharges: number;
+}
+
 export function BookingForm({ serviceId, serviceName, workerId }: BookingFormProps) {
   const router = useRouter();
-  const [worker, setWorker] = useState<any>(null);
-  const [loadingWorker, setLoadingWorker] = useState(false);
+  const [worker, setWorker] = useState<SelectedWorker | null>(null);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (workerId) {
-      setLoadingWorker(true);
       getWorkerDetails(workerId)
-        .then((w: any) => {
+        .then((workerData) => {
+          const w = workerData as unknown as BookingWorkerApi;
           setWorker({
             id: w.workerId || w.id,
             name: w.fullName,
@@ -44,9 +61,6 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         })
         .catch((err) => {
           console.error("Failed to load worker details:", err);
-        })
-        .finally(() => {
-          setLoadingWorker(false);
         });
     }
   }, [workerId]);
@@ -57,6 +71,8 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     serviceTime: "",
     workDescription: "",
     referralSource: "",
+    jobLat: 0,
+    jobLng: 0,
   });
   const [images, setImages] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -90,6 +106,88 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      const data = (await response.json()) as { display_name?: string };
+      return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    } catch {
+      return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+  };
+
+  const getCurrentPosition = (options: PositionOptions) =>
+    new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+
+  const handleUseCurrentLocation = async () => {
+    if (!window.isSecureContext) {
+      setErrors((prev) => ({
+        ...prev,
+        location: "Location needs HTTPS or localhost to work.",
+      }));
+      return;
+    }
+
+    if (!("geolocation" in navigator)) {
+      setErrors((prev) => ({
+        ...prev,
+        location: "Your browser does not support location detection.",
+      }));
+      return;
+    }
+
+    setLocating(true);
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.location;
+      return next;
+    });
+
+    try {
+      let position: GeolocationPosition;
+      try {
+        position = await getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      } catch {
+        position = await getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 60000,
+        });
+      }
+
+      const { latitude, longitude } = position.coords;
+      const address = await reverseGeocode(latitude, longitude);
+
+      setFormData((prev) => ({
+        ...prev,
+        location: address,
+        jobLat: latitude,
+        jobLng: longitude,
+      }));
+    } catch (error) {
+      const code = (error as GeolocationPositionError).code;
+      const message =
+        code === 1
+          ? "Location permission denied. Please allow location access or type address manually."
+          : code === 3
+            ? "Location request timed out. Please try again or type address manually."
+            : "Could not detect your location. Please type address manually.";
+
+      setErrors((prev) => ({ ...prev, location: message }));
+    } finally {
+      setLocating(false);
+    }
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -113,14 +211,15 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
   const formatTimeTo24h = (timeStr: string): string => {
     if (!timeStr) return "12:00";
     const [time, modifier] = timeStr.split(" ");
-    let [hours, minutes] = time.split(":");
+    const [hoursValue, minutesValue] = time.split(":");
+    let hours = hoursValue;
     if (hours === "12") {
       hours = "00";
     }
     if (modifier === "PM") {
       hours = (parseInt(hours, 10) + 12).toString();
     }
-    return `${hours.padStart(2, "0")}:${minutes}`;
+    return `${hours.padStart(2, "0")}:${minutesValue}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,19 +240,23 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         serviceId: parseInt(serviceId),
         description: formData.workDescription,
         jobAddress: formData.location,
-        jobLat: 24.8607,
-        jobLng: 67.0011,
+        jobLat: formData.jobLat || 24.8607,
+        jobLng: formData.jobLng || 67.0011,
         scheduledAt,
         initialPrice,
       });
 
       // Redirect to success page
       router.push(`/customer/booking-success?id=${booking.id}`);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Booking creation failed:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to create booking. Please try again.";
       setErrors((prev) => ({
         ...prev,
-        submit: err.message || "Failed to create booking. Please try again.",
+        submit: message,
       }));
     } finally {
       setSubmitting(false);
@@ -244,10 +347,12 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
           )}
           <button
             type="button"
+            onClick={handleUseCurrentLocation}
+            disabled={locating}
             className="flex items-center gap-1 mt-2 text-sm text-tertiary hover:text-tertiary-hover transition-colors"
           >
-            <LocateFixed className="w-4 h-4" />
-            Change Location
+            <LocateFixed className={`w-4 h-4 ${locating ? "animate-spin" : ""}`} />
+            {locating ? "Detecting Location..." : "Use Current Location"}
           </button>
         </div>
 
