@@ -56,7 +56,11 @@ export default function BookingPage({ serviceId }: BookingPageProps) {
         if (!workerId) {
           const backendWorkers = await getVerifiedWorkers(0, 10, numericServiceId);
           
-          const customerWorkers = backendWorkers as unknown as CustomerWorkerApi[];
+          const customerWorkers = (
+            backendWorkers as unknown as CustomerWorkerApi[]
+          ).filter((worker) =>
+            worker.services?.some((service) => service.id === numericServiceId)
+          );
           const mapped: WorkerDetail[] = customerWorkers.map((w) => ({
             id: w.workerId || w.id,
             name: w.fullName,

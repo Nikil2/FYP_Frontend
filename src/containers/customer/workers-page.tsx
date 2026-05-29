@@ -51,7 +51,11 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
         const backendWorkers = await getVerifiedWorkers(0, 10, numericServiceId);
         
         // 3. Map to WorkerDetail format for UI
-        const customerWorkers = backendWorkers as unknown as CustomerWorkerApi[];
+        const customerWorkers = (
+          backendWorkers as unknown as CustomerWorkerApi[]
+        ).filter((worker) =>
+          worker.services?.some((service) => service.id === numericServiceId)
+        );
         const mapped: WorkerDetail[] = customerWorkers.map((w) => ({
           id: w.workerId || w.id,
           name: w.fullName,

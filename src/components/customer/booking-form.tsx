@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { TIME_SLOTS, REFERRAL_SOURCES } from "@/lib/customer-data";
 import { getWorkerDetails } from "@/api/services/workers";
 import { createBooking } from "@/api/services/bookings";
+import { getAuthUser } from "@/lib/auth";
 
 interface BookingFormProps {
   serviceId: string;
@@ -230,12 +231,22 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     setSubmitting(true);
 
     try {
+      const authUser = getAuthUser();
+      if (!authUser?.id) {
+        setErrors((prev) => ({
+          ...prev,
+          submit: "Please sign in again to create a booking.",
+        }));
+        return;
+      }
+
       const time24h = formatTimeTo24h(formData.serviceTime);
       const scheduledAt = new Date(`${formData.serviceDate}T${time24h}:00`).toISOString();
       const initialPrice = worker ? Number(worker.visitingCharges) : 1000;
 
       // Create booking via backend API client
       const booking = await createBooking({
+        customerId: authUser.id,
         workerId,
         serviceId: parseInt(serviceId),
         description: formData.workDescription,
