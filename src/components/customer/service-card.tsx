@@ -4,7 +4,7 @@ import Link from "next/link";
 
 interface ServiceCardProps {
   service: {
-    id: number;
+    id: number | string;
     name: string;
     iconUrl?: string | null;
   };
