@@ -8,12 +8,14 @@ interface LoginPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceName?: string;
+  redirectUrl?: string;
 }
 
 export function LoginPromptModal({
   isOpen,
   onClose,
   serviceName,
+  redirectUrl,
 }: LoginPromptModalProps) {
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -89,13 +91,13 @@ export function LoginPromptModal({
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          <a href="/auth/login" className="block">
+          <a href={redirectUrl ? `/auth/login?redirect=${encodeURIComponent(redirectUrl)}` : "/auth/login"} className="block">
             <Button variant="tertiary" size="lg" className="w-full">
               <LogIn className="w-5 h-5 mr-2" />
               Login to Your Account
             </Button>
           </a>
-          <a href="/auth/signup/customer" className="block">
+          <a href={redirectUrl ? `/auth/signup/customer?redirect=${encodeURIComponent(redirectUrl)}` : "/auth/signup/customer"} className="block">
             <Button variant="outline" size="lg" className="w-full">
               <UserPlus className="w-5 h-5 mr-2" />
               Create New Account

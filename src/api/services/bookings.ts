@@ -11,8 +11,9 @@ import API_CONFIG from '../config';
 // ============================================
 
 export interface CreateBookingData {
+  customerId: string;
   workerId: string;
-  serviceId: string;
+  serviceId: number;
   description: string;
   jobAddress: string;
   jobLat: number;

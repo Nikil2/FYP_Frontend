@@ -152,9 +152,54 @@ export const setUserRole = (role: string) => {
   }
 };
 
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  if (!token || typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) {
+      return null;
+    }
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+    const decoded = JSON.parse(atob(padded)) as Record<string, unknown>;
+
+    return decoded;
+  } catch {
+    return null;
+  }
+};
+
+const getRoleFromToken = (token: string): string | null => {
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.role === "string" ? payload.role : null;
+};
+
 export const getUserRole = (): string | null => {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("userRole");
+    const storedRole = localStorage.getItem("userRole");
+    const token = localStorage.getItem("authToken");
+    const tokenRole = token ? getRoleFromToken(token) : null;
+
+    if (tokenRole && tokenRole !== storedRole) {
+      localStorage.setItem("userRole", tokenRole);
+      return tokenRole;
+    }
+
+    if (storedRole) {
+      return storedRole;
+    }
+
+    if (tokenRole) {
+      localStorage.setItem("userRole", tokenRole);
+      return tokenRole;
+    }
   }
   return null;
 };

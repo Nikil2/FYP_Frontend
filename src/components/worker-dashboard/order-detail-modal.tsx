@@ -15,24 +15,148 @@ import {
   ExternalLink,
   Check,
   XCircle,
+  MessageSquare,
+  Send,
+  Loader2,
 } from "lucide-react";
-import { MOCK_BOOKINGS } from "@/lib/mock-bookings";
-import type { ProviderOrder, OrderStatus } from "@/types/provider";
+import type { ProviderOrder } from "@/types/provider";
+import { updateBookingStatus } from "@/api/services/bookings";
+import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
+import { socketClient } from "@/lib/socket";
+import { getAuthUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 interface OrderDetailModalProps {
   order: ProviderOrder | any;
   isOpen: boolean;
   onClose: () => void;
+  onOrderUpdate?: () => void;
 }
 
+// ==================== CHAT SECTION ====================
+function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (!socketClient.isConnected()) {
+      socketClient.connect();
+    }
+
+    const loadMessages = async () => {
+      try {
+        const result = await getBookingMessages(bookingId);
+        const messageList = Array.isArray(result) ? result : (result.data || []);
+        setMessages(messageList);
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      }
+    };
+    loadMessages();
+
+    // Join booking room for real-time
+    socketClient.joinBooking(bookingId);
+
+    // Listen for new messages via Socket.IO
+    const unsubscribe = socketClient.onNewMessage((message: ChatMessage) => {
+      if (message.bookingId === bookingId) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+    });
+
+    return () => {
+      socketClient.leaveBooking(bookingId);
+      unsubscribe();
+    };
+  }, [bookingId]);
+
+  useEffect(scrollToBottom, [messages]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending) return;
+    setSending(true);
+    try {
+      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === sent.id)) return prev;
+        return [...prev, sent];
+      });
+      setNewMessage("");
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm my-4">
+      <div className="px-4 py-3 border-b border-border bg-gray-50 flex items-center gap-2">
+        <MessageSquare className="w-4.5 h-4.5 text-tertiary" />
+        <h4 className="text-sm font-semibold text-heading">Chat with Customer</h4>
+      </div>
+      <div className="h-44 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+        {messages.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-6">No messages yet. Start a conversation!</p>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.senderId === currentUserId;
+            return (
+              <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
+                <div className={cn("max-w-[80%] rounded-2xl px-3 py-1.5", isMe ? "bg-tertiary text-white rounded-br-sm" : "bg-white border border-border rounded-bl-sm")}>
+                  {!isMe && <p className="text-[10px] font-semibold text-tertiary mb-0.5">{msg.sender?.fullName || "Customer"}</p>}
+                  <p className={cn("text-xs", isMe ? "text-white" : "text-heading")}>{msg.content}</p>
+                  <p className={cn("text-[9px] mt-0.5 text-right", isMe ? "text-white/60" : "text-muted-foreground")}>
+                    {new Date(msg.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="p-2.5 border-t border-border flex gap-2">
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type a message..."
+          className="flex-1 text-xs bg-gray-50 border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!newMessage.trim() || sending}
+          className="w-8 h-8 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-50 hover:bg-tertiary-hover transition-colors"
+        >
+          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== MAIN MODAL ====================
 export function OrderDetailModal({
   order,
   isOpen,
   onClose,
+  onOrderUpdate,
 }: OrderDetailModalProps) {
   const { t } = useLanguage();
   const overlayRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string>(order?.status || "pending");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const currentUser = getAuthUser();
 
   // Close on ESC key
   useEffect(() => {
@@ -49,55 +173,50 @@ export function OrderDetailModal({
     };
   }, [isOpen, onClose]);
 
-  const handleAccept = () => {
-    // Update in MOCK_BOOKINGS array
-    const booking = MOCK_BOOKINGS.find((b) => b.id === order.id);
-    if (booking) {
-      (booking as any).status = "accepted";
+  const handleAccept = async () => {
+    setIsUpdating(true);
+    try {
+      await updateBookingStatus(order.id, "ACCEPTED");
+      setStatus("accepted");
+      if (onOrderUpdate) onOrderUpdate();
+      setTimeout(() => onClose(), 1000);
+    } catch (error) {
+      console.error("Failed to accept order:", error);
+      alert("Failed to accept order. Please try again.");
+    } finally {
+      setIsUpdating(false);
     }
-    
-    // Update localStorage too
-    const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
-    const storedBooking = stored.find((b: any) => b.id === order.id);
-    if (storedBooking) {
-      storedBooking.status = "accepted";
-      localStorage.setItem("user_bookings", JSON.stringify(stored));
-    }
-    
-    setStatus("accepted");
-    setTimeout(() => onClose(), 1000);
   };
 
-  const handleReject = () => {
-    // Update in MOCK_BOOKINGS array
-    const booking = MOCK_BOOKINGS.find((b) => b.id === order.id);
-    if (booking) {
-      (booking as any).status = "rejected";
+  const handleReject = async () => {
+    setIsUpdating(true);
+    try {
+      await updateBookingStatus(order.id, "CANCELLED");
+      setStatus("cancelled");
+      if (onOrderUpdate) onOrderUpdate();
+      setTimeout(() => onClose(), 1000);
+    } catch (error) {
+      console.error("Failed to reject order:", error);
+      alert("Failed to reject order. Please try again.");
+    } finally {
+      setIsUpdating(false);
     }
-    
-    // Update localStorage too
-    const stored = JSON.parse(localStorage.getItem("user_bookings") || "[]");
-    const storedBooking = stored.find((b: any) => b.id === order.id);
-    if (storedBooking) {
-      storedBooking.status = "rejected";
-      localStorage.setItem("user_bookings", JSON.stringify(stored));
-    }
-    
-    setStatus("rejected");
-    setTimeout(() => onClose(), 1000);
   };
 
   if (!isOpen) return null;
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "completed":
         return "text-green-600 bg-green-50 border-green-200";
       case "cancelled":
         return "text-red-500 bg-red-50 border-red-200";
       case "rejected":
         return "text-red-500 bg-red-50 border-red-200";
+      case "negotiation":
+        return "text-purple-700 bg-purple-50 border-purple-200";
       case "in-progress":
+      case "in_progress":
         return "text-blue-600 bg-blue-50 border-blue-200";
       case "accepted":
         return "text-tertiary bg-tertiary/10 border-tertiary/20";
@@ -109,14 +228,17 @@ export function OrderDetailModal({
   };
 
   const getStatusLabel = (status: string): string => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "completed":
         return t.completed;
       case "cancelled":
         return t.cancelled;
       case "rejected":
         return "Rejected";
+      case "negotiation":
+        return t.negotiation;
       case "in-progress":
+      case "in_progress":
         return t.inProgress;
       case "accepted":
         return t.accepted;
@@ -127,17 +249,25 @@ export function OrderDetailModal({
     }
   };
 
-  const hasCoordinates = order.customerLat && order.customerLng;
+  const hasCoordinates =
+    Number.isFinite(order.customerLat) && Number.isFinite(order.customerLng);
+  const addressQuery = order.location ? encodeURIComponent(order.location) : "";
 
   // Google Maps embed URL for the customer's location
   const mapEmbedUrl = hasCoordinates
     ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${order.customerLat},${order.customerLng}&zoom=15&maptype=roadmap`
-    : null;
+    : addressQuery
+      ? `https://www.google.com/maps?q=${addressQuery}&output=embed`
+      : null;
 
   // Google Maps directions link (worker can open in Google Maps app)
   const directionsUrl = hasCoordinates
     ? `https://www.google.com/maps/dir/?api=1&destination=${order.customerLat},${order.customerLng}`
-    : null;
+    : addressQuery
+      ? `https://www.google.com/maps/dir/?api=1&destination=${addressQuery}`
+      : null;
+
+  const isChatActive = ["negotiation", "accepted", "in-progress", "in_progress"].includes(status.toLowerCase());
 
   return (
     <div
@@ -301,26 +431,51 @@ export function OrderDetailModal({
             )}
           </div>
 
+          {/* ── Chat Section ── */}
+          {isChatActive && currentUser && (
+            <ChatSection bookingId={order.id} currentUserId={currentUser.id} />
+          )}
+
           {/* ── Action Buttons ── */}
-          {status === "pending" ? (
+          {["pending", "negotiation"].includes(status.toLowerCase()) ? (
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={handleAccept}
                 variant="tertiary"
                 size="sm"
-                className="flex-1 rounded-xl"
+                className="flex-1 rounded-xl text-white font-semibold transition-colors"
+                disabled={isUpdating}
               >
-                <Check className="w-4 h-4 mr-2" />
-                Accept Order
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
+                    Accepting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2 text-white" />
+                    Accept Order
+                  </>
+                )}
               </Button>
               <Button
                 onClick={handleReject}
                 variant="outline"
                 size="sm"
-                className="flex-1 rounded-xl text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="flex-1 rounded-xl text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50 font-semibold transition-colors"
+                disabled={isUpdating}
               >
-                <XCircle className="w-4 h-4 mr-2" />
-                Reject Order
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-red-600" />
+                    Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                    Reject Order
+                  </>
+                )}
               </Button>
             </div>
           ) : (
@@ -335,11 +490,11 @@ export function OrderDetailModal({
                   <Button
                     variant="tertiary"
                     size="sm"
-                    className="w-full rounded-xl"
+                    className="w-full rounded-xl text-white font-semibold"
                   >
-                    <Navigation className="w-4 h-4 mr-2" />
+                    <Navigation className="w-4 h-4 mr-2 text-white" />
                     Navigate to Customer
-                    <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-60" />
+                    <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-60 text-white" />
                   </Button>
                 </a>
               )}
@@ -347,9 +502,9 @@ export function OrderDetailModal({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full rounded-xl"
+                  className="w-full rounded-xl font-semibold hover:bg-muted"
                 >
-                  <Phone className="w-4 h-4 mr-2" />
+                  <Phone className="w-4 h-4 mr-2 text-heading" />
                   Call Customer
                 </Button>
               </a>

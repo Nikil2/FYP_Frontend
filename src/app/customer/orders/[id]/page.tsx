@@ -100,6 +100,14 @@ function StatusTimeline({ status }: { status: BookingStatus }) {
   );
 }
 
+function formatRating(value: unknown): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "N/A";
+  }
+  return numeric.toFixed(1);
+}
+
 // ==================== CHAT SECTION ====================
 function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -112,6 +120,10 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
   };
 
   useEffect(() => {
+    if (!socketClient.isConnected()) {
+      socketClient.connect();
+    }
+
     const loadMessages = async () => {
       try {
         const result = await getBookingMessages(bookingId);
@@ -146,7 +158,11 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
     if (!newMessage.trim() || sending) return;
     setSending(true);
     try {
-      await sendMessage({ bookingId, content: newMessage.trim() });
+      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === sent.id)) return prev;
+        return [...prev, sent];
+      });
       setNewMessage("");
     } catch { /* skip */ }
     setSending(false);
@@ -422,7 +438,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <p className="text-sm font-semibold text-heading">{booking.worker?.user?.fullName || "Worker"}</p>
               <div className="flex items-center gap-1 mt-0.5">
                 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                <span className="text-xs text-muted-foreground">{booking.worker?.averageRating?.toFixed(1) || "N/A"} rating</span>
+                <span className="text-xs text-muted-foreground">{formatRating(booking.worker?.averageRating)} rating</span>
               </div>
             </div>
           </div>

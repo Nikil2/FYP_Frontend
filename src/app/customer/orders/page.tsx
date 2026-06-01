@@ -53,6 +53,14 @@ function isActiveStatus(status: Booking["status"]): boolean {
   return ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS"].includes(status);
 }
 
+function formatRating(value: unknown): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "N/A";
+  }
+  return numeric.toFixed(1);
+}
+
 function BookingCard({ booking }: { booking: Booking }) {
   const router = useRouter();
   const badge = getStatusBadge(booking.status);
@@ -105,7 +113,7 @@ function BookingCard({ booking }: { booking: Booking }) {
           <div className="flex items-center gap-1">
             <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
             <span className="text-[10px] text-muted-foreground">
-              {booking.worker?.averageRating?.toFixed(1) || "N/A"}
+              {formatRating(booking.worker?.averageRating)}
             </span>
           </div>
         </div>

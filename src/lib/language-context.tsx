@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Language, LanguageContent } from "@/types/provider";
-import { translations } from "@/lib/mock-provider";
+import { providerTranslations } from "@/lib/translations/provider";
 
 interface LanguageContextType {
   language: Language;
@@ -22,7 +22,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       value={{
         language,
         setLanguage,
-        t: translations[language],
+        t: providerTranslations[language],
       }}
     >
       {children}

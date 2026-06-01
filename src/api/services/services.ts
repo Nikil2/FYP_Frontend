@@ -7,6 +7,17 @@ import { apiClient } from '../client';
 import API_CONFIG from '../config';
 import { ApiResponse, Service } from '../types';
 
+function extractPayload<T>(response: ApiResponse<T> | T): T {
+  if (response && typeof response === 'object' && 'data' in (response as Record<string, unknown>)) {
+    const wrapped = response as ApiResponse<T>;
+    if (typeof wrapped.data !== 'undefined') {
+      return wrapped.data;
+    }
+  }
+
+  return response as T;
+}
+
 /**
  * Get all services
  * @returns Array of all available services
@@ -16,10 +27,8 @@ export async function getServices(): Promise<Service[]> {
     const response = await apiClient.get<ApiResponse<Service[]> | Service[]>(
       API_CONFIG.ENDPOINTS.SERVICES
     );
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return Array.isArray(response.data) ? response.data : [];
+    const services = extractPayload(response);
+    return Array.isArray(services) ? services : [];
   } catch (error) {
     console.error('Error fetching services:', error);
     throw error;
@@ -35,10 +44,8 @@ export async function getActiveServices(): Promise<Service[]> {
     const response = await apiClient.get<ApiResponse<Service[]> | Service[]>(
       API_CONFIG.ENDPOINTS.SERVICES_ACTIVE
     );
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return Array.isArray(response.data) ? response.data : [];
+    const services = extractPayload(response);
+    return Array.isArray(services) ? services : [];
   } catch (error) {
     console.error('Error fetching active services:', error);
     throw error;
@@ -52,13 +59,14 @@ export async function getActiveServices(): Promise<Service[]> {
  */
 export async function getServiceById(serviceId: number): Promise<Service> {
   try {
-    const response = await apiClient.get<ApiResponse<Service>>(
+    const response = await apiClient.get<ApiResponse<Service> | Service>(
       `${API_CONFIG.ENDPOINTS.SERVICES}/${serviceId}`
     );
-    if (!response.data) {
+    const service = extractPayload(response);
+    if (!service) {
       throw new Error('Service not found');
     }
-    return response.data;
+    return service;
   } catch (error) {
     console.error(`Error fetching service ${serviceId}:`, error);
     throw error;
@@ -74,10 +82,8 @@ export async function getServicesList(): Promise<Service[]> {
     const response = await apiClient.get<ApiResponse<Service[]> | Service[]>(
       API_CONFIG.ENDPOINTS.SERVICES_LIST
     );
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return Array.isArray(response.data) ? response.data : [];
+    const services = extractPayload(response);
+    return Array.isArray(services) ? services : [];
   } catch (error) {
     console.error('Error fetching services list:', error);
     throw error;
@@ -129,12 +135,17 @@ export function filterServicesByKeyword(
   keyword: string
 ): Service[] {
   const lowerKeyword = keyword.toLowerCase();
-  return services.filter(
-    (service) =>
-      service.name.toLowerCase().includes(lowerKeyword) ||
-      service.description.toLowerCase().includes(lowerKeyword) ||
-      service.category.toLowerCase().includes(lowerKeyword)
-  );
+  return services.filter((service) => {
+    const name = service.name.toLowerCase();
+    const description = service.description?.toLowerCase() ?? '';
+    const category = (service.category ?? service.categoryName).toLowerCase();
+
+    return (
+      name.includes(lowerKeyword) ||
+      description.includes(lowerKeyword) ||
+      category.includes(lowerKeyword)
+    );
+  });
 }
 
 export default {

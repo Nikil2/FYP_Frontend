@@ -33,11 +33,15 @@ export interface ApiError {
 export interface Service {
   id: number;
   name: string;
-  description: string;
-  category: string;
-  icon: string;
+  description?: string;
+  category?: string;
+  icon?: string;
   isActive: boolean;
-  createdAt: string;
+  createdAt?: string;
+  categoryId: string;
+  categoryName: string;
+  categoryIcon?: string | null;
+  iconUrl?: string | null;
 }
 
 export interface ServiceCategory {

@@ -19,6 +19,8 @@ export interface WorkerDashboardOrder {
   serviceName: string;
   status: string;
   location: string;
+  customerLat?: number;
+  customerLng?: number;
   scheduledTime: string;
   scheduledDate: string;
   agreedPrice: number;
@@ -152,6 +154,8 @@ export async function getWorkerDashboardOrders(
       serviceName: String(order.serviceName || 'Service'),
       status: mapOrderStatus(String(order.status || 'pending')),
       location: String(order.location || ''),
+      customerLat: typeof order.jobLat === 'number' ? order.jobLat : undefined,
+      customerLng: typeof order.jobLng === 'number' ? order.jobLng : undefined,
       scheduledTime: scheduledAt
         ? scheduledAt.toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
         : 'TBD',

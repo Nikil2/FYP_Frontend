@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Eye, EyeOff, Phone, Lock, User, Upload, Loader2 } from "lucide-react";
 
 export function CustomerSignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const [formData, setFormData] = useState<CustomerSignupFormData>({
     fullName: "",
     phoneNumber: "",
@@ -97,7 +99,11 @@ export function CustomerSignupForm() {
       const response = await signupCustomer(signupData);
 
       if (response.success) {
-        router.replace("/customer");
+        if (redirect) {
+          router.replace(redirect);
+        } else {
+          router.replace("/customer");
+        }
       } else {
         setErrors({
           general: response.message || "Signup failed. Please try again.",
@@ -302,7 +308,7 @@ export function CustomerSignupForm() {
         <p className="text-center text-sm text-paragraph">
           Already have an account?{" "}
           <Link
-            href="/auth/login"
+            href={redirect ? `/auth/login?redirect=${encodeURIComponent(redirect)}` : "/auth/login"}
             className="text-tertiary hover:underline font-medium"
           >
             Sign in
