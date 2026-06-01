@@ -135,12 +135,17 @@ export function filterServicesByKeyword(
   keyword: string
 ): Service[] {
   const lowerKeyword = keyword.toLowerCase();
-  return services.filter(
-    (service) =>
-      service.name.toLowerCase().includes(lowerKeyword) ||
-      service.description.toLowerCase().includes(lowerKeyword) ||
-      service.category.toLowerCase().includes(lowerKeyword)
-  );
+  return services.filter((service) => {
+    const name = service.name.toLowerCase();
+    const description = service.description?.toLowerCase() ?? '';
+    const category = (service.category ?? service.categoryName).toLowerCase();
+
+    return (
+      name.includes(lowerKeyword) ||
+      description.includes(lowerKeyword) ||
+      category.includes(lowerKeyword)
+    );
+  });
 }
 
 export default {
