@@ -120,6 +120,10 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
   };
 
   useEffect(() => {
+    if (!socketClient.isConnected()) {
+      socketClient.connect();
+    }
+
     const loadMessages = async () => {
       try {
         const result = await getBookingMessages(bookingId);
@@ -154,7 +158,11 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
     if (!newMessage.trim() || sending) return;
     setSending(true);
     try {
-      await sendMessage({ bookingId, content: newMessage.trim() });
+      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === sent.id)) return prev;
+        return [...prev, sent];
+      });
       setNewMessage("");
     } catch { /* skip */ }
     setSending(false);

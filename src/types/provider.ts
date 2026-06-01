@@ -4,6 +4,7 @@
 
 export type OrderStatus =
   | "pending"
+  | "negotiation"
   | "accepted"
   | "in-progress"
   | "completed"
@@ -134,4 +135,5 @@ export interface LanguageContent {
   cancelled: string;
   inProgress: string;
   accepted: string;
+  negotiation: string;
 }

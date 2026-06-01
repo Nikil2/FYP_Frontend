@@ -64,6 +64,8 @@ export default function OrdersPage() {
         return "text-red-500";
       case "in-progress":
         return "text-blue-600";
+      case "negotiation":
+        return "text-purple-600";
       case "accepted":
         return "text-tertiary";
       case "pending":
@@ -81,6 +83,8 @@ export default function OrdersPage() {
         return t.cancelled;
       case "in-progress":
         return t.inProgress;
+      case "negotiation":
+        return t.negotiation;
       case "accepted":
         return t.accepted;
       case "pending":

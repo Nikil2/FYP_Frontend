@@ -45,6 +45,10 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
   };
 
   useEffect(() => {
+    if (!socketClient.isConnected()) {
+      socketClient.connect();
+    }
+
     const loadMessages = async () => {
       try {
         const result = await getBookingMessages(bookingId);
@@ -81,7 +85,11 @@ function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentU
     if (!newMessage.trim() || sending) return;
     setSending(true);
     try {
-      await sendMessage({ bookingId, content: newMessage.trim() });
+      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === sent.id)) return prev;
+        return [...prev, sent];
+      });
       setNewMessage("");
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -184,7 +192,7 @@ export function OrderDetailModal({
     setIsUpdating(true);
     try {
       await updateBookingStatus(order.id, "CANCELLED");
-      setStatus("rejected");
+      setStatus("cancelled");
       if (onOrderUpdate) onOrderUpdate();
       setTimeout(() => onClose(), 1000);
     } catch (error) {
@@ -205,6 +213,8 @@ export function OrderDetailModal({
         return "text-red-500 bg-red-50 border-red-200";
       case "rejected":
         return "text-red-500 bg-red-50 border-red-200";
+      case "negotiation":
+        return "text-purple-700 bg-purple-50 border-purple-200";
       case "in-progress":
       case "in_progress":
         return "text-blue-600 bg-blue-50 border-blue-200";
@@ -225,6 +235,8 @@ export function OrderDetailModal({
         return t.cancelled;
       case "rejected":
         return "Rejected";
+      case "negotiation":
+        return t.negotiation;
       case "in-progress":
       case "in_progress":
         return t.inProgress;
@@ -237,19 +249,25 @@ export function OrderDetailModal({
     }
   };
 
-  const hasCoordinates = order.customerLat && order.customerLng;
+  const hasCoordinates =
+    Number.isFinite(order.customerLat) && Number.isFinite(order.customerLng);
+  const addressQuery = order.location ? encodeURIComponent(order.location) : "";
 
   // Google Maps embed URL for the customer's location
   const mapEmbedUrl = hasCoordinates
     ? `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${order.customerLat},${order.customerLng}&zoom=15&maptype=roadmap`
-    : null;
+    : addressQuery
+      ? `https://www.google.com/maps?q=${addressQuery}&output=embed`
+      : null;
 
   // Google Maps directions link (worker can open in Google Maps app)
   const directionsUrl = hasCoordinates
     ? `https://www.google.com/maps/dir/?api=1&destination=${order.customerLat},${order.customerLng}`
-    : null;
+    : addressQuery
+      ? `https://www.google.com/maps/dir/?api=1&destination=${addressQuery}`
+      : null;
 
-  const isChatActive = ["accepted", "in-progress", "in_progress"].includes(status.toLowerCase());
+  const isChatActive = ["negotiation", "accepted", "in-progress", "in_progress"].includes(status.toLowerCase());
 
   return (
     <div
@@ -419,7 +437,7 @@ export function OrderDetailModal({
           )}
 
           {/* ── Action Buttons ── */}
-          {status.toLowerCase() === "pending" ? (
+          {["pending", "negotiation"].includes(status.toLowerCase()) ? (
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={handleAccept}
