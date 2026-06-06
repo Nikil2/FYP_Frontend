@@ -10,6 +10,7 @@ import {
   ChevronDown,
   LocateFixed,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TIME_SLOTS, REFERRAL_SOURCES } from "@/lib/customer-data";
 import { getWorkerDetails } from "@/api/services/workers";
@@ -68,6 +69,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
 
   const [formData, setFormData] = useState({
     location: "",
+    unitDetail: "",
     serviceDate: "",
     serviceTime: "",
     workDescription: "",
@@ -233,10 +235,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     try {
       const authUser = getAuthUser();
       if (!authUser?.id) {
-        setErrors((prev) => ({
-          ...prev,
-          submit: "Please sign in again to create a booking.",
-        }));
+        toast.error("Please sign in again to create a booking.");
         return;
       }
 
@@ -244,13 +243,16 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
       const scheduledAt = new Date(`${formData.serviceDate}T${time24h}:00`).toISOString();
       const initialPrice = worker ? Number(worker.visitingCharges) : 1000;
 
-      // Create booking via backend API client
+      const jobAddress = formData.unitDetail.trim()
+        ? `${formData.unitDetail.trim()}, ${formData.location}`
+        : formData.location;
+
       const booking = await createBooking({
         customerId: authUser.id,
         workerId,
         serviceId: parseInt(serviceId),
         description: formData.workDescription,
-        jobAddress: formData.location,
+        jobAddress,
         jobLat: formData.jobLat || 24.8607,
         jobLng: formData.jobLng || 67.0011,
         scheduledAt,
@@ -265,10 +267,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         err instanceof Error
           ? err.message
           : "Failed to create booking. Please try again.";
-      setErrors((prev) => ({
-        ...prev,
-        submit: message,
-      }));
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -292,11 +291,6 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-5 max-w-2xl">
-        {errors.submit && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm border border-red-100">
-            {errors.submit}
-          </div>
-        )}
         {/* Service Name (readonly) */}
         <div>
           <div className="bg-gray-100 rounded-lg px-4 py-3">
@@ -365,6 +359,24 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
             <LocateFixed className={`w-4 h-4 ${locating ? "animate-spin" : ""}`} />
             {locating ? "Detecting Location..." : "Use Current Location"}
           </button>
+
+          {/* Unit detail — always shown so user can add flat/floor even when typing address manually */}
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Flat / Apartment / Floor No. <span className="text-muted-foreground/60">(optional)</span>
+            </label>
+            <input
+              type="text"
+              name="unitDetail"
+              value={formData.unitDetail}
+              onChange={handleInputChange}
+              placeholder="e.g. Flat 4B, Floor 2, Al-Noor Apartments"
+              className="w-full border border-border rounded-lg px-4 py-2.5 text-sm text-heading placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-tertiary/40"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              GPS gives the area/landmark — add your exact unit so the worker finds you easily.
+            </p>
+          </div>
         </div>
 
         {/* Date and Time Row */}

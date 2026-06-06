@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import { LayoutShell } from "@/components/layouts/LayoutShell";
 import "../styles/globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({
         className={`${inter.variable} bg-background text-foreground font-body antialiased`}
       >
         <LayoutShell>{children}</LayoutShell>
+        <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
   );
