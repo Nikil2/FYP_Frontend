@@ -393,6 +393,17 @@ export async function deletePortfolioImage(
 }
 
 // ============================================
+// WORKER SERVICES (add/remove/update prices)
+// ============================================
+
+export async function updateWorkerServices(
+  workerId: string,
+  services: { serviceId: number; price: number }[]
+): Promise<Worker> {
+  return apiClient.put<Worker>(API_CONFIG.ENDPOINTS.WORKERS_SERVICES(workerId), { services });
+}
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 
@@ -453,6 +464,7 @@ export default {
   getWorkerDetails,
   getWorkerByUserId,
   updateWorkerProfile,
+  updateWorkerServices,
   addPortfolioImage,
   getPortfolioImages,
   updatePortfolioImage,

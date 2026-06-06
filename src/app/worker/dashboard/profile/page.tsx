@@ -10,6 +10,7 @@ import {
   getWorkerDashboardProfileByUserId,
   resolveWorkerUserId,
 } from "@/api/services/worker-dashboard";
+import { getWorkerDetails } from "@/api/services/workers";
 import { cn } from "@/lib/utils";
 import {
   User,
@@ -22,8 +23,11 @@ import {
   ChevronRight,
   Star,
   CheckCircle,
+  Wrench,
+  Pencil,
 } from "lucide-react";
 import type { VerificationStatus } from "@/types/provider";
+import { ManageServicesModal } from "@/components/worker-dashboard/manage-services-modal";
 
 export default function ProfilePage() {
   const { t } = useLanguage();
@@ -45,24 +49,23 @@ export default function ProfilePage() {
     professionalInfo: "pending" as VerificationStatus,
   });
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [workerId, setWorkerId] = useState<string | null>(null);
+  const [workerServices, setWorkerServices] = useState<{ serviceId: number; name: string; price: number }[]>([]);
+  const [showServicesModal, setShowServicesModal] = useState(false);
 
   useEffect(() => {
     const hydrate = async () => {
       const cached = getCachedWorkerDashboardProfile();
-      if (cached) {
-        const mappedStatus =
-          cached.verificationStatus === "APPROVED"
-            ? "approved"
-            : cached.verificationStatus === "REJECTED"
-            ? "rejected"
-            : "pending";
-        const vStatus: VerificationStatus =
-          mappedStatus === "approved"
-            ? "verified"
-            : mappedStatus === "rejected"
-            ? "not-verified"
-            : "pending";
+      const resolvedWorkerId = cached?.workerId ?? null;
+      setWorkerId(resolvedWorkerId);
 
+      const mapStatus = (vs: string) =>
+        vs === "APPROVED" ? "approved" : vs === "REJECTED" ? "rejected" : "pending";
+      const mapVStatus = (s: string): VerificationStatus =>
+        s === "approved" ? "verified" : s === "rejected" ? "not-verified" : "pending";
+
+      if (cached) {
+        const mappedStatus = mapStatus(cached.verificationStatus);
         setProfile((prev) => ({
           ...prev,
           name: cached.fullName,
@@ -74,41 +77,55 @@ export default function ProfilePage() {
         }));
         setVerification({
           phoneNumber: "verified",
-          identityVerification: vStatus,
-          professionalInfo: vStatus,
+          identityVerification: mapVStatus(mappedStatus),
+          professionalInfo: mapVStatus(mappedStatus),
         });
-        return;
+      } else {
+        const userId = resolveWorkerUserId();
+        if (!userId) return;
+        const live = await getWorkerDashboardProfileByUserId(userId);
+        const mappedStatus = mapStatus(live.verificationStatus);
+        setWorkerId(live.workerId);
+        setProfile((prev) => ({
+          ...prev,
+          name: live.fullName,
+          phone: live.phoneNumber,
+          profileImage: live.profilePicUrl || null,
+          rating: live.averageRating || 0,
+          completedServices: live.totalJobsCompleted || 0,
+          profileStatus: mappedStatus,
+        }));
+        setVerification({
+          phoneNumber: "verified",
+          identityVerification: mapVStatus(mappedStatus),
+          professionalInfo: mapVStatus(mappedStatus),
+        });
       }
 
-      const userId = resolveWorkerUserId();
-      if (!userId) return;
-      const live = await getWorkerDashboardProfileByUserId(userId);
-      const mappedStatus =
-        live.verificationStatus === "APPROVED"
-          ? "approved"
-          : live.verificationStatus === "REJECTED"
-          ? "rejected"
-          : "pending";
-      const vStatus: VerificationStatus =
-        mappedStatus === "approved"
-          ? "verified"
-          : mappedStatus === "rejected"
-          ? "not-verified"
-          : "pending";
-      setProfile((prev) => ({
-        ...prev,
-        name: live.fullName,
-        phone: live.phoneNumber,
-        profileImage: live.profilePicUrl || null,
-        rating: live.averageRating || 0,
-        completedServices: live.totalJobsCompleted || 0,
-        profileStatus: mappedStatus,
-      }));
-      setVerification({
-        phoneNumber: "verified",
-        identityVerification: vStatus,
-        professionalInfo: vStatus,
-      });
+      // Fetch services using workerId
+      const wid = cached?.workerId ?? (await (async () => {
+        const userId = resolveWorkerUserId();
+        if (!userId) return null;
+        const live = await getWorkerDashboardProfileByUserId(userId);
+        return live.workerId;
+      })());
+
+      if (wid) {
+        try {
+          const details = await getWorkerDetails(wid) as any;
+          if (details?.services) {
+            setWorkerServices(
+              details.services.map((s: any) => ({
+                serviceId: s.id,
+                name: s.name,
+                price: s.price || 0,
+              }))
+            );
+          }
+        } catch {
+          // non-critical, services just won't show
+        }
+      }
     };
 
     hydrate();
@@ -253,6 +270,48 @@ export default function ProfilePage() {
         </div>
       </Card>
 
+      {/* My Services */}
+      <div>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h3 className="text-base font-bold text-heading">My Services</h3>
+          <button
+            onClick={() => setShowServicesModal(true)}
+            className="flex items-center gap-1.5 text-sm font-medium text-tertiary hover:text-tertiary/80 transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Manage
+          </button>
+        </div>
+        <Card className="p-4">
+          {workerServices.length === 0 ? (
+            <div className="text-center py-4 space-y-2">
+              <Wrench className="w-8 h-8 text-muted-foreground mx-auto" />
+              <p className="text-sm text-paragraph">No services added yet</p>
+              <button
+                onClick={() => setShowServicesModal(true)}
+                className="text-sm font-medium text-tertiary hover:underline"
+              >
+                Add your first service
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {workerServices.map((s) => (
+                <div
+                  key={s.serviceId}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                >
+                  <span className="text-sm font-medium text-heading">{s.name}</span>
+                  <span className="text-sm font-semibold text-tertiary">
+                    Rs. {s.price.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
       {/* General Settings */}
       <div>
         <h3 className="text-base font-bold text-heading mb-3 px-1">
@@ -301,6 +360,32 @@ export default function ProfilePage() {
           })}
         </div>
       </div>
+
+      {/* Manage Services Modal */}
+      {showServicesModal && workerId && (
+        <ManageServicesModal
+          workerId={workerId}
+          initialServices={workerServices.map((s) => ({ serviceId: s.serviceId, price: s.price }))}
+          onClose={() => setShowServicesModal(false)}
+          onSaved={async () => {
+            if (!workerId) return;
+            try {
+              const details = await getWorkerDetails(workerId) as any;
+              if (details?.services) {
+                setWorkerServices(
+                  details.services.map((s: any) => ({
+                    serviceId: s.id,
+                    name: s.name,
+                    price: s.price || 0,
+                  }))
+                );
+              }
+            } catch {
+              // ignore
+            }
+          }}
+        />
+      )}
 
       {/* Modals */}
       {activeModal === "personal-info" && (
