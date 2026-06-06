@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, Send, Loader2, MessageCircle, ChevronDown } from "lucide-react";
+// Loader2 kept for the loading spinner in the messages area
 import { cn } from "@/lib/utils";
-import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
+import { getBookingMessages, type ChatMessage } from "@/api/services/messages";
 import { socketClient } from "@/lib/socket";
 
 interface ChatDrawerProps {
@@ -17,7 +18,6 @@ interface ChatDrawerProps {
 export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose }: ChatDrawerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [minimised, setMinimised] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,19 +58,14 @@ export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose 
   useEffect(scrollToBottom, [messages]);
 
   useEffect(() => {
-    if (!loading && !minimised) setTimeout(() => inputRef.current?.focus(), 100);
+    if (!loading && !minimised) setTimeout(() => inputRef.current?.focus(), 80);
   }, [loading, minimised]);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     const text = newMessage.trim();
-    if (!text || sending) return;
-    setSending(true);
+    if (!text) return;
+    socketClient.sendMessage(bookingId, text);
     setNewMessage("");
-    try {
-      const sent = await sendMessage({ bookingId, content: text });
-      setMessages((prev) => prev.find((m) => m.id === sent.id) ? prev : [...prev, sent]);
-    } catch { /* skip */ }
-    setSending(false);
   };
 
   return (
@@ -162,10 +157,10 @@ export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose 
             />
             <button
               onClick={handleSend}
-              disabled={!newMessage.trim() || sending}
+              disabled={!newMessage.trim()}
               className="w-8 h-8 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-40 hover:bg-tertiary/90 transition-colors flex-shrink-0"
             >
-              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              <Send className="w-3.5 h-3.5" />
             </button>
           </div>
         </>
