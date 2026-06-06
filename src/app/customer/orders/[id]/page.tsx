@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
 import { submitFeedback } from "@/api/services/feedback";
 import { fileComplaint } from "@/api/services/complaints";
+import { ApiRequestError } from "@/api/types";
 import { getAuthUser } from "@/lib/auth";
 import { socketClient } from "@/lib/socket";
 
@@ -233,10 +234,11 @@ function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted
       toast.success("Review submitted. Thank you!");
       onSubmitted();
     } catch (err) {
+      const is409 = err instanceof ApiRequestError && err.statusCode === 409;
       const message = err instanceof Error ? err.message : "";
-      if (message.toLowerCase().includes("already")) {
-        toast.error("You have already submitted a review for this booking.");
-        onSubmitted(); // re-fetch so booking.feedback populates and hides the form
+      if (is409 || message.toLowerCase().includes("already")) {
+        toast.info("You have already submitted a review for this booking.");
+        onSubmitted();
       } else {
         toast.error(message || "Failed to submit review. Please try again.");
       }
