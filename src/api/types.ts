@@ -116,7 +116,7 @@ export interface WorkerRegistrationData {
   homeLng: number;
   experienceYears: number;
   visitingCharges: number;
-  serviceIds: number[];
+  services: { serviceId: number; price: number }[];
   portfolioImages?: PortfolioImageInput[];
 }
 

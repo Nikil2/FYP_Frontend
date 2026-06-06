@@ -100,7 +100,7 @@ export interface WorkerSignupFormData {
   otpCode: string;
 
   // Step 3: Services
-  selectedServiceIds: number[];
+  selectedServices: { serviceId: number; price: number }[];
 
   // Step 4: Location
   homeAddress: string;

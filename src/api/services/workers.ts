@@ -74,7 +74,7 @@ export async function registerWorker(
       !workerData.homeLng ||
       workerData.experienceYears < 0 ||
       workerData.visitingCharges < 0 ||
-      !workerData.serviceIds.length
+      !workerData.services.length
     ) {
       throw new Error('Missing required fields');
     }
@@ -420,8 +420,8 @@ export function prepareWorkerRegistrationData(
     visitingCharges: formData.visitingCharges
       ? parseFloat(String(formData.visitingCharges))
       : 0,
-    serviceIds: Array.isArray(formData.serviceIds)
-      ? (formData.serviceIds as number[])
+    services: Array.isArray(formData.services)
+      ? (formData.services as { serviceId: number; price: number }[])
       : [],
     portfolioImages: Array.isArray(formData.portfolioImages)
       ? (formData.portfolioImages as PortfolioImageInput[])

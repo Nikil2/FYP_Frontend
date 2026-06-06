@@ -66,7 +66,7 @@ const buildPersistedFormData = (data: WorkerSignupFormData): PersistedFormData =
   phoneNumber: data.phoneNumber,
   password: data.password,
   confirmPassword: data.confirmPassword,
-  selectedServiceIds: data.selectedServiceIds,
+  selectedServices: data.selectedServices,
   homeAddress: data.homeAddress,
   homeLat: data.homeLat,
   homeLng: data.homeLng,
@@ -90,7 +90,7 @@ export function WorkerSignupForm() {
     password: "",
     confirmPassword: "",
     otpCode: "",
-    selectedServiceIds: [],
+    selectedServices: [],
     homeAddress: "",
     homeLat: 0,
     homeLng: 0,
@@ -180,10 +180,10 @@ export function WorkerSignupForm() {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const handleServicesChange = (serviceIds: number[]) => {
-    setFormData((prev) => ({ ...prev, selectedServiceIds: serviceIds }));
-    if (errors.selectedServiceIds) {
-      setErrors((prev) => ({ ...prev, selectedServiceIds: "" }));
+  const handleServicesChange = (services: { serviceId: number; price: number }[]) => {
+    setFormData((prev) => ({ ...prev, selectedServices: services }));
+    if (errors.selectedServices) {
+      setErrors((prev) => ({ ...prev, selectedServices: "" }));
     }
   };
 
@@ -348,8 +348,12 @@ export function WorkerSignupForm() {
         if (formData.otpCode.length !== 6) newErrors.otpCode = errMsg.otpInvalid;
         break;
       case 3:
-        if (formData.selectedServiceIds.length === 0) {
-          newErrors.selectedServiceIds = errMsg.noServices;
+        if (formData.selectedServices.length === 0) {
+          newErrors.selectedServices = errMsg.noServices;
+        } else if (formData.selectedServices.some((s) => s.price <= 0)) {
+          newErrors.selectedServices = isUrdu
+            ? "تمام سروسز کی قیمت درج کریں"
+            : "Enter a price for every selected service";
         }
         break;
       case 4:
@@ -456,7 +460,7 @@ export function WorkerSignupForm() {
         homeLng: formData.homeLng,
         experienceYears: formData.experienceYears,
         visitingCharges: formData.visitingCharges,
-        serviceIds: formData.selectedServiceIds,
+        services: formData.selectedServices,
       };
 
       // Register worker profile
@@ -605,7 +609,7 @@ export function WorkerSignupForm() {
         )}
         {currentStep === 3 && (
           <StepServiceSelection
-            selectedServiceIds={formData.selectedServiceIds}
+            selectedServices={formData.selectedServices}
             onServicesChange={handleServicesChange}
             errors={errors}
             lang={lang}

@@ -5,12 +5,15 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin, MessageCircle, Loader2 } from "lucide-react";
 import type {
   WorkerDetail,
   BookingFormData,
   BookingStatus,
 } from "@/types/worker";
+import { createBooking } from "@/api/services/bookings";
+import { getAuthUser } from "@/lib/auth";
+import { toast } from "sonner";
 
 // Time slots configuration - Easy to maintain and update
 const TIME_SLOTS = [
@@ -62,6 +65,7 @@ export function BookingPanel({
   staticLocation = DEFAULT_LOCATION,
 }: BookingPanelProps) {
   const [bookingStatus, setBookingStatus] = useState<BookingStatus>("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<BookingFormData>({
     serviceId: "",
     date: null,
@@ -103,7 +107,7 @@ export function BookingPanel({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (
@@ -113,15 +117,44 @@ export function BookingPanel({
       !formData.address ||
       !formData.jobDescription
     ) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
-    setBookingStatus("booking-submitted");
+    const currentUser = getAuthUser();
+    if (!currentUser) {
+      toast.error("Please log in to book a service");
+      return;
+    }
 
-    setTimeout(() => {
-      setBookingStatus("worker-en-route");
-    }, 3000);
+    const selectedService = worker.services.find(
+      (s) => s.id === formData.serviceId
+    );
+    const servicePrice = selectedService?.price ?? 0;
+
+    const [hours, minutes] = formData.timeSlot.split(":").map(Number);
+    const scheduledAt = new Date(formData.date!);
+    scheduledAt.setHours(hours, minutes, 0, 0);
+
+    setIsSubmitting(true);
+    try {
+      await createBooking({
+        customerId: currentUser.id,
+        workerId: worker.id,
+        serviceId: Number(formData.serviceId),
+        description: formData.jobDescription,
+        jobAddress: formData.address,
+        jobLat: worker.location?.lat ?? 24.8607,
+        jobLng: worker.location?.lng ?? 67.0011,
+        scheduledAt: scheduledAt.toISOString(),
+        initialPrice: servicePrice > 0 ? servicePrice : undefined,
+      });
+      setBookingStatus("booking-submitted");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to create booking. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleNewBooking = () => {
@@ -258,8 +291,16 @@ export function BookingPanel({
               variant="tertiary"
               size="lg"
               className="w-full"
+              disabled={isSubmitting}
             >
-              Book Now
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Booking...
+                </span>
+              ) : (
+                "Book Now"
+              )}
             </Button>
           </form>
 
