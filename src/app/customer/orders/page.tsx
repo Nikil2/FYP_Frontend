@@ -22,6 +22,7 @@ import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { getMyBookings, type Booking } from "@/api/services/bookings";
 import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import { getAuthUser } from "@/lib/auth";
+import { NotificationBell } from "@/components/customer/notification-bell";
 
 const TABS = [
   { id: "active", label: "Active" },
@@ -241,7 +242,8 @@ export default function OrdersPage() {
         >
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <h1 className="text-lg font-semibold text-heading">My Orders</h1>
+        <h1 className="text-lg font-semibold text-heading flex-1">My Orders</h1>
+        <NotificationBell />
       </div>
 
       {/* Tab Bar */}

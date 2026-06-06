@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +13,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
+import { getUnreadCount } from "@/api/services/notifications";
+import { socketClient } from "@/lib/socket";
 
 const NAV_ITEMS = [
   { href: "/customer", label: "Home", icon: Home },
@@ -23,6 +26,28 @@ const NAV_ITEMS = [
 
 export function CustomerSidebar() {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const result = await getUnreadCount();
+        setUnreadCount(result.unreadCount || 0);
+      } catch { /* skip */ }
+    };
+    fetchUnread();
+
+    if (!socketClient.isConnected()) socketClient.connect();
+    const unsub = socketClient.onNotification(() => {
+      setUnreadCount((c) => c + 1);
+    });
+    return unsub;
+  }, []);
+
+  // Clear badge when user visits the notifications page
+  useEffect(() => {
+    if (pathname.startsWith("/customer/notifications")) setUnreadCount(0);
+  }, [pathname]);
 
   const isActive = (href: string) => {
     if (href === "/customer") return pathname === "/customer";
@@ -46,6 +71,7 @@ export function CustomerSidebar() {
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
+          const isNotifItem = item.href === "/customer/notifications";
 
           return (
             <Link
@@ -58,7 +84,14 @@ export function CustomerSidebar() {
                   : "text-muted-foreground hover:bg-muted hover:text-heading"
               )}
             >
-              <Icon className={cn("w-5 h-5", active && "stroke-[2.5px]")} />
+              <div className="relative flex-shrink-0">
+                <Icon className={cn("w-5 h-5", active && "stroke-[2.5px]")} />
+                {isNotifItem && unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </div>
               {item.label}
             </Link>
           );

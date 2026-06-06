@@ -29,6 +29,7 @@ import { fileComplaint } from "@/api/services/complaints";
 import { ApiRequestError } from "@/api/types";
 import { getAuthUser } from "@/lib/auth";
 import { socketClient } from "@/lib/socket";
+import { NotificationBell } from "@/components/customer/notification-bell";
 
 type BookingStatus = Booking["status"];
 
@@ -304,10 +305,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <button onClick={() => router.push("/customer/orders")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors md:hidden">
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-base font-semibold text-heading">Order Details</h1>
           <p className="text-[10px] text-muted-foreground">{booking.id.slice(0, 8)}...</p>
         </div>
+        <NotificationBell />
       </div>
 
       <div className="p-4 space-y-4">
