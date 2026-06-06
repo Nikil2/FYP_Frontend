@@ -12,13 +12,15 @@ import {
   User,
   FileText,
   Navigation,
-  ExternalLink,
   Check,
   XCircle,
   MessageSquare,
   Send,
   Loader2,
+  PlayCircle,
+  CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { ProviderOrder } from "@/types/provider";
 import { updateBookingStatus } from "@/api/services/bookings";
 import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
@@ -197,7 +199,38 @@ export function OrderDetailModal({
       setTimeout(() => onClose(), 1000);
     } catch (error) {
       console.error("Failed to reject order:", error);
-      alert("Failed to reject order. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to reject order.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleStartJob = async () => {
+    setIsUpdating(true);
+    try {
+      await updateBookingStatus(order.id, "IN_PROGRESS");
+      setStatus("in_progress");
+      toast.success("Job started! Customer has been notified.");
+      if (onOrderUpdate) onOrderUpdate();
+    } catch (error) {
+      console.error("Failed to start job:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to start job.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    setIsUpdating(true);
+    try {
+      await updateBookingStatus(order.id, "COMPLETED");
+      setStatus("completed");
+      toast.success("Booking marked as complete!");
+      if (onOrderUpdate) onOrderUpdate();
+      setTimeout(() => onClose(), 1200);
+    } catch (error) {
+      console.error("Failed to complete order:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to mark as complete.");
     } finally {
       setIsUpdating(false);
     }
@@ -438,6 +471,7 @@ export function OrderDetailModal({
 
           {/* ── Action Buttons ── */}
           {["pending", "negotiation"].includes(status.toLowerCase()) ? (
+            /* PENDING / NEGOTIATION → Accept or Reject */
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={handleAccept}
@@ -446,17 +480,8 @@ export function OrderDetailModal({
                 className="flex-1 rounded-xl text-white font-semibold transition-colors"
                 disabled={isUpdating}
               >
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
-                    Accepting...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2 text-white" />
-                    Accept Order
-                  </>
-                )}
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <Check className="w-4 h-4 mr-2 text-white" />}
+                {isUpdating ? "Accepting..." : "Accept Order"}
               </Button>
               <Button
                 onClick={handleReject}
@@ -465,51 +490,53 @@ export function OrderDetailModal({
                 className="flex-1 rounded-xl text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50 font-semibold transition-colors"
                 disabled={isUpdating}
               >
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-red-600" />
-                    Rejecting...
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-4 h-4 mr-2 text-red-600" />
-                    Reject Order
-                  </>
-                )}
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-red-600" /> : <XCircle className="w-4 h-4 mr-2 text-red-600" />}
+                {isUpdating ? "Rejecting..." : "Reject Order"}
               </Button>
             </div>
-          ) : (
+          ) : status.toLowerCase() === "accepted" ? (
+            /* ACCEPTED → Start Job + Call */
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              {directionsUrl && (
-                <a
-                  href={directionsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1"
-                >
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    className="w-full rounded-xl text-white font-semibold"
-                  >
-                    <Navigation className="w-4 h-4 mr-2 text-white" />
-                    Navigate to Customer
-                    <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-60 text-white" />
-                  </Button>
-                </a>
-              )}
+              <Button
+                onClick={handleStartJob}
+                variant="tertiary"
+                size="sm"
+                className="flex-1 rounded-xl text-white font-semibold transition-colors"
+                disabled={isUpdating}
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <PlayCircle className="w-4 h-4 mr-2 text-white" />}
+                {isUpdating ? "Starting..." : "Start Job"}
+              </Button>
               <a href={`tel:${order.customerPhone}`} className="flex-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full rounded-xl font-semibold hover:bg-muted"
-                >
+                <Button variant="outline" size="sm" className="w-full rounded-xl font-semibold hover:bg-muted">
                   <Phone className="w-4 h-4 mr-2 text-heading" />
                   Call Customer
                 </Button>
               </a>
             </div>
-          )}
+          ) : status.toLowerCase() === "in_progress" ? (
+            /* IN_PROGRESS → Mark Complete + Navigate */
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={handleMarkComplete}
+                variant="tertiary"
+                size="sm"
+                className="flex-1 rounded-xl text-white font-semibold transition-colors bg-green-600 hover:bg-green-700"
+                disabled={isUpdating}
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <CheckCircle2 className="w-4 h-4 mr-2 text-white" />}
+                {isUpdating ? "Completing..." : "Mark as Complete"}
+              </Button>
+              {directionsUrl && (
+                <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+                  <Button variant="outline" size="sm" className="w-full rounded-xl font-semibold hover:bg-muted">
+                    <Navigation className="w-4 h-4 mr-2 text-heading" />
+                    Navigate
+                  </Button>
+                </a>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

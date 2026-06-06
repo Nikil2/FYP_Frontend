@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getBookingById, cancelBooking, type Booking } from "@/api/services/bookings";
+import { getBookingById, cancelBooking, updateBookingStatus, type Booking } from "@/api/services/bookings";
+import { toast } from "sonner";
 import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
 import { submitFeedback } from "@/api/services/feedback";
 import { fileComplaint } from "@/api/services/complaints";
@@ -266,9 +267,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [complaintDesc, setComplaintDesc] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [filingComplaint, setFilingComplaint] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const currentUser = getAuthUser();
 
   const fetchBooking = useCallback(async () => {
@@ -303,6 +306,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setShowCancelModal(false);
     } catch { /* skip */ }
     setCancelling(false);
+  };
+
+  const handleMarkComplete = async () => {
+    if (completing) return;
+    setCompleting(true);
+    try {
+      await updateBookingStatus(id, "COMPLETED");
+      await fetchBooking();
+      setShowCompleteModal(false);
+      toast.success("Booking marked as complete. Thank you!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark as complete.");
+    }
+    setCompleting(false);
   };
 
   const handleFileComplaint = async () => {
@@ -474,15 +491,45 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {/* Bottom Actions */}
       {isActive && (
         <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4 md:bottom-0">
-          <div className="max-w-lg mx-auto flex gap-3">
-            <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancelModal(true)}>
-              <Ban className="w-4 h-4" /> Cancel Booking
-            </Button>
-            {canComplaint && (
-              <Button variant="outline" size="sm" className="flex-1 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => setShowComplaintModal(true)}>
-                <AlertTriangle className="w-4 h-4" /> File Complaint
+          <div className="max-w-lg mx-auto flex flex-col gap-2">
+            {booking.status === "IN_PROGRESS" && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                onClick={() => setShowCompleteModal(true)}
+              >
+                <CheckCircle2 className="w-4 h-4" /> Mark as Complete
               </Button>
             )}
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancelModal(true)}>
+                <Ban className="w-4 h-4" /> Cancel Booking
+              </Button>
+              {canComplaint && (
+                <Button variant="outline" size="sm" className="flex-1 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => setShowComplaintModal(true)}>
+                  <AlertTriangle className="w-4 h-4" /> File Complaint
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-6">
+            <h3 className="text-lg font-bold text-heading mb-2">Mark as Complete?</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Confirm that the worker has finished the job and you are satisfied with the service. You can leave a review after.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCompleteModal(false)}>Not Yet</Button>
+              <Button variant="primary" className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleMarkComplete} disabled={completing}>
+                {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Complete"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
