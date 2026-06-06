@@ -15,8 +15,6 @@ import {
   Navigation,
   Check,
   XCircle,
-  MessageSquare,
-  Send,
   Loader2,
   PlayCircle,
   CheckCircle2,
@@ -24,8 +22,6 @@ import {
 import { toast } from "sonner";
 import type { ProviderOrder } from "@/types/provider";
 import { updateBookingStatus, getBookingById, type Feedback } from "@/api/services/bookings";
-import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
-import { socketClient } from "@/lib/socket";
 import { getAuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -34,118 +30,6 @@ interface OrderDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOrderUpdate?: () => void;
-}
-
-// ==================== CHAT SECTION ====================
-function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    if (!socketClient.isConnected()) {
-      socketClient.connect();
-    }
-
-    const loadMessages = async () => {
-      try {
-        const result = await getBookingMessages(bookingId);
-        const messageList = Array.isArray(result) ? result : (result.data || []);
-        setMessages(messageList);
-      } catch (err) {
-        console.error("Failed to load messages:", err);
-      }
-    };
-    loadMessages();
-
-    // Join booking room for real-time
-    socketClient.joinBooking(bookingId);
-
-    // Listen for new messages via Socket.IO
-    const unsubscribe = socketClient.onNewMessage((message: ChatMessage) => {
-      if (message.bookingId === bookingId) {
-        setMessages((prev) => {
-          if (prev.find((m) => m.id === message.id)) return prev;
-          return [...prev, message];
-        });
-      }
-    });
-
-    return () => {
-      socketClient.leaveBooking(bookingId);
-      unsubscribe();
-    };
-  }, [bookingId]);
-
-  useEffect(scrollToBottom, [messages]);
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
-    setSending(true);
-    try {
-      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === sent.id)) return prev;
-        return [...prev, sent];
-      });
-      setNewMessage("");
-    } catch (err) {
-      console.error("Failed to send message:", err);
-    }
-    setSending(false);
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden shadow-sm my-4">
-      <div className="px-4 py-3 border-b border-border bg-gray-50 flex items-center gap-2">
-        <MessageSquare className="w-4.5 h-4.5 text-tertiary" />
-        <h4 className="text-sm font-semibold text-heading">Chat with Customer</h4>
-      </div>
-      <div className="h-44 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
-        {messages.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-6">No messages yet. Start a conversation!</p>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.senderId === currentUserId;
-            return (
-              <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-                <div className={cn("max-w-[80%] rounded-2xl px-3 py-1.5", isMe ? "bg-tertiary text-white rounded-br-sm" : "bg-white border border-border rounded-bl-sm")}>
-                  {!isMe && <p className="text-[10px] font-semibold text-tertiary mb-0.5">{msg.sender?.fullName || "Customer"}</p>}
-                  <p className={cn("text-xs", isMe ? "text-white" : "text-heading")}>{msg.content}</p>
-                  <p className={cn("text-[9px] mt-0.5 text-right", isMe ? "text-white/60" : "text-muted-foreground")}>
-                    {new Date(msg.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-2.5 border-t border-border flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 text-xs bg-gray-50 border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim() || sending}
-          className="w-8 h-8 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-50 hover:bg-tertiary-hover transition-colors"
-        >
-          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ==================== MAIN MODAL ====================
@@ -313,8 +197,6 @@ export function OrderDetailModal({
     : addressQuery
       ? `https://www.google.com/maps/dir/?api=1&destination=${addressQuery}`
       : null;
-
-  const isChatActive = ["negotiation", "accepted", "in-progress", "in_progress"].includes(status.toLowerCase());
 
   return (
     <div
@@ -498,11 +380,6 @@ export function OrderDetailModal({
               </div>
             )}
           </div>
-
-          {/* ── Chat Section ── */}
-          {isChatActive && currentUser && (
-            <ChatSection bookingId={order.id} currentUserId={currentUser.id} />
-          )}
 
           {/* ── Customer Feedback ── */}
           {["completed", "COMPLETED"].includes(status) && (

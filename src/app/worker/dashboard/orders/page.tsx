@@ -12,9 +12,11 @@ import {
   resolveWorkerUserId,
 } from "@/api/services/worker-dashboard";
 import { cn } from "@/lib/utils";
-import { MapPin, Clock, FileText } from "lucide-react";
+import { MapPin, Clock, FileText, MessageCircle } from "lucide-react";
 import type { ProviderOrder, OrderStatus } from "@/types/provider";
 import { OrderDetailModal } from "@/components/worker-dashboard/order-detail-modal";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
+import { getAuthUser } from "@/lib/auth";
 
 export default function OrdersPage() {
   const { t } = useLanguage();
@@ -24,6 +26,8 @@ export default function OrdersPage() {
   const [pastOrders, setPastOrders] = useState<ProviderOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatOrder, setChatOrder] = useState<ProviderOrder | null>(null);
+  const currentUser = getAuthUser();
 
   useEffect(() => {
     const load = async () => {
@@ -191,7 +195,7 @@ export default function OrdersPage() {
                   <span>{order.location}</span>
                 </div>
 
-                {/* Bottom Row: Agreed Price + Details */}
+                {/* Bottom Row: Agreed Price + Chat + Details */}
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-paragraph">
@@ -202,20 +206,27 @@ export default function OrdersPage() {
                     </span>
                   </div>
 
-                  {order.notes && (
-                    <p className="text-xs text-muted-foreground hidden lg:block">
-                      {order.notes}
-                    </p>
-                  )}
-
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    {t.viewDetails}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {["negotiation", "accepted", "in-progress"].includes(order.status) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full gap-1.5"
+                        onClick={() => setChatOrder(order)}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        Chat
+                      </Button>
+                    )}
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => setSelectedOrder(order)}
+                    >
+                      {t.viewDetails}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -234,6 +245,17 @@ export default function OrdersPage() {
           </Card>
         )}
       </div>
+
+      {/* Chat Drawer */}
+      {chatOrder && currentUser && (
+        <ChatDrawer
+          bookingId={chatOrder.id}
+          currentUserId={currentUser.id}
+          title={chatOrder.serviceName}
+          subtitle={chatOrder.customerName}
+          onClose={() => setChatOrder(null)}
+        />
+      )}
 
       {/* Order Detail Modal */}
       {selectedOrder && (

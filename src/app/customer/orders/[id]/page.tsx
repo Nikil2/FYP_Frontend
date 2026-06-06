@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -16,7 +16,6 @@ import {
   AlertCircle,
   FileText,
   Ban,
-  Send,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
@@ -24,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { getBookingById, cancelBooking, updateBookingStatus, type Booking } from "@/api/services/bookings";
 import { toast } from "sonner";
-import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import { submitFeedback } from "@/api/services/feedback";
 import { fileComplaint } from "@/api/services/complaints";
 import { ApiRequestError } from "@/api/types";
@@ -108,115 +107,6 @@ function formatRating(value: unknown): string {
     return "N/A";
   }
   return numeric.toFixed(1);
-}
-
-// ==================== CHAT SECTION ====================
-function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    if (!socketClient.isConnected()) {
-      socketClient.connect();
-    }
-
-    const loadMessages = async () => {
-      try {
-        const result = await getBookingMessages(bookingId);
-        const messageList = Array.isArray(result) ? result : (result.data || []);
-        setMessages(messageList);
-      } catch { /* skip */ }
-    };
-    loadMessages();
-
-    // Join booking room for real-time
-    socketClient.joinBooking(bookingId);
-
-    // Listen for new messages via Socket.IO
-    const unsubscribe = socketClient.onNewMessage((message: ChatMessage) => {
-      if (message.bookingId === bookingId) {
-        setMessages((prev) => {
-          if (prev.find((m) => m.id === message.id)) return prev;
-          return [...prev, message];
-        });
-      }
-    });
-
-    return () => {
-      socketClient.leaveBooking(bookingId);
-      unsubscribe();
-    };
-  }, [bookingId]);
-
-  useEffect(scrollToBottom, [messages]);
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
-    setSending(true);
-    try {
-      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === sent.id)) return prev;
-        return [...prev, sent];
-      });
-      setNewMessage("");
-    } catch { /* skip */ }
-    setSending(false);
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-sm font-semibold text-heading flex items-center gap-2">
-          <MessageCircle className="w-4 h-4 text-tertiary" /> Chat
-        </h3>
-      </div>
-      <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
-        {messages.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-8">No messages yet. Start a conversation!</p>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.senderId === currentUserId;
-            return (
-              <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-                <div className={cn("max-w-[75%] rounded-2xl px-3 py-2", isMe ? "bg-tertiary text-white rounded-br-sm" : "bg-white border border-border rounded-bl-sm")}>
-                  {!isMe && <p className="text-[10px] font-medium text-tertiary mb-0.5">{msg.sender?.fullName}</p>}
-                  <p className={cn("text-xs", isMe ? "text-white" : "text-heading")}>{msg.content}</p>
-                  <p className={cn("text-[9px] mt-1", isMe ? "text-white/60" : "text-muted-foreground")}>
-                    {new Date(msg.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-3 border-t border-border flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 text-sm bg-gray-50 border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim() || sending}
-          className="w-9 h-9 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-50 hover:bg-tertiary-hover transition-colors"
-        >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ==================== REVIEW FORM ====================
@@ -312,6 +202,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [complaintDesc, setComplaintDesc] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [filingComplaint, setFilingComplaint] = useState(false);
@@ -528,12 +419,15 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <a href={`tel:${booking.worker?.user?.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary/10 text-tertiary rounded-lg text-xs font-medium">
                 <Phone className="w-3.5 h-3.5" /> Call
               </a>
+              <button
+                onClick={() => setShowChat(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary text-white rounded-lg text-xs font-medium hover:bg-tertiary/90 transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> Chat
+              </button>
             </div>
           )}
         </div>
-
-        {/* Chat Section */}
-        {isActive && currentUser && <ChatSection bookingId={booking.id} currentUserId={currentUser.id} />}
 
         {/* Review Section */}
         {canReview && <ReviewForm bookingId={booking.id} onSubmitted={fetchBooking} />}
@@ -670,6 +564,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Drawer */}
+      {showChat && booking && currentUser && (
+        <ChatDrawer
+          bookingId={booking.id}
+          currentUserId={currentUser.id}
+          title={booking.service?.name || "Chat"}
+          subtitle={booking.worker?.user?.fullName}
+          onClose={() => setShowChat(false)}
+        />
       )}
     </div>
   );
