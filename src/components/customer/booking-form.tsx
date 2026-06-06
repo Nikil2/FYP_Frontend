@@ -28,7 +28,7 @@ interface BookingWorkerApi {
   id: string;
   workerId?: string;
   fullName: string;
-  services?: Array<{ name: string }>;
+  services?: Array<{ id: number; name: string; price: number }>;
   averageRating?: number;
   profilePicUrl?: string | null;
   visitingCharges?: number;
@@ -40,7 +40,7 @@ interface SelectedWorker {
   category: string;
   rating: number;
   profileImage?: string | null;
-  visitingCharges: number;
+  servicePrice: number;
 }
 
 export function BookingForm({ serviceId, serviceName, workerId }: BookingFormProps) {
@@ -53,14 +53,18 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
       getWorkerDetails(workerId)
         .then((workerData) => {
           const w = workerData as unknown as BookingWorkerApi;
+          const numericServiceId = parseInt(serviceId);
+          const matchedService = w.services?.find((s) => s.id === numericServiceId);
+          const servicePrice = matchedService?.price || w.visitingCharges || 0;
           setWorker({
             id: w.workerId || w.id,
             name: w.fullName,
-            category: w.services && w.services.length > 0 ? w.services[0].name : "Worker",
+            category: matchedService?.name || (w.services?.[0]?.name ?? "Worker"),
             rating: w.averageRating || 5.0,
             profileImage: w.profilePicUrl,
-            visitingCharges: w.visitingCharges || 1000,
+            servicePrice,
           });
+          setFormData((prev) => ({ ...prev, customerPrice: servicePrice }));
         })
         .catch((err) => {
           console.error("Failed to load worker details:", err);
@@ -77,6 +81,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     referralSource: "",
     jobLat: 0,
     jobLng: 0,
+    customerPrice: 0,
   });
   const [images, setImages] = useState<File[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -242,7 +247,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
 
       const time24h = formatTimeTo24h(formData.serviceTime);
       const scheduledAt = new Date(`${formData.serviceDate}T${time24h}:00`).toISOString();
-      const initialPrice = worker ? Number(worker.visitingCharges) : 1000;
+      const initialPrice = formData.customerPrice > 0 ? formData.customerPrice : (worker?.servicePrice || 0);
 
       const jobAddress = formData.unitDetail.trim()
         ? `${formData.unitDetail.trim()}, ${formData.location}`
@@ -315,10 +320,10 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
           </div>
         </div>
 
-        {/* Selected Worker (NEW) */}
+        {/* Selected Worker */}
         {worker && (
-          <div>
-            <label className="block text-sm font-medium text-heading mb-1.5">
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-heading">
               Assigned Worker
             </label>
             <div className="bg-tertiary/10 rounded-lg px-4 py-3 flex items-center gap-3">
@@ -341,6 +346,43 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
               </div>
               <div className="text-right">
                 <p className="text-xs font-semibold text-tertiary">⭐ {worker.rating}</p>
+              </div>
+            </div>
+
+            {/* Pricing section */}
+            <div className="border border-border rounded-lg p-4 space-y-3 bg-gray-50">
+              {/* Worker's set price */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-paragraph">Worker&apos;s Price</p>
+                <p className="text-sm font-bold text-tertiary">
+                  Rs. {worker.servicePrice.toLocaleString()}
+                </p>
+              </div>
+
+              {/* Customer price input */}
+              <div>
+                <label className="block text-xs font-medium text-heading mb-1">
+                  Your Price (optional — propose a different price)
+                </label>
+                <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-tertiary/40">
+                  <span className="text-sm font-semibold text-heading">Rs.</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={formData.customerPrice || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        customerPrice: parseFloat(e.target.value) || 0,
+                      }))
+                    }
+                    placeholder={worker.servicePrice.toString()}
+                    className="flex-1 text-sm bg-transparent outline-none text-heading placeholder:text-muted-foreground"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Leave as-is to accept the worker&apos;s price, or enter your own offer to start negotiation.
+                </p>
               </div>
             </div>
           </div>

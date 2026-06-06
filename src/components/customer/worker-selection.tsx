@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, MapPin, Star } from "lucide-react";
+import { ChevronLeft, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { WorkerDetail } from "@/types/worker";
 
@@ -115,17 +115,14 @@ export function WorkerSelection({
               </div>
 
               {/* Details */}
-              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  {worker.distance} km away
-                </div>
-                <div className="text-right font-semibold text-tertiary">
-                  Rs {
-                    worker.services && worker.services.length > 0
-                      ? worker.services[0].price
-                      : worker.visitingFee
-                  }
+              <div className="flex items-center justify-between mb-3 text-xs">
+                <p className="text-muted-foreground italic">Available for booking</p>
+                <div className="font-semibold text-tertiary">
+                  Rs.{" "}
+                  {(worker.services && worker.services.length > 0 && worker.services[0].price > 0
+                    ? worker.services[0].price
+                    : worker.visitingFee
+                  ).toLocaleString()}
                 </div>
               </div>
 
