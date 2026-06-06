@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Bell } from "lucide-react";
+import { NotificationBell } from "./notification-bell";
 
 interface CustomerHeaderProps {
   userName?: string;
@@ -10,11 +10,7 @@ interface CustomerHeaderProps {
   notificationCount?: number;
 }
 
-export function CustomerHeader({
-  userName = "Guest",
-  profileImage,
-  notificationCount = 0,
-}: CustomerHeaderProps) {
+export function CustomerHeader({ userName = "Guest", profileImage }: CustomerHeaderProps) {
   const router = useRouter();
 
   return (
@@ -34,12 +30,7 @@ export function CustomerHeader({
               className="object-cover w-full h-full"
             />
           ) : (
-            userName
-              .split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)
+            userName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
           )}
         </button>
         <div>
@@ -50,20 +41,7 @@ export function CustomerHeader({
         </div>
       </div>
 
-      {/* Right - Notification */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push("/customer/notifications")}
-          className="relative"
-        >
-          <Bell className="w-6 h-6 text-heading" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-tertiary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-              {notificationCount > 99 ? "99+" : notificationCount}
-            </span>
-          )}
-        </button>
-      </div>
+      <NotificationBell />
     </div>
   );
 }

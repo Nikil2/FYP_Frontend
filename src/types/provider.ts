@@ -52,6 +52,7 @@ export interface ProviderOrder {
   scheduledTime: string;
   agreedPrice: number;
   notes?: string;
+  imageUrls?: string[];
   createdAt: string;
   completedAt?: string;
   invoiceUrl?: string;

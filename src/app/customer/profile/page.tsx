@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/customer/notification-bell";
 import {
   ChevronLeft,
   ChevronRight,
@@ -143,7 +144,8 @@ export default function ProfilePage() {
         >
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <h1 className="text-lg font-semibold text-heading">My Profile</h1>
+        <h1 className="text-lg font-semibold text-heading flex-1">My Profile</h1>
+        <NotificationBell />
       </div>
 
       {/* Profile Card */}

@@ -27,6 +27,7 @@ export interface WorkerDashboardOrder {
   customerName: string;
   customerPhone: string;
   notes?: string;
+  imageUrls: string[];
   createdAt: string;
 }
 
@@ -166,6 +167,7 @@ export async function getWorkerDashboardOrders(
       customerName: String((order.customer as Record<string, unknown>)?.fullName || 'Customer'),
       customerPhone: String((order.customer as Record<string, unknown>)?.phoneNumber || ''),
       notes: String(order.description || ''),
+      imageUrls: Array.isArray(order.imageUrls) ? (order.imageUrls as string[]) : [],
       createdAt: String(order.createdAt || new Date().toISOString()),
     };
   });

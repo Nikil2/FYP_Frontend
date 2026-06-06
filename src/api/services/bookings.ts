@@ -20,6 +20,7 @@ export interface CreateBookingData {
   jobLng: number;
   scheduledAt?: string;
   initialPrice?: number;
+  imageUrls?: string[];
 }
 
 export interface Booking {
@@ -31,6 +32,7 @@ export interface Booking {
   jobAddress: string;
   jobLat: number;
   jobLng: number;
+  imageUrls: string[];
   scheduledAt: string | null;
   status: 'PENDING' | 'NEGOTIATION' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
   finalPrice: string | null;

@@ -127,6 +127,10 @@ class SocketClient {
     this.socket?.emit('leave_booking', { bookingId });
   }
 
+  sendMessage(bookingId: string, content: string): void {
+    this.socket?.emit('send_message', { bookingId, content });
+  }
+
   startTyping(bookingId: string): void {
     this.socket?.emit('typing_start', { bookingId });
   }

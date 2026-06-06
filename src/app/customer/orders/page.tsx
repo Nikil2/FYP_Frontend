@@ -15,10 +15,14 @@ import {
   Star,
   Loader2,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { getMyBookings, type Booking } from "@/api/services/bookings";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
+import { getAuthUser } from "@/lib/auth";
+import { NotificationBell } from "@/components/customer/notification-bell";
 
 const TABS = [
   { id: "active", label: "Active" },
@@ -61,10 +65,11 @@ function formatRating(value: unknown): string {
   return numeric.toFixed(1);
 }
 
-function BookingCard({ booking }: { booking: Booking }) {
+function BookingCard({ booking, onChat }: { booking: Booking; onChat: (b: Booking) => void }) {
   const router = useRouter();
   const badge = getStatusBadge(booking.status);
   const BadgeIcon = badge.icon;
+  const isChatActive = isActiveStatus(booking.status);
 
   return (
     <button
@@ -137,14 +142,25 @@ function BookingCard({ booking }: { booking: Booking }) {
         <span className="truncate">{booking.jobAddress}</span>
       </div>
 
-      {/* Bottom Row: Price + Arrow */}
+      {/* Bottom Row: Price + Chat + Arrow */}
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-border">
         <span className="text-sm font-bold text-heading">
           {booking.finalPrice ? `Rs. ${Number(booking.finalPrice).toLocaleString()}` : "Price TBD"}
         </span>
-        <div className="flex items-center gap-1 text-xs text-tertiary font-medium">
-          View Details
-          <ChevronRight className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {isChatActive && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onChat(booking); }}
+              className="flex items-center gap-1 text-xs text-white bg-tertiary px-2.5 py-1.5 rounded-full font-medium hover:bg-tertiary/90 transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              Chat
+            </button>
+          )}
+          <div className="flex items-center gap-1 text-xs text-tertiary font-medium">
+            View Details
+            <ChevronRight className="w-4 h-4" />
+          </div>
         </div>
       </div>
 
@@ -175,6 +191,8 @@ export default function OrdersPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatBooking, setChatBooking] = useState<Booking | null>(null);
+  const currentUser = getAuthUser();
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -224,7 +242,8 @@ export default function OrdersPage() {
         >
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <h1 className="text-lg font-semibold text-heading">My Orders</h1>
+        <h1 className="text-lg font-semibold text-heading flex-1">My Orders</h1>
+        <NotificationBell />
       </div>
 
       {/* Tab Bar */}
@@ -291,7 +310,7 @@ export default function OrdersPage() {
         <div className="p-4 space-y-3 md:p-6 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           {currentBookings.length > 0 ? (
             currentBookings.map((booking) => (
-              <BookingCard key={booking.id} booking={booking} />
+              <BookingCard key={booking.id} booking={booking} onChat={setChatBooking} />
             ))
           ) : (
             <div className="flex flex-col items-center justify-center py-16 px-4 md:col-span-2">
@@ -322,6 +341,16 @@ export default function OrdersPage() {
       )}
 
       <FloatingButtons />
+
+      {chatBooking && currentUser && (
+        <ChatDrawer
+          bookingId={chatBooking.id}
+          currentUserId={currentUser.id}
+          title={chatBooking.service?.name || "Chat"}
+          subtitle={chatBooking.worker?.user?.fullName}
+          onClose={() => setChatBooking(null)}
+        />
+      )}
     </div>
   );
 }

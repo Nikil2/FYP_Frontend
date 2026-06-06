@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Award, ChevronLeft } from "lucide-react";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
+import { NotificationBell } from "@/components/customer/notification-bell";
 
 export default function RewardsPage() {
   const router = useRouter();
@@ -17,7 +18,8 @@ export default function RewardsPage() {
         >
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <h1 className="text-lg font-semibold text-heading">Rewards</h1>
+        <h1 className="text-lg font-semibold text-heading flex-1">Rewards</h1>
+        <NotificationBell />
       </div>
 
       {/* Rewards Content */}

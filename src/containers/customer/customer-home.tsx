@@ -7,7 +7,6 @@ import { CitySelector } from "@/components/customer/city-selector";
 import { ServiceCategories } from "@/components/customer/service-categories";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { getAuthUser } from "@/lib/auth";
-import { getUnreadCount } from "@/api/services/notifications";
 import { getActiveServices } from "@/api/services/services";
 import { Search, X } from "lucide-react";
 import * as Icons from "lucide-react";
@@ -31,7 +30,6 @@ const CATEGORY_ICONS: Record<string, keyof typeof Icons> = {
 export default function CustomerHome() {
   const [selectedCity, setSelectedCity] = useState("karachi");
   const [userName, setUserName] = useState("Guest User");
-  const [notificationCount, setNotificationCount] = useState(0);
   const [categories, setCategories] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,17 +41,6 @@ export default function CustomerHome() {
     if (user) {
       setUserName(user.fullName || "User");
     }
-
-    // Fetch real notification count from API
-    const fetchNotifications = async () => {
-      try {
-        const result = await getUnreadCount();
-        setNotificationCount(result.unreadCount);
-      } catch {
-        // Silently fail — notifications are non-critical
-        setNotificationCount(0);
-      }
-    };
 
     // Fetch active services and group into categories
     const fetchCategories = async () => {
@@ -80,7 +67,6 @@ export default function CustomerHome() {
       }
     };
 
-    fetchNotifications();
     fetchCategories();
   }, []);
 
@@ -107,10 +93,7 @@ export default function CustomerHome() {
   return (
     <div className="min-h-screen bg-white pb-20 md:pb-8">
       {/* Header */}
-      <CustomerHeader
-        userName={userName}
-        notificationCount={notificationCount}
-      />
+      <CustomerHeader userName={userName} />
 
       {/* Promo Banner */}
       <PromoBanner />

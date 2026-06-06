@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, use } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -16,18 +16,20 @@ import {
   AlertCircle,
   FileText,
   Ban,
-  Send,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getBookingById, cancelBooking, type Booking } from "@/api/services/bookings";
-import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
+import { getBookingById, cancelBooking, updateBookingStatus, type Booking } from "@/api/services/bookings";
+import { toast } from "sonner";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import { submitFeedback } from "@/api/services/feedback";
 import { fileComplaint } from "@/api/services/complaints";
+import { ApiRequestError } from "@/api/types";
 import { getAuthUser } from "@/lib/auth";
 import { socketClient } from "@/lib/socket";
+import { NotificationBell } from "@/components/customer/notification-bell";
 
 type BookingStatus = Booking["status"];
 
@@ -108,115 +110,6 @@ function formatRating(value: unknown): string {
   return numeric.toFixed(1);
 }
 
-// ==================== CHAT SECTION ====================
-function ChatSection({ bookingId, currentUserId }: { bookingId: string; currentUserId: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    if (!socketClient.isConnected()) {
-      socketClient.connect();
-    }
-
-    const loadMessages = async () => {
-      try {
-        const result = await getBookingMessages(bookingId);
-        const messageList = Array.isArray(result) ? result : (result.data || []);
-        setMessages(messageList);
-      } catch { /* skip */ }
-    };
-    loadMessages();
-
-    // Join booking room for real-time
-    socketClient.joinBooking(bookingId);
-
-    // Listen for new messages via Socket.IO
-    const unsubscribe = socketClient.onNewMessage((message: ChatMessage) => {
-      if (message.bookingId === bookingId) {
-        setMessages((prev) => {
-          if (prev.find((m) => m.id === message.id)) return prev;
-          return [...prev, message];
-        });
-      }
-    });
-
-    return () => {
-      socketClient.leaveBooking(bookingId);
-      unsubscribe();
-    };
-  }, [bookingId]);
-
-  useEffect(scrollToBottom, [messages]);
-
-  const handleSend = async () => {
-    if (!newMessage.trim() || sending) return;
-    setSending(true);
-    try {
-      const sent = await sendMessage({ bookingId, content: newMessage.trim() });
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === sent.id)) return prev;
-        return [...prev, sent];
-      });
-      setNewMessage("");
-    } catch { /* skip */ }
-    setSending(false);
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-sm font-semibold text-heading flex items-center gap-2">
-          <MessageCircle className="w-4 h-4 text-tertiary" /> Chat
-        </h3>
-      </div>
-      <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
-        {messages.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-8">No messages yet. Start a conversation!</p>
-        ) : (
-          messages.map((msg) => {
-            const isMe = msg.senderId === currentUserId;
-            return (
-              <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-                <div className={cn("max-w-[75%] rounded-2xl px-3 py-2", isMe ? "bg-tertiary text-white rounded-br-sm" : "bg-white border border-border rounded-bl-sm")}>
-                  {!isMe && <p className="text-[10px] font-medium text-tertiary mb-0.5">{msg.sender?.fullName}</p>}
-                  <p className={cn("text-xs", isMe ? "text-white" : "text-heading")}>{msg.content}</p>
-                  <p className={cn("text-[9px] mt-1", isMe ? "text-white/60" : "text-muted-foreground")}>
-                    {new Date(msg.createdAt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}
-                  </p>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-3 border-t border-border flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Type a message..."
-          className="flex-1 text-sm bg-gray-50 border border-border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!newMessage.trim() || sending}
-          className="w-9 h-9 rounded-full bg-tertiary text-white flex items-center justify-center disabled:opacity-50 hover:bg-tertiary-hover transition-colors"
-        >
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ==================== REVIEW FORM ====================
 function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted: () => void }) {
   const [rating, setRating] = useState(0);
@@ -229,29 +122,72 @@ function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted
     setSubmitting(true);
     try {
       await submitFeedback({ bookingId, rating, comment: comment || undefined });
+      toast.success("Review submitted. Thank you!");
       onSubmitted();
-    } catch { /* skip */ }
+    } catch (err) {
+      const is409 = err instanceof ApiRequestError && err.statusCode === 409;
+      const message = err instanceof Error ? err.message : "";
+      if (is409 || message.toLowerCase().includes("already")) {
+        toast.info("You have already submitted a review for this booking.");
+        onSubmitted();
+      } else {
+        toast.error(message || "Failed to submit review. Please try again.");
+      }
+    }
     setSubmitting(false);
   };
 
+  const labels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
+
   return (
     <div className="bg-white rounded-xl border border-border p-4">
-      <h3 className="text-sm font-semibold text-heading mb-3">Leave a Review</h3>
-      <div className="flex items-center gap-1 mb-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <button key={i} onMouseEnter={() => setHoverRating(i + 1)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRating(i + 1)}>
-            <Star className={cn("w-7 h-7 transition-colors", i < (hoverRating || rating) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
-          </button>
-        ))}
-        <span className="text-xs text-muted-foreground ml-2">{rating > 0 ? `${rating}/5` : "Select rating"}</span>
+      <h3 className="text-sm font-semibold text-heading mb-4">Leave a Review</h3>
+
+      {/* Stars */}
+      <div className="flex flex-col items-center gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseEnter={() => setHoverRating(i + 1)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => setRating(i + 1)}
+              className="p-1 transition-transform active:scale-90"
+            >
+              <Star
+                className={cn(
+                  "w-9 h-9 transition-colors",
+                  i < (hoverRating || rating)
+                    ? "text-amber-400 fill-amber-400 drop-shadow-sm"
+                    : "text-gray-300 fill-gray-100"
+                )}
+              />
+            </button>
+          ))}
+        </div>
+        <span className={cn(
+          "text-sm font-medium transition-colors",
+          rating > 0 ? "text-amber-600" : "text-muted-foreground"
+        )}>
+          {rating > 0 ? labels[rating] : "Tap a star to rate"}
+        </span>
       </div>
+
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Write your review (optional)..."
         className="w-full text-sm bg-gray-50 border border-border rounded-lg px-3 py-2 h-20 resize-none focus:outline-none focus:ring-2 focus:ring-tertiary/30 mb-3"
       />
-      <Button variant="tertiary" size="sm" className="w-full" onClick={handleSubmit} disabled={rating === 0 || submitting}>
+      <Button
+        type="button"
+        variant="tertiary"
+        size="sm"
+        className="w-full"
+        onClick={handleSubmit}
+        disabled={rating === 0 || submitting}
+      >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Review"}
       </Button>
     </div>
@@ -266,9 +202,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [complaintDesc, setComplaintDesc] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [filingComplaint, setFilingComplaint] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const currentUser = getAuthUser();
 
   const fetchBooking = useCallback(async () => {
@@ -303,6 +242,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setShowCancelModal(false);
     } catch { /* skip */ }
     setCancelling(false);
+  };
+
+  const handleMarkComplete = async () => {
+    if (completing) return;
+    setCompleting(true);
+    try {
+      await updateBookingStatus(id, "COMPLETED");
+      await fetchBooking();
+      setShowCompleteModal(false);
+      toast.success("Booking marked as complete. Thank you!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to mark as complete.");
+    }
+    setCompleting(false);
   };
 
   const handleFileComplaint = async () => {
@@ -352,10 +305,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         <button onClick={() => router.push("/customer/orders")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors md:hidden">
           <ChevronLeft className="w-5 h-5 text-heading" />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-base font-semibold text-heading">Order Details</h1>
           <p className="text-[10px] text-muted-foreground">{booking.id.slice(0, 8)}...</p>
         </div>
+        <NotificationBell />
       </div>
 
       <div className="p-4 space-y-4">
@@ -423,6 +377,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <p className="text-xs text-muted-foreground leading-relaxed">{booking.description}</p>
         </div>
 
+        {/* Service Images */}
+        {booking.imageUrls && booking.imageUrls.length > 0 && (
+          <div className="bg-white rounded-xl border border-border p-4">
+            <h3 className="text-sm font-semibold text-heading mb-3">
+              Service Images ({booking.imageUrls.length})
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {booking.imageUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={url}
+                    alt={`Service image ${i + 1}`}
+                    className="w-full aspect-square object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Worker Info */}
         <div className="bg-white rounded-xl border border-border p-4">
           <h3 className="text-sm font-semibold text-heading mb-3">Assigned Worker</h3>
@@ -447,42 +421,111 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <a href={`tel:${booking.worker?.user?.phoneNumber}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary/10 text-tertiary rounded-lg text-xs font-medium">
                 <Phone className="w-3.5 h-3.5" /> Call
               </a>
+              <button
+                onClick={() => setShowChat(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-tertiary text-white rounded-lg text-xs font-medium hover:bg-tertiary/90 transition-colors"
+              >
+                <MessageCircle className="w-3.5 h-3.5" /> Chat
+              </button>
             </div>
           )}
         </div>
-
-        {/* Chat Section */}
-        {isActive && currentUser && <ChatSection bookingId={booking.id} currentUserId={currentUser.id} />}
 
         {/* Review Section */}
         {canReview && <ReviewForm bookingId={booking.id} onSubmitted={fetchBooking} />}
 
         {/* Existing Review */}
-        {booking.feedback && (
-          <div className="bg-white rounded-xl border border-border p-4">
-            <h3 className="text-sm font-semibold text-heading mb-2">Your Review</h3>
-            <div className="flex items-center gap-1 mb-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={cn("w-4 h-4", i < (booking.feedback?.rating || 0) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
-              ))}
+        {booking.feedback && (() => {
+          const reviewLabels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
+          const r = booking.feedback.rating;
+          return (
+            <div className="bg-white rounded-xl border border-border overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-amber-50/60">
+                <h3 className="text-sm font-semibold text-heading flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  Your Review
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(booking.feedback.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+              </div>
+
+              <div className="px-4 py-4 space-y-3">
+                {/* Stars + label */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "w-6 h-6",
+                          i < r ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-100"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-amber-600">
+                    {r}/5 — {reviewLabels[r]}
+                  </span>
+                </div>
+
+                {/* Comment */}
+                {booking.feedback.comment ? (
+                  <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                    <p className="text-sm text-paragraph leading-relaxed">"{booking.feedback.comment}"</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No written comment.</p>
+                )}
+              </div>
             </div>
-            {booking.feedback.comment && <p className="text-xs text-muted-foreground">{booking.feedback.comment}</p>}
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Bottom Actions */}
       {isActive && (
         <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4 md:bottom-0">
-          <div className="max-w-lg mx-auto flex gap-3">
-            <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancelModal(true)}>
-              <Ban className="w-4 h-4" /> Cancel Booking
-            </Button>
-            {canComplaint && (
-              <Button variant="outline" size="sm" className="flex-1 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => setShowComplaintModal(true)}>
-                <AlertTriangle className="w-4 h-4" /> File Complaint
+          <div className="max-w-lg mx-auto flex flex-col gap-2">
+            {booking.status === "IN_PROGRESS" && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                onClick={() => setShowCompleteModal(true)}
+              >
+                <CheckCircle2 className="w-4 h-4" /> Mark as Complete
               </Button>
             )}
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => setShowCancelModal(true)}>
+                <Ban className="w-4 h-4" /> Cancel Booking
+              </Button>
+              {canComplaint && (
+                <Button variant="outline" size="sm" className="flex-1 text-orange-600 border-orange-200 hover:bg-orange-50" onClick={() => setShowComplaintModal(true)}>
+                  <AlertTriangle className="w-4 h-4" /> File Complaint
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-6">
+            <h3 className="text-lg font-bold text-heading mb-2">Mark as Complete?</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              Confirm that the worker has finished the job and you are satisfied with the service. You can leave a review after.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCompleteModal(false)}>Not Yet</Button>
+              <Button variant="primary" className="flex-1 bg-green-600 hover:bg-green-700" onClick={handleMarkComplete} disabled={completing}>
+                {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yes, Complete"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -523,6 +566,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+      )}
+
+      {/* Chat Drawer */}
+      {showChat && booking && currentUser && (
+        <ChatDrawer
+          bookingId={booking.id}
+          currentUserId={currentUser.id}
+          title={booking.service?.name || "Chat"}
+          subtitle={booking.worker?.user?.fullName}
+          onClose={() => setShowChat(false)}
+        />
       )}
     </div>
   );
