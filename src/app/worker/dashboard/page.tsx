@@ -21,8 +21,11 @@ import {
   ArrowRight,
   Clock,
   MapPin,
+  MessageCircle,
 } from "lucide-react";
 import type { ProviderOrder } from "@/types/provider";
+import { getAuthUser } from "@/lib/auth";
+import { ChatDrawer } from "@/components/chat/ChatDrawer";
 
 export default function WorkerDashboardPage() {
   const { t } = useLanguage();
@@ -36,6 +39,8 @@ export default function WorkerDashboardPage() {
   const [profileStatus, setProfileStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [isOnline, setIsOnline] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [chatOrder, setChatOrder] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +69,9 @@ export default function WorkerDashboardPage() {
 
         const orders = await getWorkerDashboardOrders(profile.workerId, "active");
         setActiveOrders(orders);
+
+        const user = getAuthUser();
+        setCurrentUser(user);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load dashboard");
       } finally {
@@ -194,14 +202,23 @@ export default function WorkerDashboardPage() {
                         <p className="text-lg font-bold text-tertiary">
                           Rs. {order.agreedPrice.toLocaleString()}
                         </p>
-                        <Button
-                          variant="tertiary"
-                          size="sm"
-                          className="mt-2 rounded-full text-xs"
-                          onClick={() => setSelectedOrder(order)}
-                        >
-                          {t.viewDetails}
-                        </Button>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button
+                            variant="tertiary"
+                            size="sm"
+                            className="rounded-full text-xs"
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            {t.viewDetails}
+                          </Button>
+                          <button
+                            onClick={() => setChatOrder(order)}
+                            className="w-8 h-8 rounded-full bg-tertiary/10 hover:bg-tertiary/20 flex items-center justify-center transition-colors"
+                            title="Open chat"
+                          >
+                            <MessageCircle className="w-4 h-4 text-tertiary" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -218,6 +235,17 @@ export default function WorkerDashboardPage() {
             )}
           </div>
         </>
+      )}
+
+      {/* Chat Drawer */}
+      {chatOrder && currentUser && (
+        <ChatDrawer
+          bookingId={chatOrder.id}
+          currentUserId={currentUser.id}
+          title={chatOrder.serviceName}
+          subtitle={chatOrder.customerName || "Customer"}
+          onClose={() => setChatOrder(null)}
+        />
       )}
 
       {/* Order Detail Modal */}
