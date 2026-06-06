@@ -439,7 +439,7 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     formData.append("homeAddress", data.homeAddress);
     formData.append("homeLat", data.homeLat.toString());
     formData.append("homeLng", data.homeLng.toString());
-    formData.append("selectedServiceIds", JSON.stringify(data.selectedServiceIds));
+    formData.append("services", JSON.stringify(data.selectedServices));
 
     // Selfie
     if (data.selfieImage) {

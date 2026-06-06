@@ -35,7 +35,7 @@ export default function WorkerDetailPage() {
           rating: data.averageRating || 5.0,
           reviewCount: data.totalJobsCompleted || 0,
           distance: 1.5,
-          visitingFee: data.visitingCharges || 1000,
+          visitingFee: data.visitingCharges || 0,
           isOnline: data.isOnline,
           isVerified: data.verificationStatus === "APPROVED",
           bio: data.bio || "Available for booking",
@@ -44,7 +44,7 @@ export default function WorkerDetailPage() {
           services: data.services ? data.services.map((s: any) => ({
             id: s.id.toString(),
             name: s.name,
-            price: data.visitingCharges || 1000
+            price: s.price || 0,
           })) : [],
           reviews: [],
           profileImage: data.profilePicUrl,

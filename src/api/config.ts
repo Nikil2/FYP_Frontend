@@ -46,6 +46,7 @@ export const API_CONFIG = {
     WORKERS_ORDERS: (workerId: string) => `/workers/${workerId}/orders`,
     WORKERS_WALLET_SUMMARY: (workerId: string) => `/workers/${workerId}/wallet/summary`,
     WORKERS_WALLET_TRANSACTIONS: (workerId: string) => `/workers/${workerId}/wallet/transactions`,
+    WORKERS_SERVICES: (workerId: string) => `/workers/${workerId}/services`,
     WORKERS_PORTFOLIO: (workerId: string) => `/workers/${workerId}/portfolio`,
     WORKERS_PORTFOLIO_ADD: (workerId: string) => `/workers/${workerId}/portfolio`,
     WORKERS_PORTFOLIO_ITEM: (workerId: string, portfolioId: string) =>

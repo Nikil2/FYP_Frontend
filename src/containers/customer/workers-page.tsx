@@ -14,6 +14,7 @@ interface WorkersPageProps {
 interface CustomerWorkerService {
   id: number;
   name: string;
+  price: number;
 }
 
 interface CustomerWorkerApi {
@@ -56,31 +57,35 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
         ).filter((worker) =>
           worker.services?.some((service) => service.id === numericServiceId)
         );
-        const mapped: WorkerDetail[] = customerWorkers.map((w) => ({
-          id: w.workerId || w.id,
-          name: w.fullName,
-          category: serviceData.name,
-          rating: w.averageRating || 5.0,
-          reviewCount: w.totalJobsCompleted || 0,
-          distance: 1.5, // Mocked local distance
-          visitingFee: w.visitingCharges || 1000,
-          isOnline: w.isOnline,
-          isVerified: w.verificationStatus === "APPROVED",
-          bio: w.bio || "Available for booking",
-          experienceYears: w.experienceYears || 1,
-          specializations: [serviceData.name],
-          services: [{
-            id: serviceData.id.toString(),
-            name: serviceData.name,
-            price: w.visitingCharges || 1000
-          }],
-          reviews: [],
-          profileImage: w.profilePicUrl,
-          location: {
-            lat: w.homeLat || 24.8607,
-            lng: w.homeLng || 67.0011,
-          }
-        }));
+        const mapped: WorkerDetail[] = customerWorkers.map((w) => {
+          const matchedService = w.services?.find((s) => s.id === numericServiceId);
+          const servicePrice = matchedService?.price || 0;
+          return {
+            id: w.workerId || w.id,
+            name: w.fullName,
+            category: serviceData.name,
+            rating: w.averageRating || 5.0,
+            reviewCount: w.totalJobsCompleted || 0,
+            distance: 0,
+            visitingFee: servicePrice,
+            isOnline: w.isOnline,
+            isVerified: w.verificationStatus === "APPROVED",
+            bio: w.bio || "Available for booking",
+            experienceYears: w.experienceYears || 1,
+            specializations: [serviceData.name],
+            services: [{
+              id: serviceData.id.toString(),
+              name: serviceData.name,
+              price: servicePrice,
+            }],
+            reviews: [],
+            profileImage: w.profilePicUrl,
+            location: {
+              lat: w.homeLat || 24.8607,
+              lng: w.homeLng || 67.0011,
+            },
+          };
+        });
 
         setWorkers(mapped);
       } catch (error) {

@@ -74,7 +74,7 @@ export async function registerWorker(
       !workerData.homeLng ||
       workerData.experienceYears < 0 ||
       workerData.visitingCharges < 0 ||
-      !workerData.serviceIds.length
+      !workerData.services.length
     ) {
       throw new Error('Missing required fields');
     }
@@ -393,6 +393,17 @@ export async function deletePortfolioImage(
 }
 
 // ============================================
+// WORKER SERVICES (add/remove/update prices)
+// ============================================
+
+export async function updateWorkerServices(
+  workerId: string,
+  services: { serviceId: number; price: number }[]
+): Promise<Worker> {
+  return apiClient.put<Worker>(API_CONFIG.ENDPOINTS.WORKERS_SERVICES(workerId), { services });
+}
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 
@@ -420,8 +431,8 @@ export function prepareWorkerRegistrationData(
     visitingCharges: formData.visitingCharges
       ? parseFloat(String(formData.visitingCharges))
       : 0,
-    serviceIds: Array.isArray(formData.serviceIds)
-      ? (formData.serviceIds as number[])
+    services: Array.isArray(formData.services)
+      ? (formData.services as { serviceId: number; price: number }[])
       : [],
     portfolioImages: Array.isArray(formData.portfolioImages)
       ? (formData.portfolioImages as PortfolioImageInput[])
@@ -453,6 +464,7 @@ export default {
   getWorkerDetails,
   getWorkerByUserId,
   updateWorkerProfile,
+  updateWorkerServices,
   addPortfolioImage,
   getPortfolioImages,
   updatePortfolioImage,

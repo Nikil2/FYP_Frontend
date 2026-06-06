@@ -134,7 +134,7 @@ export async function example6_BasicWorkerRegistration(): Promise<void> {
       homeLng: 67.0011,
       experienceYears: 3,
       visitingCharges: 500,
-      serviceIds: [1, 2], // Electrician services
+      services: [{ serviceId: 1, price: 1000 }, { serviceId: 2, price: 1500 }], // Electrician services
     };
 
     const worker = await registerWorker(registrationData);
@@ -172,7 +172,7 @@ export async function example7_WorkerRegistrationWithPortfolio(): Promise<void> 
       homeLng: 67.0317,
       experienceYears: 5,
       visitingCharges: 750,
-      serviceIds: [1, 2, 3], // Multiple services
+      services: [{ serviceId: 1, price: 1000 }, { serviceId: 2, price: 1500 }, { serviceId: 3, price: 2000 }], // Multiple services
       portfolioImages: [
         {
           imageUrl: 'https://example.com/project1.jpg',
@@ -322,7 +322,7 @@ export async function example13_ErrorHandling(): Promise<void> {
       homeLng: 0,
       experienceYears: 0,
       visitingCharges: 0,
-      serviceIds: [],
+      services: [],
     };
 
     await registerWorker(registrationData);
