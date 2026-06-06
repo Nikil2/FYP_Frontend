@@ -230,29 +230,71 @@ function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted
     setSubmitting(true);
     try {
       await submitFeedback({ bookingId, rating, comment: comment || undefined });
+      toast.success("Review submitted. Thank you!");
       onSubmitted();
-    } catch { /* skip */ }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.toLowerCase().includes("already")) {
+        toast.error("You have already submitted a review for this booking.");
+        onSubmitted(); // re-fetch so booking.feedback populates and hides the form
+      } else {
+        toast.error(message || "Failed to submit review. Please try again.");
+      }
+    }
     setSubmitting(false);
   };
 
+  const labels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
+
   return (
     <div className="bg-white rounded-xl border border-border p-4">
-      <h3 className="text-sm font-semibold text-heading mb-3">Leave a Review</h3>
-      <div className="flex items-center gap-1 mb-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <button key={i} onMouseEnter={() => setHoverRating(i + 1)} onMouseLeave={() => setHoverRating(0)} onClick={() => setRating(i + 1)}>
-            <Star className={cn("w-7 h-7 transition-colors", i < (hoverRating || rating) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
-          </button>
-        ))}
-        <span className="text-xs text-muted-foreground ml-2">{rating > 0 ? `${rating}/5` : "Select rating"}</span>
+      <h3 className="text-sm font-semibold text-heading mb-4">Leave a Review</h3>
+
+      {/* Stars */}
+      <div className="flex flex-col items-center gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseEnter={() => setHoverRating(i + 1)}
+              onMouseLeave={() => setHoverRating(0)}
+              onClick={() => setRating(i + 1)}
+              className="p-1 transition-transform active:scale-90"
+            >
+              <Star
+                className={cn(
+                  "w-9 h-9 transition-colors",
+                  i < (hoverRating || rating)
+                    ? "text-amber-400 fill-amber-400 drop-shadow-sm"
+                    : "text-gray-300 fill-gray-100"
+                )}
+              />
+            </button>
+          ))}
+        </div>
+        <span className={cn(
+          "text-sm font-medium transition-colors",
+          rating > 0 ? "text-amber-600" : "text-muted-foreground"
+        )}>
+          {rating > 0 ? labels[rating] : "Tap a star to rate"}
+        </span>
       </div>
+
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Write your review (optional)..."
         className="w-full text-sm bg-gray-50 border border-border rounded-lg px-3 py-2 h-20 resize-none focus:outline-none focus:ring-2 focus:ring-tertiary/30 mb-3"
       />
-      <Button variant="tertiary" size="sm" className="w-full" onClick={handleSubmit} disabled={rating === 0 || submitting}>
+      <Button
+        type="button"
+        variant="tertiary"
+        size="sm"
+        className="w-full"
+        onClick={handleSubmit}
+        disabled={rating === 0 || submitting}
+      >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Review"}
       </Button>
     </div>
@@ -440,6 +482,26 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <p className="text-xs text-muted-foreground leading-relaxed">{booking.description}</p>
         </div>
 
+        {/* Service Images */}
+        {booking.imageUrls && booking.imageUrls.length > 0 && (
+          <div className="bg-white rounded-xl border border-border p-4">
+            <h3 className="text-sm font-semibold text-heading mb-3">
+              Service Images ({booking.imageUrls.length})
+            </h3>
+            <div className="grid grid-cols-3 gap-2">
+              {booking.imageUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={url}
+                    alt={`Service image ${i + 1}`}
+                    className="w-full aspect-square object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Worker Info */}
         <div className="bg-white rounded-xl border border-border p-4">
           <h3 className="text-sm font-semibold text-heading mb-3">Assigned Worker</h3>
@@ -475,17 +537,53 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         {canReview && <ReviewForm bookingId={booking.id} onSubmitted={fetchBooking} />}
 
         {/* Existing Review */}
-        {booking.feedback && (
-          <div className="bg-white rounded-xl border border-border p-4">
-            <h3 className="text-sm font-semibold text-heading mb-2">Your Review</h3>
-            <div className="flex items-center gap-1 mb-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={cn("w-4 h-4", i < (booking.feedback?.rating || 0) ? "text-amber-400 fill-amber-400" : "text-gray-200")} />
-              ))}
+        {booking.feedback && (() => {
+          const reviewLabels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
+          const r = booking.feedback.rating;
+          return (
+            <div className="bg-white rounded-xl border border-border overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-amber-50/60">
+                <h3 className="text-sm font-semibold text-heading flex items-center gap-2">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  Your Review
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(booking.feedback.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+              </div>
+
+              <div className="px-4 py-4 space-y-3">
+                {/* Stars + label */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "w-6 h-6",
+                          i < r ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-100"
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-amber-600">
+                    {r}/5 — {reviewLabels[r]}
+                  </span>
+                </div>
+
+                {/* Comment */}
+                {booking.feedback.comment ? (
+                  <div className="rounded-lg bg-gray-50 border border-border px-3 py-2.5">
+                    <p className="text-sm text-paragraph leading-relaxed">"{booking.feedback.comment}"</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">No written comment.</p>
+                )}
+              </div>
             </div>
-            {booking.feedback.comment && <p className="text-xs text-muted-foreground">{booking.feedback.comment}</p>}
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Bottom Actions */}

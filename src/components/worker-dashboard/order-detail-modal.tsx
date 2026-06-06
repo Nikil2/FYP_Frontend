@@ -8,6 +8,7 @@ import {
   X,
   MapPin,
   Clock,
+  Star,
   Phone,
   User,
   FileText,
@@ -22,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProviderOrder } from "@/types/provider";
-import { updateBookingStatus } from "@/api/services/bookings";
+import { updateBookingStatus, getBookingById, type Feedback } from "@/api/services/bookings";
 import { getBookingMessages, sendMessage, type ChatMessage } from "@/api/services/messages";
 import { socketClient } from "@/lib/socket";
 import { getAuthUser } from "@/lib/auth";
@@ -158,7 +159,20 @@ export function OrderDetailModal({
   const overlayRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<string>(order?.status || "pending");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const currentUser = getAuthUser();
+
+  // Fetch feedback when modal opens for a completed order
+  useEffect(() => {
+    if (!isOpen || !order?.id) return;
+    if (!["completed", "COMPLETED"].includes(status)) {
+      setFeedback(null);
+      return;
+    }
+    getBookingById(order.id)
+      .then((booking) => setFeedback(booking.feedback ?? null))
+      .catch(() => setFeedback(null));
+  }, [isOpen, order?.id, status]);
 
   // Close on ESC key
   useEffect(() => {
@@ -416,6 +430,27 @@ export function OrderDetailModal({
             </div>
           )}
 
+          {/* ── Customer Images ── */}
+          {order.imageUrls && order.imageUrls.length > 0 && (
+            <div className="rounded-xl border border-border p-4">
+              <h4 className="text-sm font-semibold text-heading mb-3 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-tertiary" />
+                Service Images ({order.imageUrls.length})
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                {order.imageUrls.map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={url}
+                      alt={`Job image ${i + 1}`}
+                      className="w-full aspect-square object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Location & Map ── */}
           <div className="rounded-xl border border-border overflow-hidden">
             <div className="p-4">
@@ -467,6 +502,45 @@ export function OrderDetailModal({
           {/* ── Chat Section ── */}
           {isChatActive && currentUser && (
             <ChatSection bookingId={order.id} currentUserId={currentUser.id} />
+          )}
+
+          {/* ── Customer Feedback ── */}
+          {["completed", "COMPLETED"].includes(status) && (
+            <div className="rounded-xl border border-border p-4">
+              <h4 className="text-sm font-semibold text-heading mb-3 flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                Customer Review
+              </h4>
+              {feedback ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "w-5 h-5",
+                          i < feedback.rating
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-gray-200 fill-gray-200"
+                        )}
+                      />
+                    ))}
+                    <span className="ml-2 text-sm font-semibold text-heading">
+                      {feedback.rating}/5
+                    </span>
+                  </div>
+                  {feedback.comment && (
+                    <p className="text-sm text-paragraph leading-relaxed bg-muted/50 rounded-lg px-3 py-2">
+                      "{feedback.comment}"
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No review left yet by the customer.
+                </p>
+              )}
+            </div>
           )}
 
           {/* ── Action Buttons ── */}

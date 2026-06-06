@@ -16,6 +16,7 @@ import { TIME_SLOTS, REFERRAL_SOURCES } from "@/lib/customer-data";
 import { getWorkerDetails } from "@/api/services/workers";
 import { createBooking } from "@/api/services/bookings";
 import { getAuthUser } from "@/lib/auth";
+import { uploadMultipleToCloudinary } from "@/lib/cloudinary";
 
 interface BookingFormProps {
   serviceId: string;
@@ -247,6 +248,19 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         ? `${formData.unitDetail.trim()}, ${formData.location}`
         : formData.location;
 
+      // Upload any attached images to Cloudinary first
+      let imageUrls: string[] = [];
+      if (images.length > 0) {
+        toast.loading("Uploading images...", { id: "img-upload" });
+        try {
+          imageUrls = await uploadMultipleToCloudinary(images, "booking-images");
+          toast.dismiss("img-upload");
+        } catch {
+          toast.dismiss("img-upload");
+          toast.error("Image upload failed. Booking will be created without images.");
+        }
+      }
+
       const booking = await createBooking({
         customerId: authUser.id,
         workerId,
@@ -257,6 +271,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         jobLng: formData.jobLng || 67.0011,
         scheduledAt,
         initialPrice,
+        imageUrls,
       });
 
       // Redirect to success page
