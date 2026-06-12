@@ -335,7 +335,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const canComplaint = ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(booking.status);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
+    <div className="min-h-screen bg-gray-50 pb-40 md:pb-8">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button onClick={() => router.push("/customer/orders")} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors md:hidden">
@@ -634,7 +634,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Bottom Actions */}
       {isActive && (
-        <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-border p-4 md:bottom-0">
+        <div className="fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-border px-4 py-3 shadow-lg md:bottom-0">
           <div className="max-w-lg mx-auto flex flex-col gap-2">
             {booking.status === "IN_PROGRESS" && (
               <Button
