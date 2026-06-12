@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, Plus, Trash2, Home, Briefcase, Star, Loader2, X, Check } from "lucide-react";
+import { ChevronLeft, MapPin, Plus, Trash2, Home, Briefcase, Star, Loader2, X, Check, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/customer/notification-bell";
 import { apiClient } from "@/api/client";
@@ -40,7 +40,10 @@ export default function SavedAddressesPage() {
   const [showForm, setShowForm] = useState(false);
   const [formAddress, setFormAddress] = useState("");
   const [formLabel, setFormLabel] = useState("Home");
+  const [formLat, setFormLat] = useState(0);
+  const [formLng, setFormLng] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     fetchAddresses()
@@ -62,6 +65,48 @@ export default function SavedAddressesPage() {
     }
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormLat(latitude);
+        setFormLng(longitude);
+        // Reverse-geocode using OpenStreetMap Nominatim (free, no API key)
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          const data = await res.json();
+          const addr =
+            data.display_name ||
+            `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          setFormAddress(addr);
+          toast.success("Location detected.");
+        } catch {
+          setFormAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+          toast.success("Location detected (address lookup failed).");
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error("Location permission denied. Please allow access and try again.");
+        } else {
+          toast.error("Could not get your location. Please enter manually.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   const handleAdd = async () => {
     if (!formAddress.trim()) {
       toast.error("Please enter an address.");
@@ -72,8 +117,8 @@ export default function SavedAddressesPage() {
       const created = await apiClient.post<SavedAddress>("/locations", {
         address: formAddress.trim(),
         label: formLabel,
-        lat: 0,
-        lng: 0,
+        lat: formLat,
+        lng: formLng,
       });
       setAddresses((prev) => [...prev, created]);
       setShowForm(false);
@@ -129,7 +174,14 @@ export default function SavedAddressesPage() {
                     <LabelIcon className="w-5 h-5 text-tertiary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-tertiary uppercase tracking-wide">{addr.label || "Saved"}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-tertiary uppercase tracking-wide">{addr.label || "Saved"}</p>
+                      {addr.lat !== 0 && addr.lng !== 0 && (
+                        <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          <Navigation className="w-2.5 h-2.5" /> GPS
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-heading mt-0.5 leading-snug">{addr.address}</p>
                   </div>
                   <button
@@ -150,7 +202,7 @@ export default function SavedAddressesPage() {
               <div className="bg-white rounded-xl border border-tertiary/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-heading">Add New Address</h3>
-                  <button onClick={() => { setShowForm(false); setFormAddress(""); }} className="p-1 hover:bg-muted rounded">
+                  <button onClick={() => { setShowForm(false); setFormAddress(""); setFormLat(0); setFormLng(0); }} className="p-1 hover:bg-muted rounded">
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </div>
@@ -176,17 +228,35 @@ export default function SavedAddressesPage() {
                   })}
                 </div>
 
+                {/* Current location button */}
+                <button
+                  type="button"
+                  onClick={handleUseCurrentLocation}
+                  disabled={locating}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-tertiary/40 text-tertiary text-xs font-semibold hover:bg-tertiary/5 transition-colors disabled:opacity-60"
+                >
+                  {locating
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Detecting location...</>
+                    : <><Navigation className="w-3.5 h-3.5" /> Use Current Location</>
+                  }
+                </button>
+
+                <div className="relative flex items-center gap-2">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[10px] text-muted-foreground font-medium uppercase">or type manually</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
                 <input
                   type="text"
                   placeholder="Enter full address (e.g. Street 5, F-7, Islamabad)"
                   value={formAddress}
-                  onChange={(e) => setFormAddress(e.target.value)}
+                  onChange={(e) => { setFormAddress(e.target.value); setFormLat(0); setFormLng(0); }}
                   className="w-full text-sm border border-border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-tertiary/30"
-                  autoFocus
                 />
 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setShowForm(false); setFormAddress(""); }}>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setShowForm(false); setFormAddress(""); setFormLat(0); setFormLng(0); }}>
                     Cancel
                   </Button>
                   <Button variant="tertiary" size="sm" className="flex-1" onClick={handleAdd} disabled={saving || !formAddress.trim()}>
