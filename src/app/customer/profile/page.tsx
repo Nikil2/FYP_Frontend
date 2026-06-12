@@ -19,6 +19,7 @@ import {
   Bell,
   Heart,
   FileText,
+  Lock,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,11 @@ export default function ProfilePage() {
           icon: MapPin,
           label: "Saved Addresses",
           href: "/customer/addresses",
+        },
+        {
+          icon: Lock,
+          label: "Change Password",
+          href: "/customer/change-password",
         },
         {
           icon: Shield,

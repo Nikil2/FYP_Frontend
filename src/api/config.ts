@@ -33,6 +33,10 @@ export const API_CONFIG = {
     USERS_BLOCK: (userId: string) => `/users/${userId}/block`,
     USERS_UNBLOCK: (userId: string) => `/users/${userId}/unblock`,
     USERS_DELETE: (userId: string) => `/users/${userId}`,
+    USERS_FORGOT_PASSWORD: '/users/forgot-password',
+    USERS_VERIFY_OTP: '/users/verify-otp',
+    USERS_RESET_PASSWORD: '/users/reset-password',
+    USERS_CHANGE_PASSWORD: '/users/change-password',
 
     // ==================== WORKERS ====================
     WORKERS_REGISTER: '/workers/register',

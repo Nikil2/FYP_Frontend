@@ -25,9 +25,11 @@ import {
   CheckCircle,
   Wrench,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import type { VerificationStatus } from "@/types/provider";
 import { ManageServicesModal } from "@/components/worker-dashboard/manage-services-modal";
+import { changePassword, validatePassword } from "@/lib/auth";
 
 export default function ProfilePage() {
   const { t } = useLanguage();
@@ -52,6 +54,12 @@ export default function ProfilePage() {
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [workerServices, setWorkerServices] = useState<{ serviceId: number; name: string; price: number }[]>([]);
   const [showServicesModal, setShowServicesModal] = useState(false);
+  const [cpCurrentPassword, setCpCurrentPassword] = useState("");
+  const [cpNewPassword, setCpNewPassword] = useState("");
+  const [cpConfirmPassword, setCpConfirmPassword] = useState("");
+  const [cpError, setCpError] = useState("");
+  const [cpSuccess, setCpSuccess] = useState("");
+  const [cpLoading, setCpLoading] = useState(false);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -132,21 +140,46 @@ export default function ProfilePage() {
   }, []);
 
   const handleSettingClick = (action: string) => {
-    switch (action) {
-      case "personal-info":
-        setActiveModal("personal-info");
-        break;
-      case "business-info":
-        setActiveModal("business-info");
-        break;
-      case "change-password":
-        setActiveModal("change-password");
-        break;
-      case "work-photos":
-        setActiveModal("work-photos");
-        break;
-      default:
-        console.log(`Action: ${action}`);
+    if (action === "change-password") {
+      setCpCurrentPassword("");
+      setCpNewPassword("");
+      setCpConfirmPassword("");
+      setCpError("");
+      setCpSuccess("");
+    }
+    setActiveModal(action);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCpError("");
+    setCpSuccess("");
+
+    const validation = validatePassword(cpNewPassword);
+    if (!validation.valid) {
+      setCpError(validation.message || "Invalid new password");
+      return;
+    }
+    if (cpNewPassword !== cpConfirmPassword) {
+      setCpError("New passwords do not match");
+      return;
+    }
+    if (cpCurrentPassword === cpNewPassword) {
+      setCpError("New password must be different from current password");
+      return;
+    }
+
+    setCpLoading(true);
+    try {
+      const result = await changePassword(cpCurrentPassword, cpNewPassword);
+      if (result.success) {
+        setCpSuccess("Password changed successfully!");
+        setTimeout(() => setActiveModal(null), 1800);
+      } else {
+        setCpError(result.message);
+      }
+    } finally {
+      setCpLoading(false);
     }
   };
 
@@ -449,38 +482,75 @@ export default function ProfilePage() {
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Change Password</h3>
-              <button onClick={() => setActiveModal(null)} className="text-gray-500 hover:text-gray-700">
-                ✕
-              </button>
+              <button onClick={() => setActiveModal(null)} className="text-gray-500 hover:text-gray-700">✕</button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Current Password</label>
-                <input type="password" className="w-full border rounded-md px-3 py-2" placeholder="Enter current password" />
+            {cpSuccess ? (
+              <div className="text-center py-4 space-y-2">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                  <Lock className="w-6 h-6 text-green-600" />
+                </div>
+                <p className="text-sm font-medium text-green-700">{cpSuccess}</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">New Password</label>
-                <input type="password" className="w-full border rounded-md px-3 py-2" placeholder="Enter new password" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-                <input type="password" className="w-full border rounded-md px-3 py-2" placeholder="Confirm new password" />
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setActiveModal(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {alert('Password change not implemented yet'); setActiveModal(null);}}
-                  className="flex-1 px-4 py-2 bg-tertiary text-white rounded-md hover:bg-tertiary-600"
-                >
-                  Update
-                </button>
-              </div>
-            </div>
+            ) : (
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Current Password</label>
+                  <input
+                    type="password"
+                    value={cpCurrentPassword}
+                    onChange={(e) => { setCpCurrentPassword(e.target.value); setCpError(""); }}
+                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary"
+                    placeholder="Enter current password"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">New Password</label>
+                  <input
+                    type="password"
+                    value={cpNewPassword}
+                    onChange={(e) => { setCpNewPassword(e.target.value); setCpError(""); }}
+                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary"
+                    placeholder="At least 6 characters"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={cpConfirmPassword}
+                    onChange={(e) => { setCpConfirmPassword(e.target.value); setCpError(""); }}
+                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-tertiary"
+                    placeholder="Repeat new password"
+                    required
+                  />
+                </div>
+                {cpError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md text-sm">
+                    {cpError}
+                  </div>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={cpLoading}
+                    className="flex-1 px-4 py-2 bg-tertiary text-white rounded-md text-sm hover:bg-tertiary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {cpLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />Updating...</>
+                    ) : "Update Password"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

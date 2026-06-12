@@ -474,6 +474,93 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
   }
 };
 
+export const forgotPassword = async (
+  phoneNumber: string,
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    const response = await fetch(`${API_BASE_URL}/users/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: normalized }),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      return { success: true, message: result.data?.message || result.message || "OTP sent successfully" };
+    }
+    return { success: false, message: result.message || "Failed to send OTP" };
+  } catch {
+    return { success: false, message: "Network error. Please try again." };
+  }
+};
+
+export const verifyOtp = async (
+  phoneNumber: string,
+  otp: string,
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    const response = await fetch(`${API_BASE_URL}/users/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: normalized, otp }),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      return { success: true, message: result.data?.message || result.message || "OTP verified" };
+    }
+    return { success: false, message: result.message || "Invalid OTP" };
+  } catch {
+    return { success: false, message: "Network error. Please try again." };
+  }
+};
+
+export const resetPassword = async (
+  phoneNumber: string,
+  otp: string,
+  newPassword: string,
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const normalized = normalizePhoneNumber(phoneNumber);
+    const response = await fetch(`${API_BASE_URL}/users/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNumber: normalized, otp, newPassword }),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      return { success: true, message: result.data?.message || result.message || "Password reset successfully" };
+    }
+    return { success: false, message: result.message || "Failed to reset password" };
+  } catch {
+    return { success: false, message: "Network error. Please try again." };
+  }
+};
+
+export const changePassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/users/change-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const result = await response.json();
+    if (response.ok) {
+      return { success: true, message: result.data?.message || result.message || "Password changed successfully" };
+    }
+    return { success: false, message: result.message || "Failed to change password" };
+  } catch {
+    return { success: false, message: "Network error. Please try again." };
+  }
+};
+
 export const logout = () => {
   // Disconnect Socket.IO
   socketClient.disconnect();
