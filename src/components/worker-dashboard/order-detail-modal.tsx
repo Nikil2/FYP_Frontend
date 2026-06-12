@@ -18,10 +18,19 @@ import {
   Loader2,
   PlayCircle,
   CheckCircle2,
+  ArrowRightLeft,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ProviderOrder } from "@/types/provider";
-import { updateBookingStatus, getBookingById, type Feedback } from "@/api/services/bookings";
+import {
+  updateBookingStatus,
+  getBookingById,
+  acceptProposal,
+  createProposal,
+  type Feedback,
+  type PriceProposal,
+} from "@/api/services/bookings";
 import { getAuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -44,19 +53,22 @@ export function OrderDetailModal({
   const [status, setStatus] = useState<string>(order?.status || "pending");
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [proposals, setProposals] = useState<PriceProposal[]>([]);
+  const [showCounterInput, setShowCounterInput] = useState(false);
+  const [counterAmount, setCounterAmount] = useState("");
+  const [isCountering, setIsCountering] = useState(false);
   const currentUser = getAuthUser();
 
-  // Fetch feedback when modal opens for a completed order
+  // Fetch booking detail (proposals + feedback) when modal opens
   useEffect(() => {
     if (!isOpen || !order?.id) return;
-    if (!["completed", "COMPLETED"].includes(status)) {
-      setFeedback(null);
-      return;
-    }
     getBookingById(order.id)
-      .then((booking) => setFeedback(booking.feedback ?? null))
-      .catch(() => setFeedback(null));
-  }, [isOpen, order?.id, status]);
+      .then((booking) => {
+        setFeedback(booking.feedback ?? null);
+        setProposals(booking.proposals ?? []);
+      })
+      .catch(() => {});
+  }, [isOpen, order?.id]);
 
   // Close on ESC key
   useEffect(() => {
@@ -72,6 +84,47 @@ export function OrderDetailModal({
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
+
+  const pendingProposal = proposals.find((p) => p.status === "PENDING");
+  const latestProposalIsFromCustomer =
+    pendingProposal && pendingProposal.proposedBy === (order.customerId ?? order.customer?.id ?? "");
+
+  const handleAcceptProposal = async () => {
+    if (!pendingProposal) return;
+    setIsUpdating(true);
+    try {
+      await acceptProposal(order.id, pendingProposal.id);
+      setStatus("accepted");
+      toast.success("Price accepted! Booking confirmed.");
+      if (onOrderUpdate) onOrderUpdate();
+      setTimeout(() => onClose(), 1200);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to accept price.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCounterProposal = async () => {
+    const amount = parseFloat(counterAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid price.");
+      return;
+    }
+    setIsCountering(true);
+    try {
+      const newProposal = await createProposal(order.id, amount);
+      setProposals((prev) => [...prev, newProposal]);
+      setShowCounterInput(false);
+      setCounterAmount("");
+      toast.success(`Counter offer of Rs. ${amount.toLocaleString()} sent to customer.`);
+      if (onOrderUpdate) onOrderUpdate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send counter offer.");
+    } finally {
+      setIsCountering(false);
+    }
+  };
 
   const handleAccept = async () => {
     setIsUpdating(true);
@@ -289,18 +342,156 @@ export function OrderDetailModal({
               <p className="font-bold text-heading">{order.scheduledTime}</p>
               <p className="text-sm text-paragraph">{order.scheduledDate}</p>
             </div>
-            <div className="rounded-xl border border-border p-4">
+            <div className={cn(
+              "rounded-xl border p-4",
+              status.toLowerCase() === "negotiation" || status.toLowerCase() === "pending"
+                ? "border-purple-200 bg-purple-50"
+                : "border-border"
+            )}>
               <div className="flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4 text-tertiary" />
+                <DollarSign className="w-4 h-4 text-tertiary" />
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {t.agreedPrice}
+                  {order.agreedPrice > 0 ? t.agreedPrice : "Proposed"}
                 </p>
               </div>
-              <p className="text-2xl font-bold text-tertiary">
-                Rs. {order.agreedPrice.toLocaleString()}
-              </p>
+              {order.agreedPrice > 0 ? (
+                <p className="text-2xl font-bold text-tertiary">
+                  Rs. {order.agreedPrice.toLocaleString()}
+                </p>
+              ) : pendingProposal ? (
+                <p className="text-2xl font-bold text-purple-700">
+                  Rs. {Number(pendingProposal.amount).toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-muted-foreground">No price yet</p>
+              )}
             </div>
           </div>
+
+          {/* ── Price Negotiation Panel ── */}
+          {["negotiation", "pending"].includes(status.toLowerCase()) && (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-purple-600" />
+                <h4 className="text-sm font-semibold text-purple-800">Price Negotiation</h4>
+              </div>
+
+              {/* Proposal history */}
+              {proposals.length > 0 && (
+                <div className="space-y-2">
+                  {proposals.map((p) => {
+                    const isFromCustomer = p.proposedBy === (order.customerId ?? "");
+                    return (
+                      <div
+                        key={p.id}
+                        className={cn(
+                          "flex items-center justify-between text-xs px-3 py-2 rounded-lg",
+                          p.status === "ACCEPTED"
+                            ? "bg-green-100 text-green-800"
+                            : p.status === "REJECTED"
+                            ? "bg-red-50 text-red-600 line-through opacity-60"
+                            : isFromCustomer
+                            ? "bg-white border border-purple-200 text-purple-900"
+                            : "bg-tertiary/10 border border-tertiary/20 text-heading"
+                        )}
+                      >
+                        <span className="font-medium">
+                          {isFromCustomer ? "Customer" : "You (Worker)"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">Rs. {Number(p.amount).toLocaleString()}</span>
+                          {p.status === "ACCEPTED" && <Check className="w-3.5 h-3.5 text-green-600" />}
+                          {p.status === "PENDING" && (
+                            <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Pending</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Action: Accept price or counter */}
+              {pendingProposal && latestProposalIsFromCustomer && !showCounterInput && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={handleAcceptProposal}
+                    variant="tertiary"
+                    size="sm"
+                    className="flex-1 text-white font-semibold"
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                    Accept Rs. {Number(pendingProposal.amount).toLocaleString()}
+                  </Button>
+                  <Button
+                    onClick={() => setShowCounterInput(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 font-semibold"
+                  >
+                    <ArrowRightLeft className="w-4 h-4 mr-1" />
+                    Counter Offer
+                  </Button>
+                </div>
+              )}
+
+              {pendingProposal && !latestProposalIsFromCustomer && !showCounterInput && (
+                <p className="text-xs text-center text-purple-600 font-medium py-1">
+                  Waiting for customer to respond to your offer...
+                </p>
+              )}
+
+              {!pendingProposal && status.toLowerCase() === "pending" && !showCounterInput && (
+                <Button
+                  onClick={() => setShowCounterInput(true)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-tertiary border-tertiary/40 hover:bg-tertiary/10 font-semibold"
+                >
+                  <DollarSign className="w-4 h-4 mr-1" />
+                  Propose Your Price
+                </Button>
+              )}
+
+              {/* Counter offer input */}
+              {showCounterInput && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-semibold text-purple-800">Your Counter Price (Rs.)</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center border border-purple-300 rounded-lg bg-white px-3 gap-1">
+                      <span className="text-sm text-muted-foreground font-medium">Rs.</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={counterAmount}
+                        onChange={(e) => setCounterAmount(e.target.value)}
+                        placeholder="e.g. 1500"
+                        className="flex-1 py-2 text-sm font-semibold text-heading bg-transparent focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCounterProposal}
+                      variant="tertiary"
+                      size="sm"
+                      disabled={isCountering || !counterAmount}
+                      className="text-white font-semibold px-4"
+                    >
+                      {isCountering ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+                    </Button>
+                    <Button
+                      onClick={() => { setShowCounterInput(false); setCounterAmount(""); }}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Job Notes ── */}
           {order.notes && (
@@ -422,27 +613,17 @@ export function OrderDetailModal({
 
           {/* ── Action Buttons ── */}
           {["pending", "negotiation"].includes(status.toLowerCase()) ? (
-            /* PENDING / NEGOTIATION → Accept or Reject */
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                onClick={handleAccept}
-                variant="tertiary"
-                size="sm"
-                className="flex-1 rounded-xl text-white font-semibold transition-colors"
-                disabled={isUpdating}
-              >
-                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <Check className="w-4 h-4 mr-2 text-white" />}
-                {isUpdating ? "Accepting..." : "Accept Order"}
-              </Button>
+            /* PENDING / NEGOTIATION → only Reject (accept is in negotiation panel) */
+            <div className="pt-2">
               <Button
                 onClick={handleReject}
                 variant="outline"
                 size="sm"
-                className="flex-1 rounded-xl text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50 font-semibold transition-colors"
+                className="w-full rounded-xl text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50 font-semibold transition-colors"
                 disabled={isUpdating}
               >
                 {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-red-600" /> : <XCircle className="w-4 h-4 mr-2 text-red-600" />}
-                {isUpdating ? "Rejecting..." : "Reject Order"}
+                {isUpdating ? "Rejecting..." : "Reject & Cancel"}
               </Button>
             </div>
           ) : status.toLowerCase() === "accepted" ? (

@@ -18,10 +18,12 @@ import {
   Ban,
   Loader2,
   AlertTriangle,
+  ArrowRightLeft,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getBookingById, cancelBooking, updateBookingStatus, type Booking } from "@/api/services/bookings";
+import { getBookingById, cancelBooking, updateBookingStatus, acceptProposal, createProposal, type Booking, type PriceProposal } from "@/api/services/bookings";
 import { toast } from "sonner";
 import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import { submitFeedback } from "@/api/services/feedback";
@@ -208,6 +210,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [cancelling, setCancelling] = useState(false);
   const [filingComplaint, setFilingComplaint] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [showCounterInput, setShowCounterInput] = useState(false);
+  const [counterAmount, setCounterAmount] = useState("");
+  const [isNegotiating, setIsNegotiating] = useState(false);
   const currentUser = getAuthUser();
 
   const fetchBooking = useCallback(async () => {
@@ -256,6 +261,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       toast.error(err instanceof Error ? err.message : "Failed to mark as complete.");
     }
     setCompleting(false);
+  };
+
+  const handleAcceptProposal = async (proposalId: string) => {
+    setIsNegotiating(true);
+    try {
+      await acceptProposal(id, proposalId);
+      await fetchBooking();
+      toast.success("Price accepted! Booking confirmed.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to accept price.");
+    }
+    setIsNegotiating(false);
+  };
+
+  const handleCounterProposal = async () => {
+    const amount = parseFloat(counterAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid price.");
+      return;
+    }
+    setIsNegotiating(true);
+    try {
+      await createProposal(id, amount);
+      await fetchBooking();
+      setShowCounterInput(false);
+      setCounterAmount("");
+      toast.success(`Your offer of Rs. ${amount.toLocaleString()} sent to worker.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send offer.");
+    }
+    setIsNegotiating(false);
   };
 
   const handleFileComplaint = async () => {
@@ -347,6 +383,118 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         </div>
+
+        {/* Price Negotiation Panel (NEGOTIATION status) */}
+        {booking.status === "NEGOTIATION" && booking.proposals && booking.proposals.length > 0 && (() => {
+          const pendingProposal = booking.proposals!.find((p: PriceProposal) => p.status === "PENDING");
+          const latestIsFromWorker = pendingProposal && pendingProposal.proposedBy !== currentUser?.id;
+          return (
+            <div className="bg-purple-50 rounded-xl border border-purple-200 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-purple-600" />
+                <h3 className="text-sm font-semibold text-purple-800">Price Negotiation</h3>
+              </div>
+
+              {/* Proposal history */}
+              <div className="space-y-2">
+                {booking.proposals!.map((p: PriceProposal) => {
+                  const isFromMe = p.proposedBy === currentUser?.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={cn(
+                        "flex items-center justify-between text-xs px-3 py-2 rounded-lg",
+                        p.status === "ACCEPTED"
+                          ? "bg-green-100 text-green-800"
+                          : p.status === "REJECTED"
+                          ? "bg-red-50 text-red-600 line-through opacity-60"
+                          : isFromMe
+                          ? "bg-white border border-purple-200 text-purple-900"
+                          : "bg-tertiary/10 border border-tertiary/20 text-heading"
+                      )}
+                    >
+                      <span className="font-medium">{isFromMe ? "You" : "Worker"}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Rs. {Number(p.amount).toLocaleString()}</span>
+                        {p.status === "ACCEPTED" && <Check className="w-3.5 h-3.5 text-green-600" />}
+                        {p.status === "PENDING" && (
+                          <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Pending</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Actions */}
+              {pendingProposal && latestIsFromWorker && !showCounterInput && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    className="flex-1 text-white font-semibold"
+                    onClick={() => handleAcceptProposal(pendingProposal.id)}
+                    disabled={isNegotiating}
+                  >
+                    {isNegotiating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-1" />}
+                    Accept Rs. {Number(pendingProposal.amount).toLocaleString()}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-purple-700 border-purple-300 hover:bg-purple-50 font-semibold"
+                    onClick={() => setShowCounterInput(true)}
+                  >
+                    <ArrowRightLeft className="w-4 h-4 mr-1" />
+                    Counter
+                  </Button>
+                </div>
+              )}
+
+              {pendingProposal && !latestIsFromWorker && !showCounterInput && (
+                <p className="text-xs text-center text-purple-600 font-medium py-1">
+                  Waiting for worker to respond to your offer...
+                </p>
+              )}
+
+              {showCounterInput && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs font-semibold text-purple-800">Your Counter Price (Rs.)</label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center border border-purple-300 rounded-lg bg-white px-3 gap-1">
+                      <span className="text-sm text-muted-foreground font-medium">Rs.</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={counterAmount}
+                        onChange={(e) => setCounterAmount(e.target.value)}
+                        placeholder="e.g. 1200"
+                        className="flex-1 py-2 text-sm font-semibold text-heading bg-transparent focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      onClick={handleCounterProposal}
+                      disabled={isNegotiating || !counterAmount}
+                      className="text-white font-semibold px-4"
+                    >
+                      {isNegotiating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setShowCounterInput(false); setCounterAmount(""); }}
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Schedule & Location */}
         <div className="bg-white rounded-xl border border-border p-4">

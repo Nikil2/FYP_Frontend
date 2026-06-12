@@ -163,9 +163,10 @@ export async function getWorkerDashboardOrders(
       scheduledDate: scheduledAt
         ? scheduledAt.toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
         : 'TBD',
-      agreedPrice: Number(order.agreedPrice || 0),
+      agreedPrice: Number(order.finalPrice || order.agreedPrice || 0),
       customerName: String((order.customer as Record<string, unknown>)?.fullName || 'Customer'),
       customerPhone: String((order.customer as Record<string, unknown>)?.phoneNumber || ''),
+      customerId: String((order.customer as Record<string, unknown>)?.id || ''),
       notes: String(order.description || ''),
       imageUrls: Array.isArray(order.imageUrls) ? (order.imageUrls as string[]) : [],
       createdAt: String(order.createdAt || new Date().toISOString()),

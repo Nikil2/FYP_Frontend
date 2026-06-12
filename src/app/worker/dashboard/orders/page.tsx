@@ -199,10 +199,14 @@ export default function OrdersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-paragraph">
-                      {t.agreedPrice}
+                      {order.status === "negotiation" ? "Proposed" : t.agreedPrice}
                     </span>
-                    <span className="ml-4 font-bold text-tertiary">
-                      Rs. {order.agreedPrice.toLocaleString()}
+                    <span className={cn("ml-4 font-bold", order.agreedPrice > 0 ? "text-tertiary" : "text-purple-600")}>
+                      {order.agreedPrice > 0
+                        ? `Rs. ${order.agreedPrice.toLocaleString()}`
+                        : order.status === "negotiation"
+                        ? "Negotiating..."
+                        : "TBD"}
                     </span>
                   </div>
 
