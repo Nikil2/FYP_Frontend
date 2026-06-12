@@ -92,13 +92,30 @@ export function OrderDetailModal({
   const handleAcceptProposal = async () => {
     if (!pendingProposal) return;
     setIsUpdating(true);
+    // Optimistic UI — update state immediately, don't wait for list refresh
+    setProposals((prev) =>
+      prev.map((p) =>
+        p.id === pendingProposal.id
+          ? { ...p, status: "ACCEPTED" as const }
+          : p.status === "PENDING"
+          ? { ...p, status: "REJECTED" as const }
+          : p
+      )
+    );
+    setStatus("accepted");
     try {
       await acceptProposal(order.id, pendingProposal.id);
-      setStatus("accepted");
       toast.success("Price accepted! Booking confirmed.");
-      if (onOrderUpdate) onOrderUpdate();
+      if (onOrderUpdate) onOrderUpdate(); // background list refresh
       setTimeout(() => onClose(), 1200);
     } catch (error) {
+      // Revert optimistic update on failure
+      setProposals((prev) =>
+        prev.map((p) =>
+          p.id === pendingProposal.id ? { ...p, status: "PENDING" as const } : p
+        )
+      );
+      setStatus("negotiation");
       toast.error(error instanceof Error ? error.message : "Failed to accept price.");
     } finally {
       setIsUpdating(false);
@@ -112,14 +129,15 @@ export function OrderDetailModal({
       return;
     }
     setIsCountering(true);
+    setShowCounterInput(false);
+    setCounterAmount("");
     try {
       const newProposal = await createProposal(order.id, amount);
       setProposals((prev) => [...prev, newProposal]);
-      setShowCounterInput(false);
-      setCounterAmount("");
       toast.success(`Counter offer of Rs. ${amount.toLocaleString()} sent to customer.`);
-      if (onOrderUpdate) onOrderUpdate();
+      // No list refresh needed — status stays NEGOTIATION, only proposal list changed
     } catch (error) {
+      setShowCounterInput(true); // re-open input on failure
       toast.error(error instanceof Error ? error.message : "Failed to send counter offer.");
     } finally {
       setIsCountering(false);

@@ -224,6 +224,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     setLoading(false);
   }, [id]);
 
+  // Silent background refresh — no loading spinner
+  const refreshBooking = useCallback(async () => {
+    try {
+      const data = await getBookingById(id);
+      setBooking(data);
+    } catch { /* skip */ }
+  }, [id]);
+
   useEffect(() => {
     fetchBooking();
   }, [fetchBooking]);
@@ -264,13 +272,30 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleAcceptProposal = async (proposalId: string) => {
+    if (!booking) return;
     setIsNegotiating(true);
+    // Optimistic: mark proposal accepted + move booking to ACCEPTED immediately
+    setBooking((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        status: "ACCEPTED" as const,
+        proposals: prev.proposals?.map((p: PriceProposal) =>
+          p.id === proposalId
+            ? { ...p, status: "ACCEPTED" as const }
+            : p.status === "PENDING"
+            ? { ...p, status: "REJECTED" as const }
+            : p
+        ),
+      };
+    });
     try {
       await acceptProposal(id, proposalId);
-      await fetchBooking();
       toast.success("Price accepted! Booking confirmed.");
+      refreshBooking(); // background sync
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to accept price.");
+      refreshBooking(); // revert to server truth
     }
     setIsNegotiating(false);
   };
@@ -282,13 +307,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       return;
     }
     setIsNegotiating(true);
+    setShowCounterInput(false);
+    setCounterAmount("");
     try {
-      await createProposal(id, amount);
-      await fetchBooking();
-      setShowCounterInput(false);
-      setCounterAmount("");
+      const newProposal = await createProposal(id, amount);
+      // Optimistic: append new proposal to list
+      setBooking((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          proposals: [...(prev.proposals ?? []), newProposal],
+        };
+      });
       toast.success(`Your offer of Rs. ${amount.toLocaleString()} sent to worker.`);
     } catch (err) {
+      setShowCounterInput(true); // re-open on failure
       toast.error(err instanceof Error ? err.message : "Failed to send offer.");
     }
     setIsNegotiating(false);
