@@ -25,10 +25,13 @@ export default function OrdersPage() {
   const [activeOrders, setActiveOrders] = useState<ProviderOrder[]>([]);
   const [pastOrders, setPastOrders] = useState<ProviderOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [pastLoaded, setPastLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatOrder, setChatOrder] = useState<ProviderOrder | null>(null);
   const currentUser = getAuthUser();
 
+  // Load only active orders on mount
   useEffect(() => {
     const load = async () => {
       try {
@@ -39,24 +42,35 @@ export default function OrdersPage() {
           setError("Worker user ID missing. Set NEXT_PUBLIC_WORKER_USER_ID or login first.");
           return;
         }
-
         const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
-        const [active, past] = await Promise.all([
-          getWorkerDashboardOrders(profile.workerId, "active"),
-          getWorkerDashboardOrders(profile.workerId, "past"),
-        ]);
-
+        const active = await getWorkerDashboardOrders(profile.workerId, "active");
         setActiveOrders(active as ProviderOrder[]);
-        setPastOrders(past as ProviderOrder[]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load orders");
       } finally {
         setLoading(false);
       }
     };
-
     load();
   }, []);
+
+  // Lazy-load past orders only when that tab is first opened
+  useEffect(() => {
+    if (activeTab !== "past" || pastLoaded || pastLoading) return;
+    const loadPast = async () => {
+      setPastLoading(true);
+      try {
+        const profile = getCachedWorkerDashboardProfile();
+        if (!profile) return;
+        const past = await getWorkerDashboardOrders(profile.workerId, "past");
+        setPastOrders(past as ProviderOrder[]);
+        setPastLoaded(true);
+      } catch { /* silent */ } finally {
+        setPastLoading(false);
+      }
+    };
+    loadPast();
+  }, [activeTab, pastLoaded, pastLoading]);
 
   const currentOrders = activeTab === "active" ? activeOrders : pastOrders;
 
@@ -133,7 +147,7 @@ export default function OrdersPage() {
 
       {/* Orders List */}
       <div className="space-y-4">
-        {loading && (
+        {(loading || pastLoading) && (
           <Card className="p-4">
             <p className="text-sm text-paragraph">Loading orders...</p>
           </Card>
@@ -199,10 +213,14 @@ export default function OrdersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm text-paragraph">
-                      {t.agreedPrice}
+                      {order.status === "negotiation" ? "Proposed" : t.agreedPrice}
                     </span>
-                    <span className="ml-4 font-bold text-tertiary">
-                      Rs. {order.agreedPrice.toLocaleString()}
+                    <span className={cn("ml-4 font-bold", order.agreedPrice > 0 ? "text-tertiary" : "text-purple-600")}>
+                      {order.agreedPrice > 0
+                        ? `Rs. ${order.agreedPrice.toLocaleString()}`
+                        : order.status === "negotiation"
+                        ? "Negotiating..."
+                        : "TBD"}
                     </span>
                   </div>
 
@@ -268,12 +286,9 @@ export default function OrdersPage() {
             if (userId) {
               try {
                 const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
-                const [active, past] = await Promise.all([
-                  getWorkerDashboardOrders(profile.workerId, "active"),
-                  getWorkerDashboardOrders(profile.workerId, "past"),
-                ]);
+                const active = await getWorkerDashboardOrders(profile.workerId, "active");
                 setActiveOrders(active as ProviderOrder[]);
-                setPastOrders(past as ProviderOrder[]);
+                setPastLoaded(false); // invalidate so past reloads next time tab is opened
               } catch (err) {
                 console.error("Failed to refresh orders list:", err);
               }

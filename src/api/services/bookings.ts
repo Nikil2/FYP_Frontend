@@ -126,6 +126,12 @@ export async function acceptProposal(bookingId: string, proposalId: string): Pro
   );
 }
 
+export async function getProposals(bookingId: string): Promise<PriceProposal[]> {
+  return apiClient.get<PriceProposal[]>(
+    `${API_CONFIG.ENDPOINTS.BOOKINGS_PROPOSALS(bookingId)}`
+  );
+}
+
 export default {
   createBooking,
   getMyBookings,
