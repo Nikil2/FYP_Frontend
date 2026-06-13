@@ -28,6 +28,7 @@ import {
   getBookingById,
   acceptProposal,
   createProposal,
+  markJobDone,
   type Feedback,
   type PriceProposal,
 } from "@/api/services/bookings";
@@ -216,9 +217,10 @@ export function OrderDetailModal({
   const handleMarkComplete = async () => {
     setIsUpdating(true);
     try {
-      await updateBookingStatus(order.id, "COMPLETED");
-      setStatus("completed");
-      toast.success("Booking marked as complete!");
+      // Worker marks done → awaits customer confirmation (job counts only then).
+      await markJobDone(order.id);
+      setStatus("pending_confirmation");
+      toast.success("Marked as done! Waiting for customer to confirm.");
       if (onOrderUpdate) onOrderUpdate();
       setTimeout(() => onClose(), 1200);
     } catch (error) {
