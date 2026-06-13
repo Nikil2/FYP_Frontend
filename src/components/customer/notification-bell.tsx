@@ -115,9 +115,9 @@ export function NotificationBell() {
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-border rounded-xl shadow-xl overflow-hidden z-50">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
             <h3 className="font-bold text-heading text-sm">Notifications</h3>
             {unreadCount > 0 && (
               <button
@@ -145,7 +145,7 @@ export function NotificationBell() {
                     key={notif.id}
                     onClick={() => handleMarkRead(notif.id)}
                     className={cn(
-                      "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors",
+                      "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors",
                       !notif.isRead && "bg-tertiary/5"
                     )}
                   >
@@ -172,7 +172,7 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2.5 border-t border-border bg-gray-50">
+          <div className="px-4 py-2.5 border-t border-border bg-muted/50">
             <button
               onClick={() => { setShowDropdown(false); router.push("/customer/notifications"); }}
               className="text-xs text-tertiary font-medium hover:underline w-full text-center"
