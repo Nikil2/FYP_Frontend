@@ -1,14 +1,27 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
 import { Home, Briefcase, Wallet, User, Settings } from "lucide-react";
+import { getCachedWorkerDashboardProfile } from "@/api/services/worker-dashboard";
+
+const VERIFICATION_REQUIRED_HREFS = [
+  "/worker/dashboard/orders",
+  "/worker/dashboard/wallet",
+];
 
 export function BottomNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const [isApproved, setIsApproved] = useState(false);
+
+  useEffect(() => {
+    const cached = getCachedWorkerDashboardProfile();
+    setIsApproved(cached?.verificationStatus === "APPROVED");
+  }, []);
 
   const navItems = [
     {
@@ -50,6 +63,23 @@ export function BottomNav() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href, item.exact);
+          const locked =
+            !isApproved && VERIFICATION_REQUIRED_HREFS.includes(item.href);
+
+          if (locked) {
+            return (
+              <div
+                key={item.href}
+                className="flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-lg min-w-0 opacity-30 cursor-not-allowed"
+                title="Complete verification to unlock"
+              >
+                <Icon className="w-5 h-5 text-paragraph" />
+                <span className="text-[10px] font-medium truncate">
+                  {item.label}
+                </span>
+              </div>
+            );
+          }
 
           return (
             <Link
@@ -66,7 +96,9 @@ export function BottomNav() {
                   active ? "text-tertiary" : "text-paragraph"
                 )}
               />
-              <span className="text-[10px] font-medium truncate">{item.label}</span>
+              <span className="text-[10px] font-medium truncate">
+                {item.label}
+              </span>
             </Link>
           );
         })}

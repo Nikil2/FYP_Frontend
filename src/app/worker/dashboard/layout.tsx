@@ -6,6 +6,7 @@ import { WorkerSidebar } from "@/components/worker-dashboard/worker-sidebar";
 import { WorkerTopBar } from "@/components/worker-dashboard/worker-topbar";
 import { BottomNav } from "@/components/worker-dashboard/bottom-nav";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { VerificationGuard } from "@/components/auth/VerificationGuard";
 
 export default function WorkerDashboardLayout({
   children,
@@ -24,7 +25,7 @@ export default function WorkerDashboardLayout({
           <div className="flex flex-1 overflow-hidden relative">
             {/* Main Content */}
             <main className="flex-1 overflow-auto pb-20 lg:pb-0">
-              {children}
+              <VerificationGuard>{children}</VerificationGuard>
             </main>
 
             {/* Sidebar - slide-in from right (desktop only) */}
