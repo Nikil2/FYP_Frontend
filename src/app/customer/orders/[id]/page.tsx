@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getBookingById, cancelBooking, updateBookingStatus, acceptProposal, createProposal, type Booking, type PriceProposal } from "@/api/services/bookings";
+import { getBookingById, cancelBooking, confirmCompletion, acceptProposal, createProposal, type Booking, type PriceProposal } from "@/api/services/bookings";
 import { toast } from "sonner";
 import { ChatDrawer } from "@/components/chat/ChatDrawer";
 import { submitFeedback } from "@/api/services/feedback";
@@ -45,6 +45,8 @@ function getStatusConfig(status: BookingStatus) {
       return { label: "Accepted", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: CheckCircle2, description: "Worker has accepted. They will arrive at scheduled time" };
     case "IN_PROGRESS":
       return { label: "In Progress", color: "text-tertiary", bg: "bg-tertiary/5", border: "border-tertiary/20", icon: Clock, description: "Worker is currently working on your service" };
+    case "PENDING_CONFIRMATION":
+      return { label: "Awaiting Your Confirmation", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", icon: AlertCircle, description: "Worker marked the job done — please confirm to complete it" };
     case "COMPLETED":
       return { label: "Completed", color: "text-green-700", bg: "bg-green-50", border: "border-green-200", icon: CheckCircle2, description: "This service has been completed" };
     case "CANCELLED":
@@ -280,12 +282,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     if (completing) return;
     setCompleting(true);
     try {
-      await updateBookingStatus(id, "COMPLETED");
+      // Customer confirms completion → worker's job counts + commission collected.
+      await confirmCompletion(id);
       await fetchBooking();
       setShowCompleteModal(false);
-      toast.success("Booking marked as complete. Thank you!");
+      toast.success("Booking confirmed as complete. Thank you!");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to mark as complete.");
+      toast.error(err instanceof Error ? err.message : "Failed to confirm completion.");
     }
     setCompleting(false);
   };
@@ -439,7 +442,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const statusConfig = getStatusConfig(booking.status);
   const StatusIcon = statusConfig.icon;
-  const isActive = ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS"].includes(booking.status);
+  const isActive = ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS", "PENDING_CONFIRMATION"].includes(booking.status);
   const canReview = booking.status === "COMPLETED" && !booking.feedback;
   const canComplaint = ["ACCEPTED", "IN_PROGRESS", "COMPLETED"].includes(booking.status);
 
@@ -746,14 +749,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       {isActive && (
         <div className="fixed bottom-16 left-0 right-0 z-30 bg-white border-t border-border px-4 py-3 shadow-lg md:bottom-0">
           <div className="max-w-lg mx-auto flex flex-col gap-2">
-            {booking.status === "IN_PROGRESS" && (
+            {booking.status === "PENDING_CONFIRMATION" && (
               <Button
                 variant="primary"
                 size="sm"
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
                 onClick={() => setShowCompleteModal(true)}
               >
-                <CheckCircle2 className="w-4 h-4" /> Mark as Complete
+                <CheckCircle2 className="w-4 h-4" /> Confirm Completion
               </Button>
             )}
             <div className="flex gap-3">

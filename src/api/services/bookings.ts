@@ -34,7 +34,7 @@ export interface Booking {
   jobLng: number;
   imageUrls: string[];
   scheduledAt: string | null;
-  status: 'PENDING' | 'NEGOTIATION' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+  status: 'PENDING' | 'NEGOTIATION' | 'ACCEPTED' | 'IN_PROGRESS' | 'PENDING_CONFIRMATION' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
   finalPrice: string | null;
   customer: { id: string; fullName: string; phoneNumber: string; profilePicUrl?: string };
   worker: {
@@ -108,6 +108,19 @@ export async function cancelBooking(bookingId: string): Promise<Booking> {
   return apiClient.post<Booking>(API_CONFIG.ENDPOINTS.BOOKINGS_CANCEL(bookingId), {});
 }
 
+/** Worker marks an in-progress job as done → awaits customer confirmation. */
+export async function markJobDone(bookingId: string): Promise<Booking> {
+  return apiClient.patch<Booking>(API_CONFIG.ENDPOINTS.BOOKINGS_MARK_DONE(bookingId), {});
+}
+
+/** Customer confirms completion → job counts + commission is collected. */
+export async function confirmCompletion(bookingId: string): Promise<Booking> {
+  return apiClient.patch<Booking>(
+    API_CONFIG.ENDPOINTS.BOOKINGS_CONFIRM_COMPLETION(bookingId),
+    {}
+  );
+}
+
 // ============================================
 // PRICE PROPOSALS
 // ============================================
@@ -138,6 +151,8 @@ export default {
   getBookingById,
   updateBookingStatus,
   cancelBooking,
+  markJobDone,
+  confirmCompletion,
   createProposal,
   acceptProposal,
 };

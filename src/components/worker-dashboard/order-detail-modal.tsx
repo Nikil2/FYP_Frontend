@@ -16,7 +16,6 @@ import {
   Check,
   XCircle,
   Loader2,
-  PlayCircle,
   CheckCircle2,
   ArrowRightLeft,
   DollarSign,
@@ -28,6 +27,7 @@ import {
   getBookingById,
   acceptProposal,
   createProposal,
+  markJobDone,
   type Feedback,
   type PriceProposal,
 } from "@/api/services/bookings";
@@ -198,27 +198,13 @@ export function OrderDetailModal({
     }
   };
 
-  const handleStartJob = async () => {
-    setIsUpdating(true);
-    try {
-      await updateBookingStatus(order.id, "IN_PROGRESS");
-      setStatus("in_progress");
-      toast.success("Job started! Customer has been notified.");
-      if (onOrderUpdate) onOrderUpdate();
-    } catch (error) {
-      console.error("Failed to start job:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to start job.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const handleMarkComplete = async () => {
     setIsUpdating(true);
     try {
-      await updateBookingStatus(order.id, "COMPLETED");
-      setStatus("completed");
-      toast.success("Booking marked as complete!");
+      // Worker marks done → awaits customer confirmation (job counts only then).
+      await markJobDone(order.id);
+      setStatus("pending_confirmation");
+      toast.success("Marked as done! Waiting for customer to confirm.");
       if (onOrderUpdate) onOrderUpdate();
       setTimeout(() => onClose(), 1200);
     } catch (error) {
@@ -668,28 +654,8 @@ export function OrderDetailModal({
                 {isUpdating ? "Rejecting..." : "Reject & Cancel"}
               </Button>
             </div>
-          ) : status.toLowerCase() === "accepted" ? (
-            /* ACCEPTED → Start Job + Call */
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                onClick={handleStartJob}
-                variant="tertiary"
-                size="sm"
-                className="flex-1 rounded-xl text-white font-semibold transition-colors"
-                disabled={isUpdating}
-              >
-                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <PlayCircle className="w-4 h-4 mr-2 text-white" />}
-                {isUpdating ? "Starting..." : "Start Job"}
-              </Button>
-              <a href={`tel:${order.customerPhone}`} className="flex-1">
-                <Button variant="outline" size="sm" className="w-full rounded-xl font-semibold hover:bg-muted">
-                  <Phone className="w-4 h-4 mr-2 text-heading" />
-                  Call Customer
-                </Button>
-              </a>
-            </div>
-          ) : status.toLowerCase() === "in_progress" ? (
-            /* IN_PROGRESS → Mark Complete + Navigate */
+          ) : ["accepted", "in_progress"].includes(status.toLowerCase()) ? (
+            /* ACCEPTED or IN_PROGRESS → Mark Complete + Call/Navigate */
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Button
                 onClick={handleMarkComplete}
@@ -701,11 +667,18 @@ export function OrderDetailModal({
                 {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" /> : <CheckCircle2 className="w-4 h-4 mr-2 text-white" />}
                 {isUpdating ? "Completing..." : "Mark as Complete"}
               </Button>
-              {directionsUrl && (
+              {directionsUrl ? (
                 <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
                   <Button variant="outline" size="sm" className="w-full rounded-xl font-semibold hover:bg-muted">
                     <Navigation className="w-4 h-4 mr-2 text-heading" />
                     Navigate
+                  </Button>
+                </a>
+              ) : (
+                <a href={`tel:${order.customerPhone}`} className="flex-1">
+                  <Button variant="outline" size="sm" className="w-full rounded-xl font-semibold hover:bg-muted">
+                    <Phone className="w-4 h-4 mr-2 text-heading" />
+                    Call Customer
                   </Button>
                 </a>
               )}

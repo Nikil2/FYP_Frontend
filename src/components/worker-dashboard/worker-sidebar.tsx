@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Wallet,
+  Award,
   User,
   Settings,
   LogOut,
@@ -80,6 +81,11 @@ export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
       href: "/worker/dashboard/wallet",
       label: t.wallet,
       icon: Wallet,
+    },
+    {
+      href: "/worker/dashboard/rewards",
+      label: "Rewards",
+      icon: Award,
     },
     {
       href: "/worker/dashboard/profile",

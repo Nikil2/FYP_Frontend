@@ -32,20 +32,28 @@ export interface WorkerDashboardOrder {
 }
 
 export interface WorkerWalletSummary {
-  totalEarnings: number;
-  availableBalance: number;
-  pendingBalance: number;
-  thisMonthEarnings: number;
+  balance: number | string;
+  availableBalance: number | string;
+  totalEarnings: number | string;
+  thisMonthEarnings: number | string;
+  totalCommissionPaid: number | string;
+  totalBonusEarned: number | string;
 }
 
 export interface WorkerWalletTransaction {
   id: string;
-  type: 'credit' | 'withdrawal' | 'debit';
-  amount: number;
-  status: 'completed' | 'pending' | 'failed';
+  type:
+    | 'COMMISSION_DEBIT'
+    | 'BONUS_CREDIT'
+    | 'TOPUP_CREDIT'
+    | 'WITHDRAWAL_DEBIT'
+    | 'ADJUSTMENT';
+  amount: number | string;
+  balanceAfter: number | string;
   description: string;
-  date: string;
-  orderId?: string;
+  bookingId?: string | null;
+  bonusId?: string | null;
+  createdAt: string;
 }
 
 interface WorkerProfileResponse {

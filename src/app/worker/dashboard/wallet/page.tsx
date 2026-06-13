@@ -19,7 +19,6 @@ import {
   TrendingUp,
   ArrowDownCircle,
   ArrowUpCircle,
-  Clock,
   Wallet,
   CreditCard,
 } from "lucide-react";
@@ -27,10 +26,12 @@ import {
 export default function WalletPage() {
   const { t } = useLanguage();
   const [earnings, setEarnings] = useState<WorkerWalletSummary>({
-    totalEarnings: 0,
+    balance: 0,
     availableBalance: 0,
-    pendingBalance: 0,
+    totalEarnings: 0,
     thisMonthEarnings: 0,
+    totalCommissionPaid: 0,
+    totalBonusEarned: 0,
   });
   const [transactions, setTransactions] = useState<WorkerWalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,16 +65,23 @@ export default function WalletPage() {
     load();
   }, []);
 
+  const num = (v: number | string) => Number(v ?? 0);
+  const isCredit = (type: string) =>
+    type === "BONUS_CREDIT" || type === "TOPUP_CREDIT";
+
   const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case "credit":
-        return <ArrowDownCircle className="w-5 h-5 text-green-500" />;
-      case "withdrawal":
-        return <ArrowUpCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return <DollarSign className="w-5 h-5 text-paragraph" />;
-    }
+    if (isCredit(type))
+      return <ArrowDownCircle className="w-5 h-5 text-green-500" />;
+    if (type === "COMMISSION_DEBIT" || type === "WITHDRAWAL_DEBIT")
+      return <ArrowUpCircle className="w-5 h-5 text-red-500" />;
+    return <DollarSign className="w-5 h-5 text-paragraph" />;
   };
+
+  const formatTxnType = (type: string) =>
+    type
+      .split("_")
+      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+      .join(" ");
 
   return (
     <div className="space-y-6 p-4 lg:p-8">
@@ -119,7 +127,7 @@ export default function WalletPage() {
         </Card>
       )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Earnings */}
+        {/* Total Earnings (gross cash from jobs) */}
         <Card className="p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-tertiary to-tertiary-hover p-6 text-white">
             <div className="flex items-center justify-between mb-4">
@@ -127,40 +135,47 @@ export default function WalletPage() {
               <TrendingUp className="w-6 h-6 text-white/60" />
             </div>
             <p className="text-3xl font-bold">
-              Rs. {earnings.totalEarnings.toLocaleString()}
+              Rs. {num(earnings.totalEarnings).toLocaleString()}
+            </p>
+            <p className="text-xs text-white/70 mt-2">
+              Cash received directly from customers
             </p>
           </div>
         </Card>
 
-        {/* Available Balance */}
+        {/* Wallet Balance (platform credit) */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">{t.availableBalance}</p>
+            <p className="text-sm text-muted-foreground">Wallet Balance</p>
             <Wallet className="w-6 h-6 text-tertiary opacity-30" />
           </div>
-          <p className="text-3xl font-bold text-heading">
-            Rs. {earnings.availableBalance.toLocaleString()}
-          </p>
-          <Button
-            variant="tertiary"
-            size="sm"
-            className="w-full mt-4 rounded-lg"
+          <p
+            className={cn(
+              "text-3xl font-bold",
+              num(earnings.balance) < 0 ? "text-red-600" : "text-heading"
+            )}
           >
-            {t.withdraw}
-          </Button>
-        </Card>
-
-        {/* Pending */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">{t.pending}</p>
-            <Clock className="w-6 h-6 text-yellow-500 opacity-30" />
-          </div>
-          <p className="text-3xl font-bold text-yellow-600">
-            Rs. {earnings.pendingBalance.toLocaleString()}
+            Rs. {num(earnings.balance).toLocaleString()}
           </p>
           <p className="text-xs text-muted-foreground mt-3">
-            Pending clears when bookings are completed
+            {num(earnings.balance) < 0
+              ? "Negative — top up from the Rewards tab to keep getting bookings"
+              : "Used to pay platform commission"}
+          </p>
+        </Card>
+
+        {/* Cashback Earned */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">Cashback Earned</p>
+            <DollarSign className="w-6 h-6 text-green-500 opacity-30" />
+          </div>
+          <p className="text-3xl font-bold text-green-600">
+            Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+          </p>
+          <p className="text-xs text-muted-foreground mt-3">
+            Commission paid: Rs.{" "}
+            {num(earnings.totalCommissionPaid).toLocaleString()}
           </p>
         </Card>
       </div>
@@ -171,7 +186,7 @@ export default function WalletPage() {
           <div>
             <p className="text-sm text-muted-foreground">This Month&apos;s Earnings</p>
             <p className="text-2xl font-bold text-heading mt-1">
-              Rs. {earnings.thisMonthEarnings.toLocaleString()}
+              Rs. {num(earnings.thisMonthEarnings).toLocaleString()}
             </p>
           </div>
           <CreditCard className="w-10 h-10 text-blue-500 opacity-30" />
@@ -185,53 +200,55 @@ export default function WalletPage() {
         </h2>
 
         <div className="space-y-2">
-          {transactions.map((transaction) => (
-            <Card key={transaction.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-muted flex-center flex-shrink-0">
-                    {getTransactionIcon(transaction.type)}
+          {!loading && transactions.length === 0 && (
+            <Card className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                No transactions yet. Top up your wallet from the Rewards tab to
+                get started.
+              </p>
+            </Card>
+          )}
+          {transactions.map((transaction) => {
+            const credit = isCredit(transaction.type);
+            return (
+              <Card key={transaction.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-muted flex-center flex-shrink-0">
+                      {getTransactionIcon(transaction.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-heading truncate">
+                        {transaction.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(transaction.createdAt).toLocaleDateString(
+                          "en-PK",
+                          { day: "2-digit", month: "short", year: "numeric" }
+                        )}{" "}
+                        • {formatTxnType(transaction.type)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-heading truncate">
-                      {transaction.description}
+
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <p
+                      className={cn(
+                        "font-bold",
+                        credit ? "text-green-600" : "text-red-500"
+                      )}
+                    >
+                      {credit ? "+" : "−"}Rs.{" "}
+                      {Math.abs(num(transaction.amount)).toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {transaction.date}
-                      {transaction.orderId && ` • Order #${transaction.orderId}`}
+                      Bal: Rs. {num(transaction.balanceAfter).toLocaleString()}
                     </p>
                   </div>
                 </div>
-
-                <div className="text-right ml-4 flex-shrink-0">
-                  <p
-                    className={cn(
-                      "font-bold",
-                      transaction.type === "withdrawal"
-                        ? "text-red-500"
-                        : "text-green-600"
-                    )}
-                  >
-                    {transaction.type === "withdrawal" ? "−" : "+"}Rs.{" "}
-                    {transaction.amount.toLocaleString()}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-xs",
-                      transaction.status === "completed"
-                        ? "text-green-600"
-                        : transaction.status === "pending"
-                        ? "text-yellow-600"
-                        : "text-red-500"
-                    )}
-                  >
-                    {transaction.status.charAt(0).toUpperCase() +
-                      transaction.status.slice(1)}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>
