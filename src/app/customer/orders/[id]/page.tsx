@@ -419,7 +419,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Price Negotiation Panel (NEGOTIATION status) */}
         {booking.status === "NEGOTIATION" && booking.proposals && booking.proposals.length > 0 && (() => {
-          const pendingProposal = booking.proposals!.find((p: PriceProposal) => p.status === "PENDING");
+          const pendingProposals = booking.proposals!.filter((p: PriceProposal) => p.status === "PENDING");
+          const pendingProposal = pendingProposals[pendingProposals.length - 1];
           const latestIsFromWorker = pendingProposal && pendingProposal.proposedBy !== currentUser?.id;
           return (
             <div className="bg-purple-50 rounded-xl border border-purple-200 p-4 space-y-3">

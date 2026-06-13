@@ -279,8 +279,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         imageUrls,
       });
 
-      // Redirect to success page
-      router.push(`/customer/booking-success?id=${booking.id}`);
+      router.push(`/customer/orders/${booking.id}`);
     } catch (err) {
       console.error("Booking creation failed:", err);
       const message =

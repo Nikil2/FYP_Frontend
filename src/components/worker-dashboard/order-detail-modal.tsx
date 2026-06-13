@@ -85,7 +85,8 @@ export function OrderDetailModal({
     };
   }, [isOpen, onClose]);
 
-  const pendingProposal = proposals.find((p) => p.status === "PENDING");
+  const pendingProposals = proposals.filter((p) => p.status === "PENDING");
+  const pendingProposal = pendingProposals[pendingProposals.length - 1];
   const latestProposalIsFromCustomer =
     pendingProposal && pendingProposal.proposedBy === (order.customerId ?? order.customer?.id ?? "");
 
