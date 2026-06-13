@@ -127,9 +127,18 @@ export default function NotificationsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-tertiary animate-spin mb-3" />
-          <p className="text-sm text-muted-foreground">Loading notifications...</p>
+        <div className="divide-y divide-border">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-start gap-3 px-4 py-4 bg-white">
+              <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-2 w-16 bg-gray-200 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : notifications.length > 0 ? (
         <div className="divide-y divide-border">

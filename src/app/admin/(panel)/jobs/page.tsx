@@ -404,7 +404,29 @@ export default function AdminJobsPage() {
       {/* Full-width jobs table */}
       <Card className="mt-5 overflow-hidden rounded-2xl border-border/70 bg-card/95 p-0">
         {loading ? (
-          <div className="px-4 py-10 text-center text-paragraph">Loading jobs...</div>
+          <div className="p-4 space-y-0">
+            <div className="h-10 bg-gray-100 rounded-t-xl animate-pulse mb-0" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3 border-t border-border">
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-24 bg-gray-200 rounded-lg animate-pulse" />
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px]">

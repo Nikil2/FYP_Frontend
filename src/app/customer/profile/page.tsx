@@ -134,8 +134,45 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
+      <div className="min-h-screen bg-gray-50 pb-20">
+        <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+          <div className="h-5 w-28 bg-gray-200 rounded animate-pulse flex-1" />
+          <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+        </div>
+        <div className="bg-white p-6 border-b border-border">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gray-200 animate-pulse" />
+            <div className="flex-1 space-y-2">
+              <div className="h-5 w-36 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white mt-3 p-4 border-y border-border space-y-4">
+          <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+              <div className="space-y-1">
+                <div className="h-2 w-16 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {[1, 2, 3].map((s) => (
+          <div key={s} className="bg-white mt-3 border-y border-border">
+            <div className="h-3 w-24 bg-gray-200 rounded animate-pulse mx-4 mt-3 mb-2" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-0">
+                <div className="w-5 h-5 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-32 bg-gray-200 rounded animate-pulse flex-1" />
+                <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     );
   }

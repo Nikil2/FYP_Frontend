@@ -33,6 +33,7 @@ import {
 } from "@/api/services/bookings";
 import { getAuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { socketClient } from "@/lib/socket";
 
 interface OrderDetailModalProps {
   order: ProviderOrder | any;
@@ -66,9 +67,31 @@ export function OrderDetailModal({
       .then((booking) => {
         setFeedback(booking.feedback ?? null);
         setProposals(booking.proposals ?? []);
+        setStatus(booking.status.toLowerCase());
       })
       .catch(() => {});
   }, [isOpen, order?.id]);
+
+  // Real-time: new price proposals from the customer
+  useEffect(() => {
+    if (!isOpen || !order?.id) return;
+    const unsubProposal = socketClient.onNewProposal((data) => {
+      if (data.bookingId !== order.id) return;
+      setProposals((prev) => {
+        if (prev.some((p) => p.id === data.id)) return prev;
+        return [...prev, data];
+      });
+    });
+    const unsubStatus = socketClient.onBookingStatusUpdate((data) => {
+      if (data.bookingId !== order.id) return;
+      setStatus(data.status.toLowerCase());
+      if (onOrderUpdate) onOrderUpdate();
+    });
+    return () => {
+      unsubProposal();
+      unsubStatus();
+    };
+  }, [isOpen, order?.id, onOrderUpdate]);
 
   // Close on ESC key
   useEffect(() => {

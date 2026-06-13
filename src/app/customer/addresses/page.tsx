@@ -148,8 +148,18 @@ export default function SavedAddressesPage() {
 
       <div className="p-4 space-y-3">
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 text-tertiary animate-spin" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-border p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              </div>
+            ))}
           </div>
         ) : (
           <>

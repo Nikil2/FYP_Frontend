@@ -288,9 +288,33 @@ export default function OrdersPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-tertiary animate-spin mb-3" />
-          <p className="text-sm text-muted-foreground">Loading your orders...</p>
+        <div className="p-4 space-y-3 md:p-6 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-48 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
+                <div className="space-y-1">
+                  <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                <div className="h-6 w-24 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-16 px-4">
