@@ -37,7 +37,7 @@ function BookingSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-card flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-tertiary border-t-transparent rounded-full" />
       </div>
     );
@@ -61,7 +61,7 @@ function BookingSuccessContent() {
   const cost = booking?.finalPrice ? `Rs ${Number(booking.finalPrice).toLocaleString()}` : "Variable";
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-card flex flex-col">
       {/* Success Animation Area */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 md:py-16">
         {/* Success Icon */}
@@ -79,7 +79,7 @@ function BookingSuccessContent() {
         </p>
 
         {/* Booking Details Card */}
-        <div className="w-full max-w-sm bg-gray-50 rounded-xl p-4 space-y-3 border border-border">
+        <div className="w-full max-w-sm bg-background rounded-xl p-4 space-y-3 border border-border">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Booking ID</span>
             <span className="text-xs font-semibold text-heading truncate max-w-[200px]">
@@ -124,7 +124,7 @@ function BookingSuccessContent() {
 
         {/* Assigned Worker Card */}
         {worker && (
-          <div className="w-full max-w-sm mt-6 bg-white rounded-xl border-2 border-tertiary/30 p-4">
+          <div className="w-full max-w-sm mt-6 bg-card rounded-xl border-2 border-tertiary/30 p-4">
             <h3 className="text-sm font-semibold text-heading mb-3">
               Assigned Worker
             </h3>
@@ -225,7 +225,7 @@ export default function BookingSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="min-h-screen bg-card flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-tertiary border-t-transparent rounded-full" />
         </div>
       }

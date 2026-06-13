@@ -44,7 +44,7 @@ const faqs = [
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
+    <div className="bg-card rounded-xl border border-border overflow-hidden">
       <button
         className="w-full flex items-center justify-between px-4 py-3.5 text-left"
         onClick={() => setOpen(!open)}
@@ -67,9 +67,9 @@ export default function HelpPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button
           onClick={() => router.push("/customer/profile")}
           className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -85,7 +85,7 @@ export default function HelpPage() {
         <div className="grid grid-cols-3 gap-3">
           <a
             href="mailto:support@mehnati.pk"
-            className="bg-white rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
+            className="bg-card rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
               <Mail className="w-5 h-5 text-blue-500" />
@@ -94,7 +94,7 @@ export default function HelpPage() {
           </a>
           <a
             href="tel:+920001234567"
-            className="bg-white rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
+            className="bg-card rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
               <Phone className="w-5 h-5 text-green-500" />
@@ -105,7 +105,7 @@ export default function HelpPage() {
             href="https://wa.me/920001234567"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
+            className="bg-card rounded-xl border border-border p-3 flex flex-col items-center gap-2 hover:border-tertiary transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
               <MessageCircle className="w-5 h-5 text-emerald-500" />
@@ -115,7 +115,7 @@ export default function HelpPage() {
         </div>
 
         {/* Operating Hours */}
-        <div className="bg-white rounded-xl border border-border p-4 flex items-start gap-3">
+        <div className="bg-card rounded-xl border border-border p-4 flex items-start gap-3">
           <BookOpen className="w-5 h-5 text-tertiary flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-heading">Support Hours</p>

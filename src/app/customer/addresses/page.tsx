@@ -133,9 +133,9 @@ export default function SavedAddressesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button
           onClick={() => router.push("/customer/profile")}
           className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -150,14 +150,14 @@ export default function SavedAddressesPage() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-xl border border-border p-4 flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+              <div key={i} className="bg-card rounded-xl border border-border p-4 flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted animate-pulse flex-shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-                  <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                  <div className="h-3 w-3/4 bg-muted rounded animate-pulse" />
                 </div>
-                <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="w-8 h-8 bg-muted rounded-lg animate-pulse" />
               </div>
             ))}
           </div>
@@ -179,7 +179,7 @@ export default function SavedAddressesPage() {
             {addresses.map((addr) => {
               const LabelIcon = LABEL_ICONS[addr.label || ""] || MapPin;
               return (
-                <div key={addr.id} className="bg-white rounded-xl border border-border p-4 flex items-start gap-3">
+                <div key={addr.id} className="bg-card rounded-xl border border-border p-4 flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-tertiary/10 flex items-center justify-center flex-shrink-0">
                     <LabelIcon className="w-5 h-5 text-tertiary" />
                   </div>
@@ -209,7 +209,7 @@ export default function SavedAddressesPage() {
 
             {/* Add new address form */}
             {showForm ? (
-              <div className="bg-white rounded-xl border border-tertiary/30 p-4 space-y-3">
+              <div className="bg-card rounded-xl border border-tertiary/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-heading">Add New Address</h3>
                   <button onClick={() => { setShowForm(false); setFormAddress(""); setFormLat(0); setFormLng(0); }} className="p-1 hover:bg-muted rounded">

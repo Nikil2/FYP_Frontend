@@ -55,7 +55,7 @@ export function CustomerSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-border flex-col z-40">
+    <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 bg-card border-r border-border flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-border">
         <Link href="/" className="flex items-center gap-2">

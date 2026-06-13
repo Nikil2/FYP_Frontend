@@ -52,9 +52,9 @@ export default function CustomerChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => router.push("/customer/profile")}
           className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -66,7 +66,7 @@ export default function CustomerChangePasswordPage() {
 
       <div className="max-w-md mx-auto p-4 mt-4">
         {success ? (
-          <div className="bg-white rounded-xl border border-border p-8 text-center space-y-3">
+          <div className="bg-card rounded-xl border border-border p-8 text-center space-y-3">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
@@ -74,7 +74,7 @@ export default function CustomerChangePasswordPage() {
             <p className="text-sm text-paragraph">Your password has been changed successfully.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-border p-6">
+          <div className="bg-card rounded-xl border border-border p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-tertiary/10 rounded-full flex items-center justify-center">
                 <Lock className="w-5 h-5 text-tertiary" />

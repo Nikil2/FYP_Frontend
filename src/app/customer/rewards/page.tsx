@@ -9,9 +9,9 @@ export default function RewardsPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-white pb-20 md:pb-8">
+    <div className="min-h-screen bg-card pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button
           onClick={() => router.back()}
           className="md:hidden w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -34,7 +34,7 @@ export default function RewardsPage() {
         </div>
 
         {/* How to earn */}
-        <div className="bg-white border border-border rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4">
           <h3 className="text-base font-semibold text-heading mb-3">
             How to earn rewards
           </h3>
