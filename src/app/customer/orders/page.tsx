@@ -364,7 +364,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <FloatingButtons />
+      {!chatBooking && <FloatingButtons />}
 
       {chatBooking && currentUser && (
         <ChatDrawer

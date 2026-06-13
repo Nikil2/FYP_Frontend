@@ -13,9 +13,10 @@ interface ChatDrawerProps {
   title: string;
   subtitle?: string;
   onClose: () => void;
+  className?: string;
 }
 
-export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose }: ChatDrawerProps) {
+export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose, className }: ChatDrawerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,7 +70,7 @@ export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose 
   };
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 w-[370px] sm:bottom-6 sm:right-6 flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-border">
+    <div className={cn("fixed bottom-20 left-3 right-3 z-50 sm:left-auto sm:right-6 sm:w-[370px] sm:bottom-6 flex flex-col rounded-2xl shadow-2xl overflow-hidden border border-border", className)}>
       {/* Header */}
       <div className="flex items-center gap-2.5 px-3.5 py-3 bg-tertiary text-white cursor-pointer select-none"
         onClick={() => setMinimised((m) => !m)}
@@ -101,7 +102,7 @@ export function ChatDrawer({ bookingId, currentUserId, title, subtitle, onClose 
       {!minimised && (
         <>
           {/* Messages */}
-          <div className="h-96 overflow-y-auto p-3 space-y-2.5 bg-gray-50">
+          <div className="h-64 sm:h-96 overflow-y-auto p-3 space-y-2.5 bg-gray-50">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="w-5 h-5 text-tertiary animate-spin" />

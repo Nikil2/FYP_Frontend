@@ -834,6 +834,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           title={booking.service?.name || "Chat"}
           subtitle={booking.worker?.user?.fullName}
           onClose={() => setShowChat(false)}
+          className={isActive ? "bottom-44 sm:bottom-6" : undefined}
         />
       )}
     </div>
