@@ -60,6 +60,16 @@ export const API_CONFIG = {
     WORKERS_PORTFOLIO_DELETE: (workerId: string, portfolioId: string) =>
       `/workers/${workerId}/portfolio/${portfolioId}`,
 
+    // ==================== WALLET & BONUS ====================
+    WALLET_SUMMARY: (workerId: string) => `/wallet/worker/${workerId}/summary`,
+    WALLET_TRANSACTIONS: (workerId: string) => `/wallet/worker/${workerId}/transactions`,
+    WALLET_TOPUP: (workerId: string) => `/wallet/worker/${workerId}/topup`,
+    BONUS_PROGRESS: (workerId: string) => `/bonus/worker/${workerId}/progress`,
+    BONUS_HISTORY: (workerId: string) => `/bonus/worker/${workerId}/history`,
+    ADMIN_BONUS_CONFIG: '/admin/bonus/config',
+    ADMIN_BONUS_ANALYTICS: '/admin/bonus/analytics',
+    ADMIN_BONUS_SUSPEND: (workerId: string) => `/admin/workers/${workerId}/bonus-suspend`,
+
     // ==================== SERVICES ====================
     SERVICES: '/services',
     SERVICES_ACTIVE: '/services/active',
@@ -76,6 +86,9 @@ export const API_CONFIG = {
     BOOKINGS_WORKER: (workerId: string) => `/bookings/worker/${workerId}`,
     BOOKINGS_UPDATE_STATUS: (bookingId: string) => `/bookings/${bookingId}/status`,
     BOOKINGS_CANCEL: (bookingId: string) => `/bookings/${bookingId}/cancel`,
+    BOOKINGS_MARK_DONE: (bookingId: string) => `/bookings/${bookingId}/mark-done`,
+    BOOKINGS_CONFIRM_COMPLETION: (bookingId: string) =>
+      `/bookings/${bookingId}/confirm-completion`,
     BOOKINGS_PROPOSALS: (bookingId: string) => `/bookings/${bookingId}/proposals`,
     BOOKINGS_ACCEPT_PROPOSAL: (bookingId: string, proposalId: string) =>
       `/bookings/${bookingId}/proposals/${proposalId}/accept`,
