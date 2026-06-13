@@ -10,8 +10,8 @@ import { getAdminSession, setAdminSession, loginAdminViaApi } from "@/lib/admin-
 export default function AdminLoginPage() {
   const router = useRouter();
 
-  const [username, setUsername] = useState("n-admin");
-  const [password, setPassword] = useState("Adm12345");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
