@@ -121,7 +121,7 @@ export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
               size="xl"
             />
             {/* Online indicator */}
-            <div className="absolute bottom-0 right-0 w-4 h-4 bg-tertiary border-2 border-white rounded-full" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 bg-tertiary border-2 border-card rounded-full" />
           </div>
 
           <div>
@@ -167,9 +167,9 @@ export function WorkerSidebar({ onClose }: WorkerSidebarProps) {
           </div>
         ) : (
           <div className="mt-4 flex justify-center">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-full">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-full">
               <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-              <span className="text-xs font-medium text-yellow-700">
+              <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">
                 {profile.profileStatus === "pending" ? "Under Review" : "Action Required"}
               </span>
             </div>

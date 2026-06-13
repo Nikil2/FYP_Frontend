@@ -9,14 +9,14 @@ export default function CustomerLayout({
 }) {
   return (
     <RoleGuard allowedRoles={["CUSTOMER"]}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         <div className="flex">
           {/* Desktop Sidebar - hidden on mobile */}
           <CustomerSidebar />
 
           {/* Main Content */}
           <div className="flex-1 md:ml-64 overflow-x-hidden">
-            <div className="max-w-5xl mx-auto bg-white min-h-screen relative">
+            <div className="max-w-5xl mx-auto bg-background min-h-screen relative">
               {children}
             </div>
           </div>

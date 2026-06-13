@@ -185,7 +185,7 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b border-border h-16 flex items-center px-4 lg:px-6">
+    <header className="sticky top-0 z-40 bg-card border-b border-border h-16 flex items-center px-4 lg:px-6">
       {/* Left: Logo */}
       <div className="flex items-center gap-3">
         {/* Logo */}
@@ -195,7 +195,7 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
             alt="Mehnati"
             width={120}
             height={32}
-            className="h-8 w-auto"
+            className="h-8 w-auto dark:brightness-0 dark:invert"
           />
         </a>
       </div>
@@ -219,9 +219,9 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
 
           {/* Notifications Dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-border rounded-xl shadow-xl overflow-hidden z-50">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
                 <h3 className="font-bold text-heading text-sm">
                   {language === "ur" ? "اطلاعات" : "Notifications"}
                 </h3>
@@ -248,12 +248,12 @@ export function WorkerTopBar({ onToggleSidebar }: WorkerTopBarProps) {
                       key={notif.id}
                       onClick={() => markAsRead(notif.id)}
                       className={cn(
-                        "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors",
+                        "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors",
                         !notif.isRead && "bg-tertiary/5"
                       )}
                     >
                       {/* Icon */}
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mt-0.5">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center mt-0.5">
                         {notifIconMap[notif.type]}
                       </div>
 

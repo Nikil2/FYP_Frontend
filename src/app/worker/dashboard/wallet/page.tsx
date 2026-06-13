@@ -84,9 +84,34 @@ export default function WalletPage() {
 
       {/* Earnings Overview Cards */}
       {loading && (
-        <Card className="p-4">
-          <p className="text-sm text-paragraph">Loading wallet...</p>
-        </Card>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
+            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
+            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
+          </div>
+          <div className="bg-gray-200 rounded-2xl h-20 animate-pulse" />
+          <div className="space-y-2">
+            <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse ml-auto" />
+                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse ml-auto" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
       {error && (
         <Card className="p-4 border-red-200 bg-red-50">

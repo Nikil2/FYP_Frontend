@@ -58,25 +58,45 @@
     --chart-5: 27 87% 67%;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
+    --background: 0 0% 8%;
+    --secondary-background: #141414;
+
+    --foreground: 0 0% 95%;
+    --heading: #f0f0f0;
+    --paragraph: #a8a8a8;
+
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 0 0% 95%;
     --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --primary-hover: #4a9eff;
+
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 95%;
+    --secondary-hover: #cccccc;
+
+    --tertiary: #96bf48;
+    --tertiary-foreground: #ffffff;
+    --tertiary-hover: #7ea13c;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 55%;
+    --muted-hover: #2a2a2a;
+
+    --accent: 0 0% 18%;
+    --accent-foreground: 0 0% 95%;
+
+    --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 0 0% 70%;
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -87,10 +107,8 @@
 
 body {
   color: var(--paragraph);
-  background-color: var(--background);
   font-family: var(--font-inter), sans-serif;
   text-rendering: optimizeLegibility;
-  border: var(--border);
   scroll-behavior: smooth;
 }
 

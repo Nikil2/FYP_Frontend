@@ -32,7 +32,7 @@ function getNotificationIcon(title: string) {
     return { icon: Star, bg: "bg-amber-50", color: "text-amber-600" };
   if (t.includes("complaint") || t.includes("dispute"))
     return { icon: Info, bg: "bg-orange-50", color: "text-orange-600" };
-  return { icon: Bell, bg: "bg-gray-100", color: "text-gray-600" };
+  return { icon: Bell, bg: "bg-muted", color: "text-gray-600" };
 }
 
 function timeAgo(dateStr: string) {
@@ -97,9 +97,9 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/customer")}
@@ -127,9 +127,18 @@ export default function NotificationsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-tertiary animate-spin mb-3" />
-          <p className="text-sm text-muted-foreground">Loading notifications...</p>
+        <div className="divide-y divide-border">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-start gap-3 px-4 py-4 bg-card">
+              <div className="w-10 h-10 rounded-full bg-muted animate-pulse flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-48 bg-muted rounded animate-pulse" />
+                <div className="h-3 w-full bg-muted rounded animate-pulse" />
+                <div className="h-3 w-3/4 bg-muted rounded animate-pulse" />
+                <div className="h-2 w-16 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : notifications.length > 0 ? (
         <div className="divide-y divide-border">
@@ -148,7 +157,7 @@ export default function NotificationsPage() {
                   "w-full text-left flex items-start gap-3 px-4 py-4 transition-colors",
                   !notification.isRead
                     ? "bg-tertiary/5"
-                    : "bg-white hover:bg-gray-50"
+                    : "bg-card hover:bg-background"
                 )}
               >
                 {/* Icon */}

@@ -61,9 +61,9 @@ export default function TermsPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button
           onClick={() => router.push("/customer/profile")}
           className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -85,13 +85,13 @@ export default function TermsPage() {
         </div>
 
         {sections.map(({ title, content }) => (
-          <div key={title} className="bg-white rounded-xl border border-border p-4">
+          <div key={title} className="bg-card rounded-xl border border-border p-4">
             <h3 className="text-sm font-semibold text-heading mb-2">{title}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">{content}</p>
           </div>
         ))}
 
-        <div className="bg-white rounded-xl border border-border p-4 text-center">
+        <div className="bg-card rounded-xl border border-border p-4 text-center">
           <p className="text-xs text-muted-foreground">
             Questions?{" "}
             <a href="mailto:legal@mehnati.pk" className="text-tertiary font-medium hover:underline">

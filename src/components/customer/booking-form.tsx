@@ -87,13 +87,45 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const formatTimeTo24h = (timeStr: string): string => {
+    if (!timeStr) return "12:00";
+    const [time, modifier] = timeStr.split(" ");
+    const [hoursValue, minutesValue] = time.split(":");
+    let hours = hoursValue;
+    if (hours === "12") {
+      hours = "00";
+    }
+    if (modifier === "PM") {
+      hours = (parseInt(hours, 10) + 12).toString();
+    }
+    return `${hours.padStart(2, "0")}:${minutesValue}`;
+  };
+
+  const isTimeSlotPast = (slot: string, date: string): boolean => {
+    if (!date) return false;
+    const today = new Date().toISOString().split("T")[0];
+    if (date !== today) return false;
+    const time24h = formatTimeTo24h(slot);
+    const slotTime = new Date(`${date}T${time24h}:00`);
+    return slotTime <= new Date();
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // If date changes to today and current time selection is now past, clear it
+      if (name === "serviceDate" && prev.serviceTime) {
+        if (isTimeSlotPast(prev.serviceTime, value)) {
+          updated.serviceTime = "";
+        }
+      }
+      return updated;
+    });
     // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => {
@@ -209,26 +241,19 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     if (!formData.serviceTime) {
       newErrors.serviceTime = "Service time is required";
     }
+    if (formData.serviceDate && formData.serviceTime) {
+      const time24h = formatTimeTo24h(formData.serviceTime);
+      const scheduled = new Date(`${formData.serviceDate}T${time24h}:00`);
+      if (scheduled <= new Date()) {
+        newErrors.serviceTime = "Service date and time cannot be in the past";
+      }
+    }
     if (!formData.workDescription.trim()) {
       newErrors.workDescription = "Work description is required";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const formatTimeTo24h = (timeStr: string): string => {
-    if (!timeStr) return "12:00";
-    const [time, modifier] = timeStr.split(" ");
-    const [hoursValue, minutesValue] = time.split(":");
-    let hours = hoursValue;
-    if (hours === "12") {
-      hours = "00";
-    }
-    if (modifier === "PM") {
-      hours = (parseInt(hours, 10) + 12).toString();
-    }
-    return `${hours.padStart(2, "0")}:${minutesValue}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -279,8 +304,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
         imageUrls,
       });
 
-      // Redirect to success page
-      router.push(`/customer/booking-success?id=${booking.id}`);
+      router.push(`/customer/orders/${booking.id}`);
     } catch (err) {
       console.error("Booking creation failed:", err);
       const message =
@@ -471,11 +495,14 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
                 className="w-full appearance-none border border-border rounded-lg px-4 py-3 pr-8 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-tertiary/40"
               >
                 <option value="">Select Time</option>
-                {TIME_SLOTS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
+                {TIME_SLOTS.map((slot) => {
+                  const past = isTimeSlotPast(slot, formData.serviceDate);
+                  return (
+                    <option key={slot} value={slot} disabled={past}>
+                      {slot}{past ? " (passed)" : ""}
+                    </option>
+                  );
+                })}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>

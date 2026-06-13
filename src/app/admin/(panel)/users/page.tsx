@@ -74,8 +74,28 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <p className="text-heading">Loading users...</p>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="h-7 w-44 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-96 bg-gray-200 rounded animate-pulse" />
+        </div>
+        <div className="bg-gray-200 rounded-2xl h-28 animate-pulse" />
+        <div className="rounded-2xl border border-border overflow-hidden">
+          <div className="h-10 bg-gray-100 animate-pulse" />
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3 border-t border-border">
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
+                <div className="h-3 w-48 bg-gray-200 rounded animate-pulse" />
+              </div>
+              <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-4 w-8 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
+              <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+              <div className="h-8 w-20 bg-gray-200 rounded-lg animate-pulse" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

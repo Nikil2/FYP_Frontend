@@ -51,9 +51,9 @@ export default function AccountSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
         <button
           onClick={() => router.push("/customer/profile")}
           className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
@@ -66,7 +66,7 @@ export default function AccountSettingsPage() {
 
       <div className="p-4 space-y-4">
         {/* Avatar */}
-        <div className="bg-white rounded-xl border border-border p-5 flex flex-col items-center gap-3">
+        <div className="bg-card rounded-xl border border-border p-5 flex flex-col items-center gap-3">
           <div className="w-20 h-20 rounded-full bg-tertiary/20 flex items-center justify-center border-2 border-tertiary">
             <span className="text-2xl font-bold text-tertiary">
               {user?.fullName?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "U"}
@@ -76,7 +76,7 @@ export default function AccountSettingsPage() {
         </div>
 
         {/* Edit Name */}
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-semibold text-heading">Personal Information</h3>
             {!editing && (
@@ -161,7 +161,7 @@ export default function AccountSettingsPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
             <h3 className="text-sm font-semibold text-heading">Security</h3>
           </div>
@@ -175,7 +175,7 @@ export default function AccountSettingsPage() {
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-white rounded-xl border border-red-100 overflow-hidden">
+        <div className="bg-card rounded-xl border border-red-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-red-100">
             <h3 className="text-sm font-semibold text-red-600">Danger Zone</h3>
           </div>
