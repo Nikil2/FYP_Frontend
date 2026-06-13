@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Award,
   BarChart3,
   BriefcaseBusiness,
   CircleDot,
@@ -44,6 +45,8 @@ const NAV_ITEMS = [
   { href: "/admin/services", label: "Services", icon: Wrench },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/revenue", label: "Revenue", icon: Wallet },
+  { href: "/admin/finance", label: "Finance", icon: BarChart3 },
+  { href: "/admin/rewards", label: "Rewards", icon: Award },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

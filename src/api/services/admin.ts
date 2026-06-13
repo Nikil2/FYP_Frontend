@@ -670,4 +670,164 @@ export default {
   activateService,
   getRevenueStats,
   getAnalytics,
+  getFinanceSummary,
+  getAllCommissions,
+  getAllWorkerWallets,
+  getAllBonusRecords,
+  releaseBonusManually,
+  rejectBonus,
+  getBonusConfig,
+  updateBonusConfig,
+  getBonusAnalytics,
+  setBonusSuspension,
 };
+
+// ============================================
+// FINANCE & BONUS TYPES
+// ============================================
+
+export interface FinanceSummary {
+  totalCommissionCollected: number;
+  totalBonusesPaid: number;
+  totalTopupsReceived: number;
+  netPlatformRevenue: number;
+  commissionTxnCount: number;
+  bonusTxnCount: number;
+  totalWorkerWalletBalance: number;
+  totalWorkers: number;
+}
+
+export interface CommissionRecord {
+  id: string;
+  workerId: string;
+  amount: number | string;
+  balanceAfter: number | string;
+  description: string;
+  createdAt: string;
+  worker: {
+    id: string;
+    user: { fullName: string; phoneNumber: string };
+  };
+}
+
+export interface AdminWorkerWallet {
+  id: string;
+  walletBalance: number | string;
+  currentTier: string;
+  isBonusSuspended: boolean;
+  totalJobsCompleted: number;
+  averageRating: number | string;
+  user: { fullName: string; phoneNumber: string };
+}
+
+export interface BonusRecordAdmin {
+  id: string;
+  workerId: string;
+  windowIndex: number;
+  jobsInWindow: number;
+  commissionCollected: number | string;
+  cashbackRate: number | string;
+  bonusAmount: number | string;
+  status: 'PENDING' | 'PAID' | 'REJECTED';
+  createdAt: string;
+  worker: {
+    id: string;
+    currentTier: string;
+    user: { fullName: string; phoneNumber: string };
+  };
+}
+
+export interface BonusConfig {
+  id: string;
+  commissionRate: number | string;
+  bronzeThreshold: number;
+  silverThreshold: number;
+  goldThreshold: number;
+  platinumThreshold: number;
+  bronzeCashbackRate: number | string;
+  silverCashbackRate: number | string;
+  goldCashbackRate: number | string;
+  platinumCashbackRate: number | string;
+  windowSize: number;
+  minRatingForBonus: number | string;
+  maxCancellationRate: number | string;
+}
+
+export interface BonusAnalytics {
+  totalCommissionEarned: number;
+  totalBonusesPaid: number;
+  netPlatformRevenue: number;
+  bonusesPaidCount: number;
+  bonusesRejectedCount: number;
+  workersByTier: { tier: string; count: number }[];
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ============================================
+// FINANCE & BONUS API FUNCTIONS
+// ============================================
+
+export async function getFinanceSummary(): Promise<{ data: FinanceSummary }> {
+  return apiClient.get('/admin/finance/summary');
+}
+
+export async function getAllCommissions(
+  page = 1,
+  limit = 20,
+  workerId?: string,
+): Promise<PaginatedResponse<CommissionRecord>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (workerId) params.set('workerId', workerId);
+  return apiClient.get(`/admin/finance/commissions?${params}`);
+}
+
+export async function getAllWorkerWallets(
+  page = 1,
+  limit = 20,
+  search?: string,
+): Promise<PaginatedResponse<AdminWorkerWallet>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) params.set('search', search);
+  return apiClient.get(`/admin/finance/wallets?${params}`);
+}
+
+export async function getAllBonusRecords(
+  page = 1,
+  limit = 20,
+  status?: string,
+): Promise<PaginatedResponse<BonusRecordAdmin>> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status) params.set('status', status);
+  return apiClient.get(`/admin/bonus/records?${params}`);
+}
+
+export async function releaseBonusManually(bonusId: string): Promise<{ data: BonusRecordAdmin; message: string }> {
+  return apiClient.post(`/admin/bonus/records/${bonusId}/release`, {});
+}
+
+export async function rejectBonus(bonusId: string): Promise<{ data: BonusRecordAdmin; message: string }> {
+  return apiClient.post(`/admin/bonus/records/${bonusId}/reject`, {});
+}
+
+export async function getBonusConfig(): Promise<{ data: BonusConfig }> {
+  return apiClient.get('/admin/bonus/config');
+}
+
+export async function updateBonusConfig(config: Partial<Record<string, number>>): Promise<{ data: BonusConfig; message: string }> {
+  return apiClient.patch('/admin/bonus/config', config);
+}
+
+export async function getBonusAnalytics(): Promise<{ data: BonusAnalytics }> {
+  return apiClient.get('/admin/bonus/analytics');
+}
+
+export async function setBonusSuspension(workerId: string, suspended: boolean): Promise<{ data: unknown; message: string }> {
+  return apiClient.post(`/admin/workers/${workerId}/bonus-suspend`, { suspended });
+}
