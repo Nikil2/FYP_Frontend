@@ -198,21 +198,23 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Mobile Buttons - Search + Menu - Hidden on Landing Page & Auth Pages */}
-          {!isLandingPage && !isAuthPage && (
+          {/* Mobile Buttons - Always visible except auth pages */}
+          {!isAuthPage && (
             <div className="md:hidden flex items-center gap-2">
-              {/* Mobile Search Toggle */}
-              <button
-                className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
-                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                aria-label="Toggle search"
-              >
-                {isMobileSearchOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Search className="w-6 h-6" />
-                )}
-              </button>
+              {/* Mobile Search Toggle - only on non-landing pages */}
+              {!isLandingPage && (
+                <button
+                  className="p-2 hover:bg-muted rounded-lg animation-standard text-heading"
+                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                  aria-label="Toggle search"
+                >
+                  {isMobileSearchOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Search className="w-6 h-6" />
+                  )}
+                </button>
+              )}
 
               {/* Mobile Menu Button */}
               <button
@@ -230,7 +232,7 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Mobile Search - Collapsible - Hidden on Landing Page & Auth Pages */}
+        {/* Mobile Search - Collapsible */}
         {!isLandingPage && !isAuthPage && isMobileSearchOpen && (
           <div className="md:hidden px-3 py-3 border-t border-border bg-secondary-background relative z-40">
             <div className="relative">
@@ -277,40 +279,71 @@ export function Navbar() {
           </div>
         )}
 
-        {/* Mobile Menu - Hidden on Landing Page & Auth Pages */}
-        {!isLandingPage && !isAuthPage && isMobileMenuOpen && (
+        {/* Mobile Menu */}
+        {!isAuthPage && isMobileMenuOpen && (
           <div
             ref={mobileMenuRef}
-            className="md:hidden py-4 border-t border-border"
+            className="md:hidden border-t border-border bg-card"
           >
-            <div className="flex flex-col gap-4">
-              {NAV_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-heading hover:text-tertiary animation-standard font-medium py-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
-              <div className="flex flex-col gap-2 pt-4 border-t border-border">
-                <a href="/auth/login" className="w-full">
-                  <Button variant="outline" size="sm" className="w-full">
-                    Login
-                  </Button>
-                </a>
-                <a href="/auth/signup/customer" className="w-full">
-                  <Button variant="tertiary" size="sm" className="w-full">
-                    Sign Up as Customer
-                  </Button>
-                </a>
-                <a href="/auth/signup/worker" className="w-full">
-                  <Button variant="tertiary" size="sm" className="w-full">
-                    Sign Up as Worker
-                  </Button>
-                </a>
-              </div>
+            <div className="flex flex-col px-4 py-4 gap-1">
+              {/* Nav links - only on non-landing pages */}
+              {!isLandingPage && (
+                <>
+                  {NAV_LINKS.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      className="text-heading hover:text-tertiary hover:bg-muted animation-standard font-medium px-3 py-3 rounded-lg"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                  <div className="border-t border-border my-2" />
+                </>
+              )}
+
+              {/* Auth section */}
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-2">
+                {isLandingPage ? "Get Started" : "Account"}
+              </p>
+              <a
+                href="/auth/login"
+                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Login
+              </a>
+              <a
+                href="/auth/signup/customer"
+                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign Up as Customer
+              </a>
+              <a
+                href="/auth/signup/worker"
+                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign Up as Worker
+              </a>
+
+              {/* CTA buttons for landing page */}
+              {isLandingPage && (
+                <div className="flex flex-col gap-2 pt-2 mt-2 border-t border-border">
+                  <a href="/auth/signup/customer" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="tertiary" size="sm" className="w-full">
+                      Browse Services
+                    </Button>
+                  </a>
+                  <a href="/auth/signup/worker" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Start Earning
+                    </Button>
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         )}
