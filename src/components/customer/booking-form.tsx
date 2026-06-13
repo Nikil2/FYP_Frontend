@@ -18,6 +18,17 @@ import { createBooking } from "@/api/services/bookings";
 import { getAuthUser } from "@/lib/auth";
 import { uploadMultipleToCloudinary } from "@/lib/cloudinary";
 
+function localDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, "0");
+  const d = date.getDate().toString().padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getMinBookingDate(): string {
+  return localDateStr(new Date());
+}
+
 interface BookingFormProps {
   serviceId: string;
   serviceName: string;
@@ -75,7 +86,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
   const [formData, setFormData] = useState({
     location: "",
     unitDetail: "",
-    serviceDate: "",
+    serviceDate: getMinBookingDate(),
     serviceTime: "",
     workDescription: "",
     referralSource: "",
@@ -91,23 +102,13 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     if (!timeStr) return "12:00";
     const [time, modifier] = timeStr.split(" ");
     const [hoursValue, minutesValue] = time.split(":");
-    let hours = hoursValue;
-    if (hours === "12") {
-      hours = "00";
+    let hours = parseInt(hoursValue, 10);
+    if (modifier === "AM") {
+      if (hours === 12) hours = 0;
+    } else {
+      if (hours !== 12) hours += 12;
     }
-    if (modifier === "PM") {
-      hours = (parseInt(hours, 10) + 12).toString();
-    }
-    return `${hours.padStart(2, "0")}:${minutesValue}`;
-  };
-
-  const isTimeSlotPast = (slot: string, date: string): boolean => {
-    if (!date) return false;
-    const today = new Date().toISOString().split("T")[0];
-    if (date !== today) return false;
-    const time24h = formatTimeTo24h(slot);
-    const slotTime = new Date(`${date}T${time24h}:00`);
-    return slotTime <= new Date();
+    return `${hours.toString().padStart(2, "0")}:${minutesValue}`;
   };
 
   const handleInputChange = (
@@ -118,12 +119,6 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      // If date changes to today and current time selection is now past, clear it
-      if (name === "serviceDate" && prev.serviceTime) {
-        if (isTimeSlotPast(prev.serviceTime, value)) {
-          updated.serviceTime = "";
-        }
-      }
       return updated;
     });
     // Clear error when user types
@@ -473,7 +468,7 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
                 name="serviceDate"
                 value={formData.serviceDate}
                 onChange={handleInputChange}
-                min={new Date().toISOString().split("T")[0]}
+                min={getMinBookingDate()}
                 className="w-full border border-border rounded-lg px-4 py-3 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-tertiary/40"
               />
             </div>
@@ -495,14 +490,11 @@ export function BookingForm({ serviceId, serviceName, workerId }: BookingFormPro
                 className="w-full appearance-none border border-border rounded-lg px-4 py-3 pr-8 text-sm text-heading focus:outline-none focus:ring-2 focus:ring-tertiary/40"
               >
                 <option value="">Select Time</option>
-                {TIME_SLOTS.map((slot) => {
-                  const past = isTimeSlotPast(slot, formData.serviceDate);
-                  return (
-                    <option key={slot} value={slot} disabled={past}>
-                      {slot}{past ? " (passed)" : ""}
-                    </option>
-                  );
-                })}
+                {TIME_SLOTS.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
