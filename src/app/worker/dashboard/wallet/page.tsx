@@ -175,84 +175,111 @@ export default function WalletPage() {
 
       {!loading && !error && (
         <>
-          {/* ── Commission Due Banner ── */}
-          {amountDue > 0 && (
-            <div
-              className={cn(
-                "rounded-2xl p-5 border-2",
-                overdue
-                  ? "bg-red-50 border-red-300"
-                  : daysLeft !== null && daysLeft <= 3
-                  ? "bg-orange-50 border-orange-300"
-                  : "bg-amber-50 border-amber-200",
-              )}
-            >
-              <div className="flex items-start gap-3 mb-4">
+          {/* ── Commission Section — always visible ── */}
+          <div
+            className={cn(
+              "rounded-2xl p-5 border-2",
+              overdue
+                ? "bg-red-50 border-red-300"
+                : amountDue > 0 && daysLeft !== null && daysLeft <= 3
+                ? "bg-orange-50 border-orange-300"
+                : amountDue > 0
+                ? "bg-amber-50 border-amber-200"
+                : "bg-green-50 border-green-200",
+            )}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 mb-4">
+              {amountDue === 0 ? (
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
                 <AlertTriangle
                   className={cn(
                     "w-6 h-6 flex-shrink-0 mt-0.5",
                     overdue ? "text-red-600" : "text-amber-600",
                   )}
                 />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-heading">
-                    {overdue ? "Commission Overdue!" : "Commission Due"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {overdue
-                      ? "You missed the payment deadline. Pay now to continue receiving bookings."
-                      : daysLeft !== null
-                      ? `Pay within ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to avoid suspension`
-                      : "Please pay your platform commission"}
-                  </p>
-                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-bold text-heading">
+                  {amountDue === 0
+                    ? "Commission — All Clear"
+                    : overdue
+                    ? "Commission Overdue!"
+                    : "Commission Due"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {amountDue === 0
+                    ? "No commission owed. You are up to date."
+                    : overdue
+                    ? "You missed the payment deadline. Pay now to continue receiving bookings."
+                    : daysLeft !== null
+                    ? `Pay within ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to avoid suspension`
+                    : "Please pay your platform commission"}
+                </p>
               </div>
+            </div>
 
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Amount to Pay</p>
-                  <p className="text-3xl font-extrabold text-heading">
-                    Rs. {amountDue.toLocaleString()}
-                  </p>
-                  {dueStatus?.commissionDueAt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Due by:{" "}
-                      {new Date(dueStatus.commissionDueAt).toLocaleDateString("en-PK", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
-                  )}
-                </div>
+            {/* Amount breakdown */}
+            <div className="bg-white/70 rounded-xl p-4 mb-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Commission from jobs (10%)</span>
+                <span className="font-semibold text-red-600">
+                  − Rs. {(amountDue + num(earnings.totalBonusEarned)).toLocaleString()}
+                </span>
               </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Bonus earned (tier cashback)</span>
+                <span className="font-semibold text-green-600">
+                  + Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+                </span>
+              </div>
+              <div className="border-t border-border pt-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-heading">You need to pay</span>
+                <span className={cn("text-2xl font-extrabold", amountDue > 0 ? "text-heading" : "text-green-600")}>
+                  Rs. {amountDue.toLocaleString()}
+                </span>
+              </div>
+              {dueStatus?.commissionDueAt && amountDue > 0 && (
+                <p className="text-xs text-muted-foreground text-right">
+                  Due by:{" "}
+                  {new Date(dueStatus.commissionDueAt).toLocaleDateString("en-PK", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </p>
+              )}
+            </div>
 
-              {hasPending ? (
-                <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-100 rounded-lg px-3 py-2.5">
-                  <Clock className="w-4 h-4 flex-shrink-0" />
-                  <span>
-                    Your payment proof is under review. Admin will verify within 24 hours.
-                  </span>
+            {/* Action area */}
+            {amountDue === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-100 rounded-lg px-3 py-2.5">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>Nothing to pay right now. Keep completing jobs!</span>
+              </div>
+            ) : hasPending ? (
+              <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-100 rounded-lg px-3 py-2.5">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span>Your payment proof is under review. Admin will verify within 24 hours.</span>
+              </div>
+            ) : (
+              <>
+                {/* Company account info */}
+                <div className="mb-3 text-xs text-muted-foreground bg-white/70 rounded-lg px-3 py-2.5 space-y-0.5">
+                  <p className="font-semibold text-heading">Transfer to Mehnati Account:</p>
+                  <p>EasyPaisa / JazzCash: <span className="font-mono font-semibold">0300-0000000</span></p>
+                  <p>Account Name: <span className="font-semibold">Mehnati Marketplace</span></p>
                 </div>
-              ) : (
                 <Button
                   variant="primary"
                   className="w-full bg-tertiary hover:bg-tertiary/90 text-white font-semibold"
                   onClick={() => setShowPayModal(true)}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Pay Commission — Upload Proof
+                  I Paid — Upload Screenshot
                 </Button>
-              )}
-
-              {/* Company account info */}
-              <div className="mt-3 text-xs text-muted-foreground border-t border-amber-200 pt-3 space-y-0.5">
-                <p className="font-semibold text-heading">Transfer to Mehnati Account:</p>
-                <p>EasyPaisa / JazzCash: <span className="font-mono font-semibold">0300-0000000</span></p>
-                <p>Account Name: <span className="font-semibold">Mehnati Marketplace</span></p>
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
 
           {/* ── Summary Cards ── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
