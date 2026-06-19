@@ -286,7 +286,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       await confirmCompletion(id);
       await fetchBooking();
       setShowCompleteModal(false);
-      toast.success("Booking confirmed as complete. Thank you!");
+      toast.success("Booking confirmed as complete. You earned 20 points!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm completion.");
     }

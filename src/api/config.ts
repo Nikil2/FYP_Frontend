@@ -134,6 +134,10 @@ export const API_CONFIG = {
     UPLOADS_PORTFOLIO: '/uploads/portfolio',
     UPLOADS_EVIDENCE: '/uploads/evidence',
 
+    // ==================== CUSTOMER REWARDS ====================
+    CUSTOMER_REWARDS_SUMMARY: (userId: string) => `/customer-rewards/${userId}/summary`,
+    CUSTOMER_REWARDS_TRANSACTIONS: (userId: string) => `/customer-rewards/${userId}/transactions`,
+
     // ==================== ADMIN ====================
     ADMIN_LOGIN: '/admin/login',
     ADMIN_DASHBOARD: '/admin/dashboard',
