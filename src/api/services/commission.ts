@@ -66,21 +66,19 @@ export async function getAdminPendingPayments(
 
 export async function approveCommissionPayment(
   paymentId: string,
-  adminUserId: string,
 ): Promise<{ success: boolean }> {
   return apiClient.post<{ success: boolean }>(
     API_CONFIG.ENDPOINTS.COMMISSION_ADMIN_APPROVE(paymentId),
-    { adminUserId },
+    {},
   );
 }
 
 export async function rejectCommissionPayment(
   paymentId: string,
-  adminUserId: string,
   reason: string,
 ): Promise<{ success: boolean }> {
   return apiClient.post<{ success: boolean }>(
     API_CONFIG.ENDPOINTS.COMMISSION_ADMIN_REJECT(paymentId),
-    { adminUserId, reason },
+    { reason },
   );
 }

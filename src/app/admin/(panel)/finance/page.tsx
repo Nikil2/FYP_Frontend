@@ -20,7 +20,6 @@ import {
   rejectCommissionPayment,
   type AdminPendingPayment,
 } from "@/api/services/commission";
-import { getAuthUser } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -42,7 +41,6 @@ const num = (v: number | string | null | undefined) => Number(v ?? 0);
 type Tab = "commissions" | "wallets" | "payments";
 
 export default function AdminFinancePage() {
-  const adminUser = getAuthUser();
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [tab, setTab] = useState<Tab>("payments");
 
@@ -116,10 +114,10 @@ export default function AdminFinancePage() {
   }, [tab, loadPendingPayments]);
 
   const handleApprove = async (paymentId: string) => {
-    if (!adminUser?.id || actionLoading) return;
+    if (actionLoading) return;
     setActionLoading(paymentId);
     try {
-      await approveCommissionPayment(paymentId, adminUser.id);
+      await approveCommissionPayment(paymentId);
       toast.success("Payment approved. Worker wallet cleared.");
       setPendingPayments((prev) => prev.filter((p) => p.id !== paymentId));
     } catch (err) {
@@ -129,10 +127,10 @@ export default function AdminFinancePage() {
   };
 
   const handleReject = async () => {
-    if (!rejectModal || !adminUser?.id || !rejectReason.trim()) return;
+    if (!rejectModal || !rejectReason.trim()) return;
     setActionLoading(rejectModal.id);
     try {
-      await rejectCommissionPayment(rejectModal.id, adminUser.id, rejectReason.trim());
+      await rejectCommissionPayment(rejectModal.id, rejectReason.trim());
       toast.success("Payment rejected. Worker notified.");
       setPendingPayments((prev) => prev.filter((p) => p.id !== rejectModal.id));
       setRejectModal(null);
