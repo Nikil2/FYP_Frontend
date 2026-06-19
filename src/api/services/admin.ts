@@ -496,6 +496,25 @@ export async function getComplaints(
   return unwrapResponse(raw);
 }
 
+export interface JobStats {
+  TOTAL: number;
+  ACTIVE: number;
+  PENDING: number;
+  NEGOTIATION: number;
+  ACCEPTED: number;
+  IN_PROGRESS: number;
+  COMPLETED: number;
+  CANCELLED: number;
+  DISPUTED: number;
+}
+
+export async function getAdminJobStats(): Promise<JobStats> {
+  const raw = await apiClient.get<WrappedResponse<JobStats> | JobStats>(
+    API_CONFIG.ENDPOINTS.ADMIN_JOB_STATS,
+  );
+  return unwrapResponse(raw);
+}
+
 export async function getAdminJobs(
   page: number = 1,
   limit: number = 20,
