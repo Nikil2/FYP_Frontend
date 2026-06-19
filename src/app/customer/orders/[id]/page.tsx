@@ -126,7 +126,7 @@ function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted
     setSubmitting(true);
     try {
       await submitFeedback({ bookingId, rating, comment: comment || undefined });
-      toast.success("Review submitted. Thank you!");
+      toast.success("Review submitted! You earned 5 points.");
       onSubmitted();
     } catch (err) {
       const is409 = err instanceof ApiRequestError && err.statusCode === 409;
