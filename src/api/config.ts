@@ -134,6 +134,14 @@ export const API_CONFIG = {
     UPLOADS_PORTFOLIO: '/uploads/portfolio',
     UPLOADS_EVIDENCE: '/uploads/evidence',
 
+    // ==================== COMMISSION ====================
+    COMMISSION_DUE: (workerId: string) => `/commission/worker/${workerId}/due`,
+    COMMISSION_PAY: (workerId: string) => `/commission/worker/${workerId}/pay`,
+    COMMISSION_PAYMENTS: (workerId: string) => `/commission/worker/${workerId}/payments`,
+    COMMISSION_ADMIN_PENDING: '/commission/admin/pending',
+    COMMISSION_ADMIN_APPROVE: (paymentId: string) => `/commission/admin/${paymentId}/approve`,
+    COMMISSION_ADMIN_REJECT: (paymentId: string) => `/commission/admin/${paymentId}/reject`,
+
     // ==================== CUSTOMER REWARDS ====================
     CUSTOMER_REWARDS_SUMMARY: (userId: string) => `/customer-rewards/${userId}/summary`,
     CUSTOMER_REWARDS_TRANSACTIONS: (userId: string) => `/customer-rewards/${userId}/transactions`,
