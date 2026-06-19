@@ -223,15 +223,15 @@ export default function WalletPage() {
             {/* Amount breakdown */}
             <div className="bg-white/70 rounded-xl p-4 mb-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Commission from jobs (10%)</span>
+                <span className="text-muted-foreground">Total commission from jobs (10%)</span>
                 <span className="font-semibold text-red-600">
-                  − Rs. {(amountDue + num(earnings.totalBonusEarned)).toLocaleString()}
+                  − Rs. {num(dueStatus?.totalCommissionCharged).toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Bonus earned (tier cashback)</span>
+                <span className="text-muted-foreground">Already paid & verified</span>
                 <span className="font-semibold text-green-600">
-                  + Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+                  − Rs. {num(dueStatus?.totalCommissionCleared).toLocaleString()}
                 </span>
               </div>
               <div className="border-t border-border pt-2 flex items-center justify-between">

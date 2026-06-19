@@ -3,6 +3,8 @@ import API_CONFIG from '../config';
 
 export interface CommissionDueStatus {
   amountDue: number;
+  totalCommissionCharged: number;
+  totalCommissionCleared: number;
   commissionDueAt: string | null;
   daysLeft: number | null;
   isPaymentOverdue: boolean;
