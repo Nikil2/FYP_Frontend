@@ -126,7 +126,7 @@ function ReviewForm({ bookingId, onSubmitted }: { bookingId: string; onSubmitted
     setSubmitting(true);
     try {
       await submitFeedback({ bookingId, rating, comment: comment || undefined });
-      toast.success("Review submitted. Thank you!");
+      toast.success("Review submitted! You earned 5 points.");
       onSubmitted();
     } catch (err) {
       const is409 = err instanceof ApiRequestError && err.statusCode === 409;
@@ -286,7 +286,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       await confirmCompletion(id);
       await fetchBooking();
       setShowCompleteModal(false);
-      toast.success("Booking confirmed as complete. Thank you!");
+      toast.success("Booking confirmed as complete. You earned 20 points!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to confirm completion.");
     }

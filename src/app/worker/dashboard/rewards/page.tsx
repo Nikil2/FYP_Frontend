@@ -13,7 +13,6 @@ import {
   getBonusProgress,
   getBonusHistory,
   getWalletSummary,
-  topupWallet,
   TIER_META,
   type BonusProgress,
   type BonusRecord,
@@ -26,7 +25,6 @@ import {
   Wallet,
   CheckCircle2,
   XCircle,
-  Plus,
 } from "lucide-react";
 
 const PKR = (v: number | string) =>
@@ -39,7 +37,6 @@ export default function RewardsPage() {
   const [history, setHistory] = useState<BonusRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toppingUp, setToppingUp] = useState(false);
 
   const load = async () => {
     try {
@@ -75,23 +72,6 @@ export default function RewardsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTopup = async () => {
-    if (!workerId) return;
-    const input = window.prompt("Top-up amount (PKR):", "2000");
-    if (!input) return;
-    const amount = Number(input);
-    if (!amount || amount <= 0) return;
-    try {
-      setToppingUp(true);
-      await topupWallet(workerId, amount);
-      await load();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Top-up failed");
-    } finally {
-      setToppingUp(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="p-6 text-center text-paragraph">Loading rewards…</div>
@@ -119,25 +99,20 @@ export default function RewardsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="flex items-center gap-2 text-paragraph mb-1">
-            <Wallet className="w-4 h-4" /> Wallet Balance
+            <Wallet className="w-4 h-4" /> Commission Owed
           </div>
-          <p
-            className={cnBalance(Number(wallet?.balance ?? 0))}
-          >
-            {PKR(wallet?.balance ?? 0)}
+          <p className={cnBalance(Number(wallet?.balance ?? 0))}>
+            Rs. {Math.max(0, -Number(wallet?.balance ?? 0)).toLocaleString()}
           </p>
-          {Number(wallet?.balance ?? 0) < 0 && (
+          {Number(wallet?.balance ?? 0) < 0 ? (
             <p className="text-xs text-destructive mt-1">
-              Negative balance — top up to keep receiving bookings.
+              Go to <strong>Wallet</strong> tab to pay and upload proof.
+            </p>
+          ) : (
+            <p className="text-xs text-green-600 mt-1">
+              All clear — no commission owed.
             </p>
           )}
-          <Button
-            onClick={handleTopup}
-            disabled={toppingUp}
-            className="mt-3 w-full gap-1"
-          >
-            <Plus className="w-4 h-4" /> Top Up
-          </Button>
         </Card>
 
         <Card className="p-5">

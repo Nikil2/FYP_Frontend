@@ -14,6 +14,14 @@ import {
   type AdminWorkerWallet,
   type PaginatedResponse,
 } from "@/api/services/admin";
+import {
+  getAdminPendingPayments,
+  approveCommissionPayment,
+  rejectCommissionPayment,
+  type AdminPendingPayment,
+} from "@/api/services/commission";
+import { getAuthUser } from "@/lib/auth";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -23,26 +31,38 @@ import {
   TrendingUp,
   ArrowDownCircle,
   AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 
 const num = (v: number | string | null | undefined) => Number(v ?? 0);
 
-type Tab = "commissions" | "wallets";
+type Tab = "commissions" | "wallets" | "payments";
 
 export default function AdminFinancePage() {
+  const adminUser = getAuthUser();
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
-  const [tab, setTab] = useState<Tab>("commissions");
+  const [tab, setTab] = useState<Tab>("payments");
 
-  // Commissions
+  // Commission Ledger
   const [commissions, setCommissions] = useState<PaginatedResponse<CommissionRecord> | null>(null);
   const [commPage, setCommPage] = useState(1);
   const [commLoading, setCommLoading] = useState(false);
 
-  // Wallets
+  // Worker Wallets
   const [wallets, setWallets] = useState<PaginatedResponse<AdminWorkerWallet> | null>(null);
   const [walletPage, setWalletPage] = useState(1);
   const [walletSearch, setWalletSearch] = useState("");
   const [walletLoading, setWalletLoading] = useState(false);
+
+  // Commission Payments (proof verification)
+  const [pendingPayments, setPendingPayments] = useState<AdminPendingPayment[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState<{ id: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     getFinanceSummary()
@@ -74,6 +94,15 @@ export default function AdminFinancePage() {
     }
   }, []);
 
+  const loadPendingPayments = useCallback(async () => {
+    setPaymentsLoading(true);
+    try {
+      const res = await getAdminPendingPayments(0, 50);
+      setPendingPayments(res.data);
+    } catch (e) { console.error(e); }
+    finally { setPaymentsLoading(false); }
+  }, []);
+
   useEffect(() => {
     if (tab === "commissions") loadCommissions(commPage);
   }, [tab, commPage, loadCommissions]);
@@ -81,6 +110,38 @@ export default function AdminFinancePage() {
   useEffect(() => {
     if (tab === "wallets") loadWallets(walletPage, walletSearch);
   }, [tab, walletPage, walletSearch, loadWallets]);
+
+  useEffect(() => {
+    if (tab === "payments") loadPendingPayments();
+  }, [tab, loadPendingPayments]);
+
+  const handleApprove = async (paymentId: string) => {
+    if (!adminUser?.id || actionLoading) return;
+    setActionLoading(paymentId);
+    try {
+      await approveCommissionPayment(paymentId, adminUser.id);
+      toast.success("Payment approved. Worker wallet cleared.");
+      setPendingPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve.");
+    }
+    setActionLoading(null);
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal || !adminUser?.id || !rejectReason.trim()) return;
+    setActionLoading(rejectModal.id);
+    try {
+      await rejectCommissionPayment(rejectModal.id, adminUser.id, rejectReason.trim());
+      toast.success("Payment rejected. Worker notified.");
+      setPendingPayments((prev) => prev.filter((p) => p.id !== rejectModal.id));
+      setRejectModal(null);
+      setRejectReason("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to reject.");
+    }
+    setActionLoading(null);
+  };
 
   return (
     <div>
@@ -117,22 +178,147 @@ export default function AdminFinancePage() {
       </section>
 
       {/* Tab Switcher */}
-      <div className="flex gap-2 mb-4">
-        {(["commissions", "wallets"] as Tab[]).map((t) => (
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {(["payments", "commissions", "wallets"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-colors",
-              tab === t
-                ? "bg-heading text-white"
-                : "bg-muted text-paragraph hover:bg-muted/70"
+              "px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5",
+              tab === t ? "bg-heading text-white" : "bg-muted text-paragraph hover:bg-muted/70"
             )}
           >
-            {t === "commissions" ? "Commission Ledger" : "Worker Wallets"}
+            {t === "payments" && <Clock className="w-3.5 h-3.5" />}
+            {t === "payments"
+              ? `Payment Proofs${pendingPayments.length > 0 ? ` (${pendingPayments.length})` : ""}`
+              : t === "commissions"
+              ? "Commission Ledger"
+              : "Worker Wallets"}
           </button>
         ))}
       </div>
+
+      {/* ── Commission Payment Proofs ── */}
+      {tab === "payments" && (
+        <Card className="rounded-2xl overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-500" />
+            <h2 className="font-semibold text-heading">Pending Payment Proofs</h2>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {pendingPayments.length} pending
+            </span>
+          </div>
+
+          {paymentsLoading ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">Loading...</div>
+          ) : pendingPayments.length === 0 ? (
+            <div className="p-10 flex flex-col items-center gap-2 text-muted-foreground">
+              <CheckCircle2 className="w-10 h-10 text-green-400" />
+              <p className="text-sm font-medium">All clear — no pending payments</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {pendingPayments.map((p) => (
+                <div key={p.id} className="p-5 flex gap-4 items-start">
+                  {/* Worker avatar */}
+                  <div className="w-10 h-10 rounded-full bg-tertiary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {p.worker.user.profilePicUrl ? (
+                      <img src={p.worker.user.profilePicUrl} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <span className="text-sm font-bold text-tertiary">
+                        {p.worker.user.fullName.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold text-heading">{p.worker.user.fullName}</p>
+                      <span className="text-xs text-muted-foreground">{p.worker.user.phoneNumber}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Submitted: {new Date(p.submittedAt).toLocaleDateString("en-PK", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                      {" · "}Due by: {new Date(p.dueDate).toLocaleDateString("en-PK", {
+                        day: "numeric", month: "short",
+                      })}
+                    </p>
+                    <p className="text-lg font-extrabold text-heading mt-1">
+                      Rs. {Number(p.amount).toLocaleString()}
+                    </p>
+
+                    {/* Screenshot */}
+                    <a
+                      href={p.proofImageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-tertiary font-semibold hover:underline"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> View Payment Screenshot
+                    </a>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+                        disabled={actionLoading === p.id}
+                        onClick={() => handleApprove(p.id)}
+                      >
+                        <CheckCircle2 className="w-4 h-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        disabled={actionLoading === p.id}
+                        onClick={() => setRejectModal({ id: p.id })}
+                      >
+                        <XCircle className="w-4 h-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Reject Modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-heading">Reject Payment Proof</h3>
+            <p className="text-sm text-muted-foreground">
+              Tell the worker why their payment was rejected so they can resubmit correctly.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Screenshot is unclear, wrong amount, wrong account number..."
+              className="w-full text-sm bg-gray-50 border border-border rounded-lg px-3 py-2.5 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => { setRejectModal(null); setRejectReason(""); }}>
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold"
+                disabled={!rejectReason.trim() || !!actionLoading}
+                onClick={handleReject}
+              >
+                Confirm Reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Commission Ledger */}
       {tab === "commissions" && (

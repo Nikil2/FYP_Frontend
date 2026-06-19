@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
@@ -13,18 +13,38 @@ import {
   type WorkerWalletSummary,
   type WorkerWalletTransaction,
 } from "@/api/services/worker-dashboard";
+import {
+  getCommissionDue,
+  submitCommissionProof,
+  getWorkerCommissionPayments,
+  type CommissionDueStatus,
+  type CommissionPayment,
+} from "@/api/services/commission";
+import { apiClient } from "@/api/client";
+import API_CONFIG from "@/api/config";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   DollarSign,
   TrendingUp,
   ArrowDownCircle,
   ArrowUpCircle,
   Wallet,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Upload,
+  X,
+  Loader2,
+  Gift,
   CreditCard,
+  XCircle,
 } from "lucide-react";
 
 export default function WalletPage() {
   const { t } = useLanguage();
+
+  const [workerId, setWorkerId] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<WorkerWalletSummary>({
     balance: 0,
     availableBalance: 0,
@@ -34,8 +54,17 @@ export default function WalletPage() {
     totalBonusEarned: 0,
   });
   const [transactions, setTransactions] = useState<WorkerWalletTransaction[]>([]);
+  const [dueStatus, setDueStatus] = useState<CommissionDueStatus | null>(null);
+  const [payments, setPayments] = useState<CommissionPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Pay modal
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -43,82 +72,99 @@ export default function WalletPage() {
         setLoading(true);
         setError(null);
         const userId = resolveWorkerUserId();
-        if (!userId) {
-          setError("Worker user ID missing. Set NEXT_PUBLIC_WORKER_USER_ID or login first.");
-          return;
-        }
+        if (!userId) { setError("Please login again."); return; }
 
-        const profile = getCachedWorkerDashboardProfile() || await getWorkerDashboardProfileByUserId(userId);
-        const [summary, txns] = await Promise.all([
-          getWorkerWalletSummary(profile.workerId),
-          getWorkerWalletTransactions(profile.workerId),
+        const profile =
+          getCachedWorkerDashboardProfile() ||
+          (await getWorkerDashboardProfileByUserId(userId));
+
+        const wId = profile.workerId;
+        setWorkerId(wId);
+
+        const [summary, txns, due, hist] = await Promise.all([
+          getWorkerWalletSummary(wId),
+          getWorkerWalletTransactions(wId),
+          getCommissionDue(wId),
+          getWorkerCommissionPayments(wId),
         ]);
+
         setEarnings(summary);
         setTransactions(txns);
+        setDueStatus(due);
+        setPayments(hist.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load wallet");
       } finally {
         setLoading(false);
       }
     };
-
     load();
   }, []);
 
-  const num = (v: number | string) => Number(v ?? 0);
-  const isCredit = (type: string) =>
-    type === "BONUS_CREDIT" || type === "TOPUP_CREDIT";
+  const num = (v: number | string | null | undefined) => Number(v ?? 0);
+  const isCredit = (type: string) => type === "BONUS_CREDIT" || type === "TOPUP_CREDIT";
 
-  const getTransactionIcon = (type: string) => {
-    if (isCredit(type))
-      return <ArrowDownCircle className="w-5 h-5 text-green-500" />;
-    if (type === "COMMISSION_DEBIT" || type === "WITHDRAWAL_DEBIT")
-      return <ArrowUpCircle className="w-5 h-5 text-red-500" />;
-    return <DollarSign className="w-5 h-5 text-paragraph" />;
+  // Upload screenshot
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await apiClient.upload<{ url: string }>(
+        API_CONFIG.ENDPOINTS.UPLOADS_EVIDENCE,
+        form,
+      );
+      setProofUrl(res.url);
+    } catch {
+      toast.error("Failed to upload screenshot. Try again.");
+    }
+    setUploading(false);
   };
 
-  const formatTxnType = (type: string) =>
-    type
-      .split("_")
-      .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-      .join(" ");
+  const handleSubmitPayment = async () => {
+    if (!proofUrl || !workerId || submitting) return;
+    setSubmitting(true);
+    try {
+      await submitCommissionProof(workerId, proofUrl);
+      toast.success("Payment proof submitted! Admin will verify within 24 hours.");
+      setShowPayModal(false);
+      setProofUrl(null);
+      // Refresh due status
+      const updated = await getCommissionDue(workerId);
+      setDueStatus(updated);
+      const hist = await getWorkerCommissionPayments(workerId);
+      setPayments(hist.data);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Submission failed.");
+    }
+    setSubmitting(false);
+  };
+
+  const statusColor = (s: string) => {
+    if (s === "APPROVED") return "text-green-600 bg-green-50";
+    if (s === "REJECTED") return "text-red-600 bg-red-50";
+    return "text-amber-600 bg-amber-50";
+  };
+  const statusLabel = (s: string) => {
+    if (s === "APPROVED") return "Verified";
+    if (s === "REJECTED") return "Rejected";
+    return "Under Review";
+  };
+
+  const amountDue = dueStatus?.amountDue ?? 0;
+  const daysLeft = dueStatus?.daysLeft ?? null;
+  const overdue = dueStatus?.isPaymentOverdue ?? false;
+  const hasPending = dueStatus?.hasPendingSubmission ?? false;
 
   return (
     <div className="space-y-6 p-4 lg:p-8">
-      {/* Page Header */}
-      <h1 className="text-2xl lg:text-3xl font-bold text-heading">
-        {t.wallet}
-      </h1>
+      <h1 className="text-2xl lg:text-3xl font-bold text-heading">{t.wallet}</h1>
 
-      {/* Earnings Overview Cards */}
       {loading && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
-            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
-            <div className="bg-gray-200 rounded-2xl h-32 animate-pulse" />
-          </div>
-          <div className="bg-gray-200 rounded-2xl h-20 animate-pulse" />
-          <div className="space-y-2">
-            <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
-                    <div className="space-y-2">
-                      <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
-                      <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse ml-auto" />
-                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse ml-auto" />
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin text-tertiary" />
         </div>
       )}
       {error && (
@@ -126,131 +172,362 @@ export default function WalletPage() {
           <p className="text-sm text-red-600">{error}</p>
         </Card>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Earnings (gross cash from jobs) */}
-        <Card className="p-0 overflow-hidden">
-          <div className="bg-gradient-to-br from-tertiary to-tertiary-hover p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-white/80">{t.totalEarnings}</p>
-              <TrendingUp className="w-6 h-6 text-white/60" />
-            </div>
-            <p className="text-3xl font-bold">
-              Rs. {num(earnings.totalEarnings).toLocaleString()}
-            </p>
-            <p className="text-xs text-white/70 mt-2">
-              Cash received directly from customers
-            </p>
-          </div>
-        </Card>
 
-        {/* Wallet Balance (platform credit) */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Wallet Balance</p>
-            <Wallet className="w-6 h-6 text-tertiary opacity-30" />
-          </div>
-          <p
+      {!loading && !error && (
+        <>
+          {/* ── Commission Section — always visible ── */}
+          <div
             className={cn(
-              "text-3xl font-bold",
-              num(earnings.balance) < 0 ? "text-red-600" : "text-heading"
+              "rounded-2xl p-5 border-2",
+              overdue
+                ? "bg-red-50 border-red-300"
+                : amountDue > 0 && daysLeft !== null && daysLeft <= 3
+                ? "bg-orange-50 border-orange-300"
+                : amountDue > 0
+                ? "bg-amber-50 border-amber-200"
+                : "bg-green-50 border-green-200",
             )}
           >
-            Rs. {num(earnings.balance).toLocaleString()}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            {num(earnings.balance) < 0
-              ? "Negative — top up from the Rewards tab to keep getting bookings"
-              : "Used to pay platform commission"}
-          </p>
-        </Card>
+            {/* Header */}
+            <div className="flex items-start gap-3 mb-4">
+              {amountDue === 0 ? (
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle
+                  className={cn(
+                    "w-6 h-6 flex-shrink-0 mt-0.5",
+                    overdue ? "text-red-600" : "text-amber-600",
+                  )}
+                />
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-bold text-heading">
+                  {amountDue === 0
+                    ? "Commission — All Clear"
+                    : overdue
+                    ? "Commission Overdue!"
+                    : "Commission Due"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {amountDue === 0
+                    ? "No commission owed. You are up to date."
+                    : overdue
+                    ? "You missed the payment deadline. Pay now to continue receiving bookings."
+                    : daysLeft !== null
+                    ? `Pay within ${daysLeft} day${daysLeft !== 1 ? "s" : ""} to avoid suspension`
+                    : "Please pay your platform commission"}
+                </p>
+              </div>
+            </div>
 
-        {/* Cashback Earned */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Cashback Earned</p>
-            <DollarSign className="w-6 h-6 text-green-500 opacity-30" />
+            {/* Amount breakdown */}
+            <div className="bg-white/70 rounded-xl p-4 mb-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Commission from jobs (10%)</span>
+                <span className="font-semibold text-red-600">
+                  − Rs. {(amountDue + num(earnings.totalBonusEarned)).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Bonus earned (tier cashback)</span>
+                <span className="font-semibold text-green-600">
+                  + Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+                </span>
+              </div>
+              <div className="border-t border-border pt-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-heading">You need to pay</span>
+                <span className={cn("text-2xl font-extrabold", amountDue > 0 ? "text-heading" : "text-green-600")}>
+                  Rs. {amountDue.toLocaleString()}
+                </span>
+              </div>
+              {dueStatus?.commissionDueAt && amountDue > 0 && (
+                <p className="text-xs text-muted-foreground text-right">
+                  Due by:{" "}
+                  {new Date(dueStatus.commissionDueAt).toLocaleDateString("en-PK", {
+                    day: "numeric", month: "long", year: "numeric",
+                  })}
+                </p>
+              )}
+            </div>
+
+            {/* Action area */}
+            {amountDue === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-100 rounded-lg px-3 py-2.5">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>Nothing to pay right now. Keep completing jobs!</span>
+              </div>
+            ) : hasPending ? (
+              <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-100 rounded-lg px-3 py-2.5">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span>Your payment proof is under review. Admin will verify within 24 hours.</span>
+              </div>
+            ) : (
+              <>
+                {/* Company account info */}
+                <div className="mb-3 text-xs text-muted-foreground bg-white/70 rounded-lg px-3 py-2.5 space-y-0.5">
+                  <p className="font-semibold text-heading">Transfer to Mehnati Account:</p>
+                  <p>EasyPaisa / JazzCash: <span className="font-mono font-semibold">0300-0000000</span></p>
+                  <p>Account Name: <span className="font-semibold">Mehnati Marketplace</span></p>
+                </div>
+                <Button
+                  variant="primary"
+                  className="w-full bg-tertiary hover:bg-tertiary/90 text-white font-semibold"
+                  onClick={() => setShowPayModal(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  I Paid — Upload Screenshot
+                </Button>
+              </>
+            )}
           </div>
-          <p className="text-3xl font-bold text-green-600">
-            Rs. {num(earnings.totalBonusEarned).toLocaleString()}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Commission paid: Rs.{" "}
-            {num(earnings.totalCommissionPaid).toLocaleString()}
-          </p>
-        </Card>
-      </div>
 
-      {/* This Month */}
-      <Card className="p-6 bg-blue-50 border-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">This Month&apos;s Earnings</p>
-            <p className="text-2xl font-bold text-heading mt-1">
-              Rs. {num(earnings.thisMonthEarnings).toLocaleString()}
-            </p>
-          </div>
-          <CreditCard className="w-10 h-10 text-blue-500 opacity-30" />
-        </div>
-      </Card>
+          {/* ── Summary Cards ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Cash Earned */}
+            <Card className="p-0 overflow-hidden">
+              <div className="bg-gradient-to-br from-tertiary to-tertiary-hover p-6 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-white/80">Cash Earned</p>
+                  <TrendingUp className="w-5 h-5 text-white/50" />
+                </div>
+                <p className="text-3xl font-bold">
+                  Rs. {num(earnings.totalEarnings).toLocaleString()}
+                </p>
+                <p className="text-xs text-white/60 mt-1">
+                  This month: Rs. {num(earnings.thisMonthEarnings).toLocaleString()}
+                </p>
+              </div>
+            </Card>
 
-      {/* Transaction History */}
-      <div>
-        <h2 className="text-lg font-bold text-heading mb-4">
-          Transaction History
-        </h2>
-
-        <div className="space-y-2">
-          {!loading && transactions.length === 0 && (
-            <Card className="p-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                No transactions yet. Top up your wallet from the Rewards tab to
-                get started.
+            {/* Commission Owed */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Commission Owed</p>
+                <Wallet className="w-5 h-5 text-muted-foreground/30" />
+              </div>
+              <p
+                className={cn(
+                  "text-3xl font-bold",
+                  amountDue > 0 ? "text-red-600" : "text-green-600",
+                )}
+              >
+                Rs. {amountDue.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                {amountDue > 0 ? "10% of completed jobs — pay to the company" : "All clear!"}
               </p>
             </Card>
-          )}
-          {transactions.map((transaction) => {
-            const credit = isCredit(transaction.type);
-            return (
-              <Card key={transaction.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-muted flex-center flex-shrink-0">
-                      {getTransactionIcon(transaction.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-heading truncate">
-                        {transaction.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(transaction.createdAt).toLocaleDateString(
-                          "en-PK",
-                          { day: "2-digit", month: "short", year: "numeric" }
-                        )}{" "}
-                        • {formatTxnType(transaction.type)}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="text-right ml-4 flex-shrink-0">
-                    <p
-                      className={cn(
-                        "font-bold",
-                        credit ? "text-green-600" : "text-red-500"
-                      )}
-                    >
-                      {credit ? "+" : "−"}Rs.{" "}
-                      {Math.abs(num(transaction.amount)).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Bal: Rs. {num(transaction.balanceAfter).toLocaleString()}
-                    </p>
-                  </div>
+            {/* Bonus Earned */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Bonus Earned</p>
+                <Gift className="w-5 h-5 text-green-400/50" />
+              </div>
+              <p className="text-3xl font-bold text-green-600">
+                Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Cashback from your tier rewards
+              </p>
+            </Card>
+          </div>
+
+          {/* ── Commission Payment History ── */}
+          {payments.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-heading mb-3">Commission Payments</h2>
+              <div className="space-y-2">
+                {payments.map((p) => (
+                  <Card key={p.id} className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                          p.status === "APPROVED"
+                            ? "bg-green-50"
+                            : p.status === "REJECTED"
+                            ? "bg-red-50"
+                            : "bg-amber-50",
+                        )}
+                      >
+                        {p.status === "APPROVED" ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        ) : p.status === "REJECTED" ? (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-amber-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-heading">
+                          Rs. {Number(p.amount).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(p.submittedAt).toLocaleDateString("en-PK", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                        {p.status === "REJECTED" && p.rejectionReason && (
+                          <p className="text-xs text-red-500 mt-0.5">
+                            Reason: {p.rejectionReason}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold px-2.5 py-1 rounded-full",
+                          statusColor(p.status),
+                        )}
+                      >
+                        {statusLabel(p.status)}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Wallet Ledger ── */}
+          <div>
+            <h2 className="text-lg font-bold text-heading mb-3">Transaction History</h2>
+            <div className="space-y-2">
+              {transactions.length === 0 && (
+                <Card className="p-6 text-center">
+                  <p className="text-sm text-muted-foreground">No transactions yet.</p>
+                </Card>
+              )}
+              {transactions.map((txn) => {
+                const credit = isCredit(txn.type);
+                return (
+                  <Card key={txn.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          {credit ? (
+                            <ArrowDownCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <ArrowUpCircle className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-heading truncate">
+                            {txn.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(txn.createdAt).toLocaleDateString("en-PK", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right ml-4 flex-shrink-0">
+                        <p className={cn("font-bold", credit ? "text-green-600" : "text-red-500")}>
+                          {credit ? "+" : "−"}Rs. {Math.abs(num(txn.amount)).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Pay Commission Modal ── */}
+      {showPayModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-heading">Pay Commission</h3>
+              <button
+                onClick={() => { setShowPayModal(false); setProofUrl(null); }}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-muted/50 rounded-xl p-4 space-y-1.5 text-sm">
+              <p className="font-semibold text-heading">How to pay:</p>
+              <p className="text-muted-foreground">
+                1. Send <span className="font-bold text-heading">Rs. {amountDue.toLocaleString()}</span> to:
+              </p>
+              <div className="bg-white rounded-lg border border-border px-3 py-2 space-y-0.5">
+                <p className="text-xs text-muted-foreground">EasyPaisa / JazzCash</p>
+                <p className="font-mono font-bold text-heading">0300-0000000</p>
+                <p className="text-xs text-muted-foreground">Mehnati Marketplace</p>
+              </div>
+              <p className="text-muted-foreground">2. Take a screenshot of your payment</p>
+              <p className="text-muted-foreground">3. Upload it below</p>
+            </div>
+
+            {/* Upload area */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            {proofUrl ? (
+              <div className="relative rounded-xl overflow-hidden border border-border">
+                <img src={proofUrl} alt="Payment proof" className="w-full max-h-48 object-cover" />
+                <button
+                  onClick={() => setProofUrl(null)}
+                  className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="absolute bottom-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Uploaded
                 </div>
-              </Card>
-            );
-          })}
+              </div>
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className="w-full border-2 border-dashed border-border rounded-xl py-8 flex flex-col items-center gap-2 hover:border-tertiary/50 hover:bg-tertiary/5 transition-colors"
+              >
+                {uploading ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-tertiary" />
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">Tap to upload screenshot</p>
+                    <p className="text-xs text-muted-foreground/60">JPG, PNG, WEBP</p>
+                  </>
+                )}
+              </button>
+            )}
+
+            <Button
+              variant="primary"
+              className="w-full bg-tertiary hover:bg-tertiary/90 text-white font-semibold"
+              disabled={!proofUrl || submitting}
+              onClick={handleSubmitPayment}
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Submit for Verification
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
