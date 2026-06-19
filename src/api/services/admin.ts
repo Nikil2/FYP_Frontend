@@ -496,6 +496,25 @@ export async function getComplaints(
   return unwrapResponse(raw);
 }
 
+export interface JobStats {
+  TOTAL: number;
+  ACTIVE: number;
+  PENDING: number;
+  NEGOTIATION: number;
+  ACCEPTED: number;
+  IN_PROGRESS: number;
+  COMPLETED: number;
+  CANCELLED: number;
+  DISPUTED: number;
+}
+
+export async function getAdminJobStats(): Promise<JobStats> {
+  const raw = await apiClient.get<WrappedResponse<JobStats> | JobStats>(
+    API_CONFIG.ENDPOINTS.ADMIN_JOB_STATS,
+  );
+  return unwrapResponse(raw);
+}
+
 export async function getAdminJobs(
   page: number = 1,
   limit: number = 20,
@@ -687,12 +706,16 @@ export default {
 // ============================================
 
 export interface FinanceSummary {
-  totalCommissionCollected: number;
-  totalBonusesPaid: number;
-  totalTopupsReceived: number;
-  netPlatformRevenue: number;
+  totalCommissionCharged: number;
   commissionTxnCount: number;
+  totalCommissionReceived: number;
+  approvedPaymentCount: number;
+  totalCommissionPending: number;
+  pendingPaymentCount: number;
+  totalCommissionOwed: number;
+  totalBonusesPaid: number;
   bonusTxnCount: number;
+  netPlatformRevenue: number;
   totalWorkerWalletBalance: number;
   totalWorkers: number;
 }

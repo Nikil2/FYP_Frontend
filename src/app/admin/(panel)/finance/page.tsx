@@ -20,7 +20,6 @@ import {
   rejectCommissionPayment,
   type AdminPendingPayment,
 } from "@/api/services/commission";
-import { getAuthUser } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -42,7 +41,6 @@ const num = (v: number | string | null | undefined) => Number(v ?? 0);
 type Tab = "commissions" | "wallets" | "payments";
 
 export default function AdminFinancePage() {
-  const adminUser = getAuthUser();
   const [summary, setSummary] = useState<FinanceSummary | null>(null);
   const [tab, setTab] = useState<Tab>("payments");
 
@@ -116,10 +114,10 @@ export default function AdminFinancePage() {
   }, [tab, loadPendingPayments]);
 
   const handleApprove = async (paymentId: string) => {
-    if (!adminUser?.id || actionLoading) return;
+    if (actionLoading) return;
     setActionLoading(paymentId);
     try {
-      await approveCommissionPayment(paymentId, adminUser.id);
+      await approveCommissionPayment(paymentId);
       toast.success("Payment approved. Worker wallet cleared.");
       setPendingPayments((prev) => prev.filter((p) => p.id !== paymentId));
     } catch (err) {
@@ -129,10 +127,10 @@ export default function AdminFinancePage() {
   };
 
   const handleReject = async () => {
-    if (!rejectModal || !adminUser?.id || !rejectReason.trim()) return;
+    if (!rejectModal || !rejectReason.trim()) return;
     setActionLoading(rejectModal.id);
     try {
-      await rejectCommissionPayment(rejectModal.id, adminUser.id, rejectReason.trim());
+      await rejectCommissionPayment(rejectModal.id, rejectReason.trim());
       toast.success("Payment rejected. Worker notified.");
       setPendingPayments((prev) => prev.filter((p) => p.id !== rejectModal.id));
       setRejectModal(null);
@@ -153,27 +151,27 @@ export default function AdminFinancePage() {
       {/* Summary Cards */}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
         <MetricCard
-          label="Total Commission Collected"
-          value={`Rs. ${num(summary?.totalCommissionCollected).toLocaleString()}`}
-          hint={`${num(summary?.commissionTxnCount)} transactions`}
+          label="Commission Received (Verified)"
+          value={`Rs. ${num(summary?.totalCommissionReceived).toLocaleString()}`}
+          hint={`${num(summary?.approvedPaymentCount)} approved payments`}
           tone="good"
         />
         <MetricCard
-          label="Total Bonuses Paid Out"
-          value={`Rs. ${num(summary?.totalBonusesPaid).toLocaleString()}`}
-          hint={`${num(summary?.bonusTxnCount)} payouts`}
+          label="Commission Still Owed"
+          value={`Rs. ${num(summary?.totalCommissionOwed).toLocaleString()}`}
+          hint={`Charged Rs. ${num(summary?.totalCommissionCharged).toLocaleString()} across ${num(summary?.commissionTxnCount)} jobs`}
           tone="warn"
+        />
+        <MetricCard
+          label="Under Review (Pending)"
+          value={`Rs. ${num(summary?.totalCommissionPending).toLocaleString()}`}
+          hint={`${num(summary?.pendingPaymentCount)} submissions awaiting approval`}
         />
         <MetricCard
           label="Net Platform Revenue"
           value={`Rs. ${num(summary?.netPlatformRevenue).toLocaleString()}`}
-          hint="Commission − bonuses"
+          hint={`Received − Rs. ${num(summary?.totalBonusesPaid).toLocaleString()} bonuses`}
           tone="good"
-        />
-        <MetricCard
-          label="Total Worker Wallet Balance"
-          value={`Rs. ${num(summary?.totalWorkerWalletBalance).toLocaleString()}`}
-          hint={`Across ${num(summary?.totalWorkers)} workers`}
         />
       </section>
 

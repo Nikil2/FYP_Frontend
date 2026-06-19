@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { TierBadge } from "@/components/worker-dashboard/tier-badge";
+
 import {
   getCachedWorkerDashboardProfile,
   getWorkerDashboardProfileByUserId,
@@ -18,6 +18,10 @@ import {
   type BonusRecord,
   type WalletSummary,
 } from "@/api/services/bonus";
+import {
+  getCommissionDue,
+  type CommissionDueStatus,
+} from "@/api/services/commission";
 import {
   Award,
   Gift,
@@ -34,6 +38,7 @@ export default function RewardsPage() {
   const [workerId, setWorkerId] = useState<string | null>(null);
   const [progress, setProgress] = useState<BonusProgress | null>(null);
   const [wallet, setWallet] = useState<WalletSummary | null>(null);
+  const [commissionDue, setCommissionDue] = useState<CommissionDueStatus | null>(null);
   const [history, setHistory] = useState<BonusRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,14 +57,16 @@ export default function RewardsPage() {
         (await getWorkerDashboardProfileByUserId(userId));
       setWorkerId(profile.workerId);
 
-      const [prog, wal, hist] = await Promise.all([
+      const [prog, wal, hist, due] = await Promise.all([
         getBonusProgress(profile.workerId),
         getWalletSummary(profile.workerId),
         getBonusHistory(profile.workerId),
+        getCommissionDue(profile.workerId),
       ]);
       setProgress(prog);
       setWallet(wal);
       setHistory(hist.data);
+      setCommissionDue(due);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load rewards");
     } finally {
@@ -101,10 +108,10 @@ export default function RewardsPage() {
           <div className="flex items-center gap-2 text-paragraph mb-1">
             <Wallet className="w-4 h-4" /> Commission Owed
           </div>
-          <p className={cnBalance(Number(wallet?.balance ?? 0))}>
-            Rs. {Math.max(0, -Number(wallet?.balance ?? 0)).toLocaleString()}
+          <p className={(commissionDue?.amountDue ?? 0) > 0 ? "text-2xl font-bold text-destructive" : "text-2xl font-bold text-heading"}>
+            Rs. {(commissionDue?.amountDue ?? 0).toLocaleString()}
           </p>
-          {Number(wallet?.balance ?? 0) < 0 ? (
+          {(commissionDue?.amountDue ?? 0) > 0 ? (
             <p className="text-xs text-destructive mt-1">
               Go to <strong>Wallet</strong> tab to pay and upload proof.
             </p>

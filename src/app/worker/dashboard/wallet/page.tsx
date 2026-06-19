@@ -20,8 +20,6 @@ import {
   type CommissionDueStatus,
   type CommissionPayment,
 } from "@/api/services/commission";
-import { apiClient } from "@/api/client";
-import API_CONFIG from "@/api/config";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -110,13 +108,19 @@ export default function WalletPage() {
     if (!file) return;
     setUploading(true);
     try {
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
       const form = new FormData();
       form.append("file", file);
-      const res = await apiClient.upload<{ url: string }>(
-        API_CONFIG.ENDPOINTS.UPLOADS_EVIDENCE,
-        form,
+      form.append("upload_preset", uploadPreset);
+      form.append("folder", "commission_proofs");
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: form },
       );
-      setProofUrl(res.url);
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setProofUrl(data.secure_url);
     } catch {
       toast.error("Failed to upload screenshot. Try again.");
     }
@@ -223,15 +227,15 @@ export default function WalletPage() {
             {/* Amount breakdown */}
             <div className="bg-white/70 rounded-xl p-4 mb-4 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Commission from jobs (10%)</span>
+                <span className="text-muted-foreground">Total commission from jobs (10%)</span>
                 <span className="font-semibold text-red-600">
-                  − Rs. {(amountDue + num(earnings.totalBonusEarned)).toLocaleString()}
+                  − Rs. {num(dueStatus?.totalCommissionCharged).toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Bonus earned (tier cashback)</span>
+                <span className="text-muted-foreground">Already paid & verified</span>
                 <span className="font-semibold text-green-600">
-                  + Rs. {num(earnings.totalBonusEarned).toLocaleString()}
+                  − Rs. {num(dueStatus?.totalCommissionCleared).toLocaleString()}
                 </span>
               </div>
               <div className="border-t border-border pt-2 flex items-center justify-between">
