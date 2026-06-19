@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   BriefcaseBusiness,
   Calendar,
@@ -14,14 +14,20 @@ import {
   UserRound,
   Wrench,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getAdminJobById, getAdminJobs } from "@/api/services/admin";
-import type { AdminJob, AdminJobDetail } from "@/api/services/admin";
+import {
+  getAdminJobs,
+  getAdminJobById,
+  getAdminJobStats,
+} from "@/api/services/admin";
+import type { AdminJob, AdminJobDetail, JobStats } from "@/api/services/admin";
 
 type JobStatusFilter =
   | "ALL"
@@ -34,15 +40,21 @@ type JobStatusFilter =
   | "CANCELLED"
   | "DISPUTED";
 
+const PAGE_SIZE = 20;
+
 function toDateLabel(value?: string | null) {
   if (!value) return "Not scheduled";
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString("en-PK", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function statusTone(status: string) {
   if (status === "IN_PROGRESS" || status === "ACCEPTED") return "bg-emerald-100 text-emerald-700";
   if (status === "COMPLETED") return "bg-sky-100 text-sky-700";
   if (status === "DISPUTED" || status === "CANCELLED") return "bg-red-100 text-red-700";
+  if (status === "NEGOTIATION") return "bg-purple-100 text-purple-700";
   return "bg-amber-100 text-amber-700";
 }
 
@@ -54,12 +66,7 @@ function statusTopBorder(status: string) {
 }
 
 function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
 function JobDetailModal({
@@ -85,7 +92,6 @@ function JobDetailModal({
           job ? statusTopBorder(job.status) : ""
         }`}
       >
-        {/* Header */}
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border/60 bg-white px-6 py-5">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-paragraph">
@@ -106,7 +112,6 @@ function JobDetailModal({
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6">
           {loading ? (
             <div className="flex min-h-[300px] items-center justify-center">
@@ -121,8 +126,6 @@ function JobDetailModal({
             </div>
           ) : (
             <div className="space-y-6">
-
-              {/* Status + price row */}
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className={`${statusTone(job.status)} px-3 py-1 text-xs font-semibold`}>
                   {job.status.replace("_", " ")}
@@ -140,7 +143,6 @@ function JobDetailModal({
                 ) : null}
               </div>
 
-              {/* Job location + schedule */}
               <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-paragraph">
                   Job Info
@@ -156,13 +158,9 @@ function JobDetailModal({
                 </div>
               </div>
 
-              {/* Worker + Customer side by side */}
               <div className="grid gap-3 sm:grid-cols-2">
-                {/* Worker */}
                 <div className="rounded-xl border border-border/60 p-4">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-paragraph">
-                    Worker
-                  </p>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-paragraph">Worker</p>
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
                       {initials(job.worker.user.fullName)}
@@ -189,11 +187,8 @@ function JobDetailModal({
                   </div>
                 </div>
 
-                {/* Customer */}
                 <div className="rounded-xl border border-border/60 p-4">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-paragraph">
-                    Customer
-                  </p>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-paragraph">Customer</p>
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-700">
                       {initials(job.customer.fullName)}
@@ -216,34 +211,27 @@ function JobDetailModal({
                 </div>
               </div>
 
-              {/* Stats row */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <div className="flex flex-col gap-2 rounded-xl bg-sky-50 p-3">
                   <div className="flex items-center gap-1.5">
                     <MessageSquare className="h-3.5 w-3.5 text-sky-600" />
                     <span className="text-[11px] font-medium text-sky-700">Messages</span>
                   </div>
-                  <span className="text-2xl font-bold text-sky-700">
-                    {job.summary.totalMessages}
-                  </span>
+                  <span className="text-2xl font-bold text-sky-700">{job.summary.totalMessages}</span>
                 </div>
                 <div className="flex flex-col gap-2 rounded-xl bg-emerald-50 p-3">
                   <div className="flex items-center gap-1.5">
                     <BriefcaseBusiness className="h-3.5 w-3.5 text-emerald-600" />
                     <span className="text-[11px] font-medium text-emerald-700">Proposals</span>
                   </div>
-                  <span className="text-2xl font-bold text-emerald-700">
-                    {job.summary.totalProposals}
-                  </span>
+                  <span className="text-2xl font-bold text-emerald-700">{job.summary.totalProposals}</span>
                 </div>
                 <div className="flex flex-col gap-2 rounded-xl bg-amber-50 p-3">
                   <div className="flex items-center gap-1.5">
                     <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
                     <span className="text-[11px] font-medium text-amber-700">Complaints</span>
                   </div>
-                  <span className="text-2xl font-bold text-amber-700">
-                    {job.summary.totalComplaints}
-                  </span>
+                  <span className="text-2xl font-bold text-amber-700">{job.summary.totalComplaints}</span>
                 </div>
                 <div className="col-span-2 flex flex-col gap-2 rounded-xl bg-purple-50 p-3 sm:col-span-1">
                   <div className="flex items-center gap-1.5">
@@ -264,7 +252,6 @@ function JobDetailModal({
                   </span>
                 </div>
               </div>
-
             </div>
           )}
         </div>
@@ -274,98 +261,97 @@ function JobDetailModal({
 }
 
 export default function AdminJobsPage() {
+  const [stats, setStats] = useState<JobStats | null>(null);
   const [jobs, setJobs] = useState<AdminJob[]>([]);
+  const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [selectedJob, setSelectedJob] = useState<AdminJobDetail | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<JobStatusFilter>("ACTIVE");
+  const [statusFilter, setStatusFilter] = useState<JobStatusFilter>("ALL");
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    async function loadJobs() {
-      try {
-        setLoading(true);
-        const response = await getAdminJobs(1, 100, statusFilter, search || undefined);
-        setJobs(response.data);
-      } catch (error) {
-        console.error("Failed to load admin jobs:", error);
-        setJobs([]);
-      } finally {
-        setLoading(false);
-      }
+    getAdminJobStats().then(setStats).catch(console.error);
+  }, []);
+
+  const loadJobs = useCallback(async (p: number, status: string, q: string) => {
+    setLoading(true);
+    try {
+      const res = await getAdminJobs(p, PAGE_SIZE, status, q || undefined);
+      setJobs(res.data);
+      setMeta({ total: res.meta.total, page: res.meta.page, totalPages: res.meta.totalPages });
+    } catch (e) {
+      console.error(e);
+      setJobs([]);
+    } finally {
+      setLoading(false);
     }
-    loadJobs();
-  }, [search, statusFilter]);
+  }, []);
 
   useEffect(() => {
-    if (!selectedJobId) {
-      setSelectedJob(null);
-      return;
-    }
+    setPage(1);
+  }, [statusFilter, search]);
 
-    async function loadDetail(jobId: string) {
+  useEffect(() => {
+    loadJobs(page, statusFilter, search);
+  }, [page, statusFilter, search, loadJobs]);
+
+  useEffect(() => {
+    if (!selectedJobId) { setSelectedJob(null); return; }
+    async function loadDetail(id: string) {
+      setDetailLoading(true);
       try {
-        setDetailLoading(true);
-        const response = await getAdminJobById(jobId);
-        setSelectedJob(response.data);
-      } catch (error) {
-        console.error("Failed to load job detail:", error);
-        setSelectedJob(null);
-      } finally {
-        setDetailLoading(false);
-      }
+        const res = await getAdminJobById(id);
+        setSelectedJob(res.data);
+      } catch { setSelectedJob(null); }
+      finally { setDetailLoading(false); }
     }
-
     loadDetail(selectedJobId);
   }, [selectedJobId]);
 
-  function openDetail(jobId: string) {
-    setSelectedJobId(jobId);
-    setModalOpen(true);
-  }
-
-  function closeModal() {
-    setModalOpen(false);
-    setSelectedJobId(null);
-    setSelectedJob(null);
-  }
-
-  const activeJobs = useMemo(
-    () =>
-      jobs.filter((job) =>
-        ["PENDING", "NEGOTIATION", "ACCEPTED", "IN_PROGRESS"].includes(job.status),
-      ).length,
-    [jobs],
-  );
-  const disputedJobs = useMemo(() => jobs.filter((job) => job.status === "DISPUTED").length, [jobs]);
-  const inProgressJobs = useMemo(
-    () => jobs.filter((job) => job.status === "IN_PROGRESS").length,
-    [jobs],
-  );
+  function openDetail(jobId: string) { setSelectedJobId(jobId); setModalOpen(true); }
+  function closeModal() { setModalOpen(false); setSelectedJobId(null); setSelectedJob(null); }
 
   return (
     <div>
       <AdminPageHeader
         title="Jobs & Bookings"
-        description="View live jobs, assigned worker IDs, customer details, and complete booking lifecycle data."
-        action={<Badge className="bg-emerald-100 text-emerald-700">{jobs.length} jobs loaded</Badge>}
+        description="Track all platform bookings — live, completed, cancelled, and disputed."
+        action={<Badge className="bg-emerald-100 text-emerald-700">{stats?.TOTAL ?? "—"} total bookings</Badge>}
       />
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Active Jobs" value={activeJobs.toString()} hint="Pending to in-progress" tone="good" />
-        <MetricCard label="In Progress" value={inProgressJobs.toString()} hint="Workers currently on-site or working" />
+      {/* Real stats from backend */}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
         <MetricCard
-          label="Disputed Jobs"
-          value={disputedJobs.toString()}
-          hint={disputedJobs > 0 ? "Needs immediate attention" : "No active disputes"}
-          tone={disputedJobs > 0 ? "warn" : "good"}
+          label="Total Bookings"
+          value={(stats?.TOTAL ?? "—").toString()}
+          hint="All time across all statuses"
+        />
+        <MetricCard
+          label="Active Now"
+          value={(stats?.ACTIVE ?? "—").toString()}
+          hint={`${stats?.IN_PROGRESS ?? 0} in progress · ${stats?.PENDING ?? 0} pending`}
+          tone="good"
+        />
+        <MetricCard
+          label="Completed"
+          value={(stats?.COMPLETED ?? "—").toString()}
+          hint="Successfully finished jobs"
+          tone="good"
+        />
+        <MetricCard
+          label="Cancelled / Disputed"
+          value={`${stats?.CANCELLED ?? "—"} / ${stats?.DISPUTED ?? "—"}`}
+          hint={stats?.DISPUTED && stats.DISPUTED > 0 ? "Disputes need attention" : "No active disputes"}
+          tone={stats?.DISPUTED && stats.DISPUTED > 0 ? "warn" : undefined}
         />
       </section>
 
       {/* Filters */}
-      <Card className="mt-5 rounded-2xl border-border/70 bg-card/95 p-4 md:p-5">
+      <Card className="rounded-2xl border-border/70 bg-card/95 p-4 md:p-5">
         <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-3">
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-paragraph">
@@ -387,8 +373,8 @@ export default function AdminJobsPage() {
               onChange={(e) => setStatusFilter(e.target.value as JobStatusFilter)}
               className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-400"
             >
+              <option value="ALL">All Bookings</option>
               <option value="ACTIVE">Active (Live)</option>
-              <option value="ALL">All</option>
               <option value="PENDING">Pending</option>
               <option value="NEGOTIATION">Negotiation</option>
               <option value="ACCEPTED">Accepted</option>
@@ -401,7 +387,7 @@ export default function AdminJobsPage() {
         </div>
       </Card>
 
-      {/* Full-width jobs table */}
+      {/* Jobs table */}
       <Card className="mt-5 overflow-hidden rounded-2xl border-border/70 bg-card/95 p-0">
         {loading ? (
           <div className="p-4 space-y-0">
@@ -422,7 +408,6 @@ export default function AdminJobsPage() {
                 </div>
                 <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse" />
                 <div className="h-3 w-32 bg-gray-200 rounded animate-pulse" />
-                <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
                 <div className="h-8 w-24 bg-gray-200 rounded-lg animate-pulse" />
               </div>
             ))}
@@ -436,6 +421,7 @@ export default function AdminJobsPage() {
                   <th className="px-4 py-3">Worker</th>
                   <th className="px-4 py-3">Service</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Price</th>
                   <th className="px-4 py-3">Signals</th>
                   <th className="px-4 py-3">Scheduled</th>
                   <th className="px-4 py-3">Action</th>
@@ -444,8 +430,8 @@ export default function AdminJobsPage() {
               <tbody>
                 {jobs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-paragraph">
-                      No jobs found for this filter.
+                    <td colSpan={8} className="px-4 py-10 text-center text-paragraph">
+                      No bookings found for this filter.
                     </td>
                   </tr>
                 ) : (
@@ -464,18 +450,22 @@ export default function AdminJobsPage() {
                         <p className="max-w-[180px] truncate text-xs text-paragraph">{job.jobAddress}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={statusTone(job.status)}>{job.status}</Badge>
+                        <Badge className={statusTone(job.status)}>{job.status.replace("_", " ")}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-heading">
+                        {(job as any).finalPrice
+                          ? `Rs. ${Number((job as any).finalPrice).toLocaleString()}`
+                          : <span className="text-paragraph font-normal text-xs">—</span>}
                       </td>
                       <td className="px-4 py-3 text-xs text-paragraph">
-                        Msg {job.counts.messages} • Proposal {job.counts.proposals} • Complaint{" "}
-                        {job.counts.complaints}
+                        Msg {job.counts.messages} · Prop {job.counts.proposals} · Comp {job.counts.complaints}
                       </td>
-                      <td className="px-4 py-3 text-xs text-paragraph">
+                      <td className="px-4 py-3 text-xs text-paragraph whitespace-nowrap">
                         {toDateLabel(job.scheduledAt)}
                       </td>
                       <td className="px-4 py-3">
                         <Button size="sm" variant="outline" onClick={() => openDetail(job.id)}>
-                          View detail
+                          View
                         </Button>
                       </td>
                     </tr>
@@ -485,9 +475,25 @@ export default function AdminJobsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {meta.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <span className="text-xs text-paragraph">
+              {meta.total} bookings · Page {meta.page} of {meta.totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" disabled={page === meta.totalPages} onClick={() => setPage((p) => p + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
-      {/* Detail modal */}
       {modalOpen && (
         <JobDetailModal job={selectedJob} loading={detailLoading} onClose={closeModal} />
       )}
