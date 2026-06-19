@@ -151,27 +151,27 @@ export default function AdminFinancePage() {
       {/* Summary Cards */}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
         <MetricCard
-          label="Total Commission Collected"
-          value={`Rs. ${num(summary?.totalCommissionCollected).toLocaleString()}`}
-          hint={`${num(summary?.commissionTxnCount)} transactions`}
+          label="Commission Received (Verified)"
+          value={`Rs. ${num(summary?.totalCommissionReceived).toLocaleString()}`}
+          hint={`${num(summary?.approvedPaymentCount)} approved payments`}
           tone="good"
         />
         <MetricCard
-          label="Total Bonuses Paid Out"
-          value={`Rs. ${num(summary?.totalBonusesPaid).toLocaleString()}`}
-          hint={`${num(summary?.bonusTxnCount)} payouts`}
+          label="Commission Still Owed"
+          value={`Rs. ${num(summary?.totalCommissionOwed).toLocaleString()}`}
+          hint={`Charged Rs. ${num(summary?.totalCommissionCharged).toLocaleString()} across ${num(summary?.commissionTxnCount)} jobs`}
           tone="warn"
+        />
+        <MetricCard
+          label="Under Review (Pending)"
+          value={`Rs. ${num(summary?.totalCommissionPending).toLocaleString()}`}
+          hint={`${num(summary?.pendingPaymentCount)} submissions awaiting approval`}
         />
         <MetricCard
           label="Net Platform Revenue"
           value={`Rs. ${num(summary?.netPlatformRevenue).toLocaleString()}`}
-          hint="Commission − bonuses"
+          hint={`Received − Rs. ${num(summary?.totalBonusesPaid).toLocaleString()} bonuses`}
           tone="good"
-        />
-        <MetricCard
-          label="Total Worker Wallet Balance"
-          value={`Rs. ${num(summary?.totalWorkerWalletBalance).toLocaleString()}`}
-          hint={`Across ${num(summary?.totalWorkers)} workers`}
         />
       </section>
 

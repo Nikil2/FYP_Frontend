@@ -687,12 +687,16 @@ export default {
 // ============================================
 
 export interface FinanceSummary {
-  totalCommissionCollected: number;
-  totalBonusesPaid: number;
-  totalTopupsReceived: number;
-  netPlatformRevenue: number;
+  totalCommissionCharged: number;
   commissionTxnCount: number;
+  totalCommissionReceived: number;
+  approvedPaymentCount: number;
+  totalCommissionPending: number;
+  pendingPaymentCount: number;
+  totalCommissionOwed: number;
+  totalBonusesPaid: number;
   bonusTxnCount: number;
+  netPlatformRevenue: number;
   totalWorkerWalletBalance: number;
   totalWorkers: number;
 }
