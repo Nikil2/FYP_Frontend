@@ -20,8 +20,6 @@ import {
   type CommissionDueStatus,
   type CommissionPayment,
 } from "@/api/services/commission";
-import { apiClient } from "@/api/client";
-import API_CONFIG from "@/api/config";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -110,13 +108,19 @@ export default function WalletPage() {
     if (!file) return;
     setUploading(true);
     try {
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+      const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
       const form = new FormData();
       form.append("file", file);
-      const res = await apiClient.upload<{ url: string }>(
-        API_CONFIG.ENDPOINTS.UPLOADS_EVIDENCE,
-        form,
+      form.append("upload_preset", uploadPreset);
+      form.append("folder", "commission_proofs");
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: "POST", body: form },
       );
-      setProofUrl(res.url);
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setProofUrl(data.secure_url);
     } catch {
       toast.error("Failed to upload screenshot. Try again.");
     }
