@@ -4,16 +4,14 @@
  */
 export const AI_BOT = {
   /** Full display name (header). */
-  name: 'Mehnati Saathi',
+  name: 'Nova',
   /** Short name (bubble, compact spots). */
-  shortName: 'Saathi',
-  /** Urdu rendering, used where bilingual text is shown. */
-  nameUrdu: 'مہنتی ساتھی',
+  shortName: 'Nova',
   /** First greeting shown when the chat opens. */
   greeting:
-    'Assalam o Alaikum! 👋 Main Saathi hoon. Tell me what you need — e.g. "Find an AC technician in Karachi under 2000".',
+    'Hi, I\'m Nova 👋 Ask me to find a worker or help with a booking — e.g. "Find an AC technician in Karachi under 2000".',
   /** Tagline under the name in the header. */
-  tagline: 'Your AI helper',
+  tagline: 'AI assistant',
 } as const;
 
 /** Quick-suggestion chips shown on first open (also great for the demo). */

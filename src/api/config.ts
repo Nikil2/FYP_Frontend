@@ -172,7 +172,7 @@ export const API_CONFIG = {
     ADMIN_REVENUE: '/admin/revenue',
     ADMIN_ANALYTICS: '/admin/analytics',
 
-    // ==================== AI ASSISTANT (Saathi) ====================
+    // ==================== AI ASSISTANT (Nova) ====================
     AI_AGENT: '/ai/agent',
     AI_ONBOARD: '/ai/onboard',
   },

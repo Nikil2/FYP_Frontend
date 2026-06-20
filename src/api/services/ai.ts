@@ -1,5 +1,5 @@
 /**
- * AI Assistant service ("Saathi").
+ * AI Assistant service ("Nova").
  *
  * Wraps POST /ai/agent. The backend returns the response body directly
  * (NOT wrapped in { success, data }), so apiClient.post resolves to the
