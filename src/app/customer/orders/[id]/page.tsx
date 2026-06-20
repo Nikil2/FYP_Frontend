@@ -775,7 +775,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Complete Modal */}
       {showCompleteModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center">
           <div className="bg-white w-full max-w-lg rounded-t-2xl p-6">
             <h3 className="text-lg font-bold text-heading mb-2">Mark as Complete?</h3>
             <p className="text-sm text-muted-foreground mb-6">
@@ -793,7 +793,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Cancel Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center">
           <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 animate-slide-in-right">
             <h3 className="text-lg font-bold text-heading mb-2">Cancel Booking?</h3>
             <p className="text-sm text-muted-foreground mb-6">Are you sure you want to cancel this booking? This action cannot be undone.</p>
@@ -809,7 +809,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* Complaint Modal */}
       {showComplaintModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center">
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end justify-center">
           <div className="bg-white w-full max-w-lg rounded-t-2xl p-6 animate-slide-in-right">
             <h3 className="text-lg font-bold text-heading mb-2">File a Complaint</h3>
             <p className="text-sm text-muted-foreground mb-4">Describe the issue with this booking.</p>
