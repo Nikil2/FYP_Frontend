@@ -14,7 +14,13 @@
 
 import { apiClient } from '../client';
 import API_CONFIG from '../config';
-import type { AiMessage, AgentRequest, AgentResponse } from '@/types/ai';
+import type {
+  AiMessage,
+  AgentRequest,
+  AgentResponse,
+  ConversationSummary,
+  StoredTurn,
+} from '@/types/ai';
 
 const MAX_HISTORY_TURNS = 10;
 
@@ -42,6 +48,23 @@ export const aiService = {
       userId: params.userId,
     };
     return apiClient.post<AgentResponse>(API_CONFIG.ENDPOINTS.AI_AGENT, body);
+  },
+
+  /** List the logged-in user's past conversations (history panel). */
+  async listConversations(userId: string): Promise<ConversationSummary[]> {
+    return apiClient.get<ConversationSummary[]>(
+      `${API_CONFIG.ENDPOINTS.AI_AGENT}/../conversations?userId=${encodeURIComponent(userId)}`.replace(
+        '/agent/..',
+        '',
+      ),
+    );
+  },
+
+  /** Load a past conversation's full transcript. */
+  async getMessages(conversationId: string): Promise<StoredTurn[]> {
+    return apiClient.get<StoredTurn[]>(
+      `/ai/conversations/${conversationId}/messages`,
+    );
   },
 
   /** Worker conversational onboarding (used later in F5). */
