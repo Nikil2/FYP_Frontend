@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, X, Sparkles } from 'lucide-react';
+import { Send, X, Sparkles, History, PenSquare } from 'lucide-react';
 import { AI_BOT } from '@/lib/ai-config';
 import { useAIChat } from '@/hooks/useAIChat';
 import { ChatMessage } from './ChatMessage';
 import { QuickPrompts } from './QuickPrompts';
+import { ConversationHistory } from './ConversationHistory';
 
 /**
  * The open chat window for Nova. Header + scrollable messages + input.

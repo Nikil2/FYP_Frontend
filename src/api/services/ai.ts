@@ -53,17 +53,14 @@ export const aiService = {
   /** List the logged-in user's past conversations (history panel). */
   async listConversations(userId: string): Promise<ConversationSummary[]> {
     return apiClient.get<ConversationSummary[]>(
-      `${API_CONFIG.ENDPOINTS.AI_AGENT}/../conversations?userId=${encodeURIComponent(userId)}`.replace(
-        '/agent/..',
-        '',
-      ),
+      API_CONFIG.ENDPOINTS.AI_CONVERSATIONS(userId),
     );
   },
 
   /** Load a past conversation's full transcript. */
   async getMessages(conversationId: string): Promise<StoredTurn[]> {
     return apiClient.get<StoredTurn[]>(
-      `/ai/conversations/${conversationId}/messages`,
+      API_CONFIG.ENDPOINTS.AI_CONVERSATION_MESSAGES(conversationId),
     );
   },
 
