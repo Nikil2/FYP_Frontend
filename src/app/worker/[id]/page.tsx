@@ -7,18 +7,17 @@ import { WorkerHeader } from "@/components/worker-detail/worker-header";
 import { WorkerAbout } from "@/components/worker-detail/worker-about";
 import { ServicesList } from "@/components/worker-detail/services-list";
 import { ReviewsSection } from "@/components/worker-detail/reviews-section";
-import { BookingPanel } from "@/components/worker-detail/booking-panel";
-import { ChatModal } from "@/components/modals/chat-modal";
+import { BookingCTA } from "@/components/worker-detail/booking-cta";
 
 import { getWorkerDetails } from "@/api/services/workers";
+import { getWorkerReviews } from "@/api/services/feedback";
 
-import type { WorkerDetail } from "@/types/worker";
+import type { WorkerDetail, Review } from "@/types/worker";
 
 import { Container } from "@/components/ui/container";
 
 export default function WorkerDetailPage() {
   const params = useParams();
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [worker, setWorker] = useState<WorkerDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,14 +26,31 @@ export default function WorkerDetailPage() {
       try {
         setIsLoading(true);
         const workerId = params.id as string;
-        const data = await getWorkerDetails(workerId) as any;
+
+        // Fetch profile + real reviews together.
+        const [data, reviewsRes] = await Promise.all([
+          getWorkerDetails(workerId) as Promise<any>,
+          getWorkerReviews(workerId).catch(() => ({ data: [], total: 0 })),
+        ]);
+
+        const realReviews: Review[] = (reviewsRes?.data ?? []).map((r: any) => ({
+          id: r.id,
+          customerName: r.user?.fullName ?? "Customer",
+          rating: r.rating,
+          date: r.createdAt
+            ? new Date(r.createdAt).toLocaleDateString()
+            : "",
+          comment: r.comment ?? "",
+          customerAvatar: r.user?.profilePicUrl,
+        }));
+
         const mapped: WorkerDetail = {
           id: data.workerId || data.id,
           name: data.fullName,
           category: data.services && data.services.length > 0 ? data.services[0].name : "Service Worker",
-          rating: data.averageRating || 5.0,
-          reviewCount: data.totalJobsCompleted || 0,
-          distance: 1.5,
+          rating: Number(data.averageRating ?? 0),
+          reviewCount: reviewsRes?.total ?? realReviews.length,
+          distance: 0, // unknown without customer geolocation — hidden in UI
           visitingFee: data.visitingCharges || 0,
           isOnline: data.isOnline,
           isVerified: data.verificationStatus === "APPROVED",
@@ -46,11 +62,11 @@ export default function WorkerDetailPage() {
             name: s.name,
             price: s.price || 0,
           })) : [],
-          reviews: [],
+          reviews: realReviews,
           profileImage: data.profilePicUrl,
           location: {
-            lat: data.homeLat || 24.8607,
-            lng: data.homeLng || 67.0011,
+            lat: data.homeLat ?? 24.8607,
+            lng: data.homeLng ?? 67.0011,
           }
         };
         setWorker(mapped);
@@ -154,17 +170,9 @@ export default function WorkerDetailPage() {
               <WorkerHeader worker={worker} />
             </div>
 
-            {/* Booking Panel - Right side (appears on mobile too) */}
+            {/* Booking CTA - Right side (appears on mobile too) */}
             <div className="lg:hidden md:col-span-1">
-              <BookingPanel
-                worker={worker}
-                onChatClick={() => setIsChatOpen(true)}
-                staticLocation={{
-                  address: "Karachi, Pakistan",
-                  lat: 24.8607,
-                  lng: 67.0011,
-                }}
-              />
+              <BookingCTA worker={worker} />
             </div>
           </div>
 
@@ -185,27 +193,12 @@ export default function WorkerDetailPage() {
             {/* Right Column (30%) - Sticky Sidebar for desktop */}
             <div className="hidden lg:block">
               <div className="sticky top-24">
-                <BookingPanel
-                  worker={worker}
-                  onChatClick={() => setIsChatOpen(true)}
-                  staticLocation={{
-                    address: "Karachi, Pakistan",
-                    lat: 24.8607,
-                    lng: 67.0011,
-                  }}
-                />
+                <BookingCTA worker={worker} />
               </div>
             </div>
           </div>
         </div>
       </Container>
-
-      {/* Chat Modal */}
-      <ChatModal
-        worker={worker}
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-      />
     </main>
   );
 }

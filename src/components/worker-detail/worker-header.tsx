@@ -76,11 +76,13 @@ export function WorkerHeader({ worker }: WorkerHeaderProps) {
               </span>
             </div>
 
-            {/* Distance */}
-            <div className="flex items-center gap-2 text-paragraph">
-              <MapPin className="w-5 h-5 text-tertiary" />
-              <span>{worker.distance} km away</span>
-            </div>
+            {/* Distance — only shown when we have a real value */}
+            {worker.distance > 0 && (
+              <div className="flex items-center gap-2 text-paragraph">
+                <MapPin className="w-5 h-5 text-tertiary" />
+                <span>{worker.distance} km away</span>
+              </div>
+            )}
           </div>
 
           {/* Experience and Specializations */}

@@ -282,12 +282,12 @@ export function OrderDetailModal({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
+      <div className="relative w-full max-w-2xl max-h-[90dvh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
         {/* ── Header ── */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-5 bg-white border-b border-border rounded-t-2xl">
           <div className="flex items-center gap-3">

@@ -25,7 +25,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
         </div>
         {/* Book Now Overlay Button */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-90 group-hover:opacity-100 transition-opacity">
-          <span className="bg-tertiary text-white text-xs font-semibold px-4 py-1 rounded-md shadow-sm">
+          <span className="whitespace-nowrap bg-tertiary text-white text-xs font-semibold px-4 py-1 rounded-md shadow-sm">
             Book Now
           </span>
         </div>
