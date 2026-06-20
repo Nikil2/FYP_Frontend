@@ -14,8 +14,10 @@ import { ConversationHistory } from './ConversationHistory';
  * locked while a reply is in flight.
  */
 export function AIChatPanel({ onClose }: { onClose: () => void }) {
-  const { messages, loading, send } = useAIChat();
+  const { messages, loading, send, newChat, loadConversation, userId } =
+    useAIChat();
   const [input, setInput] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,6 +65,25 @@ export function AIChatPanel({ onClose }: { onClose: () => void }) {
           <p className="text-xs text-white/80">{AI_BOT.tagline}</p>
         </div>
         <button
+          onClick={() => {
+            setShowHistory(false);
+            newChat();
+          }}
+          className="rounded-full p-1.5 transition hover:bg-white/20"
+          aria-label="New chat"
+          title="New chat"
+        >
+          <PenSquare size={18} />
+        </button>
+        <button
+          onClick={() => setShowHistory((s) => !s)}
+          className="rounded-full p-1.5 transition hover:bg-white/20"
+          aria-label="Chat history"
+          title="Chat history"
+        >
+          <History size={18} />
+        </button>
+        <button
           onClick={onClose}
           className="rounded-full p-1.5 transition hover:bg-white/20"
           aria-label="Close chat"
@@ -70,6 +91,18 @@ export function AIChatPanel({ onClose }: { onClose: () => void }) {
           <X size={18} />
         </button>
       </div>
+
+      {/* History drawer (overlays the chat when open) */}
+      {showHistory && (
+        <ConversationHistory
+          userId={userId}
+          onBack={() => setShowHistory(false)}
+          onSelect={(id, turns) => {
+            loadConversation(id, turns);
+            setShowHistory(false);
+          }}
+        />
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
