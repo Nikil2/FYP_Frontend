@@ -362,29 +362,62 @@ export function Navbar() {
 
               {/* Auth section */}
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-2">
-                {isLandingPage ? "Get Started" : "Account"}
+                {authUser ? "Account" : isLandingPage ? "Get Started" : "Account"}
               </p>
-              <a
-                href="/auth/login"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Login
-              </a>
-              <a
-                href="/auth/signup/customer"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up as Customer
-              </a>
-              <a
-                href="/auth/signup/worker"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up as Worker
-              </a>
+              {authUser ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-tertiary text-tertiary-foreground text-sm font-semibold">
+                      {authUser.fullName?.charAt(0)?.toUpperCase() || "U"}
+                    </span>
+                    <span className="font-medium text-heading truncate">
+                      {authUser.fullName}
+                    </span>
+                  </div>
+                  <a
+                    href={dashboardPath(userRole)}
+                    className="flex items-center gap-2 px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </a>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="flex items-center gap-2 px-3 py-3 rounded-lg hover:bg-muted animation-standard text-red-600 font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="/auth/login"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Login
+                  </a>
+                  <a
+                    href="/auth/signup/customer"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up as Customer
+                  </a>
+                  <a
+                    href="/auth/signup/worker"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up as Worker
+                  </a>
+                </>
+              )}
 
               {/* CTA buttons for landing page */}
               {isLandingPage && (
