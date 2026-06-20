@@ -51,7 +51,7 @@ export function AIChatPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed bottom-24 right-6 z-50 flex h-[600px] max-h-[calc(100vh-7rem)] w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl bg-gray-50 shadow-2xl ring-1 ring-black/10"
+      className="fixed inset-0 z-50 flex h-full w-full flex-col overflow-hidden bg-gray-50 shadow-2xl ring-1 ring-black/10 sm:inset-auto sm:bottom-24 sm:right-6 sm:h-[600px] sm:max-h-[calc(100vh-7rem)] sm:w-[380px] sm:max-w-[calc(100vw-2rem)] sm:rounded-2xl"
       role="dialog"
       aria-label={`${AI_BOT.name} chat`}
     >
