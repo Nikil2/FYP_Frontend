@@ -1,6 +1,7 @@
 import { CustomerBottomNav } from "@/components/customer/bottom-nav";
 import { CustomerSidebar } from "@/components/customer/customer-sidebar";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { AIChatWidget } from "@/components/ai/AIChatWidget";
 
 export default function CustomerLayout({
   children,
@@ -24,6 +25,9 @@ export default function CustomerLayout({
 
         {/* Mobile Bottom Nav - hidden on desktop */}
         <CustomerBottomNav />
+
+        {/* Nova — floating AI assistant on every customer page */}
+        <AIChatWidget />
       </div>
     </RoleGuard>
   );
