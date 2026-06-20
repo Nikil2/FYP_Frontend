@@ -10,14 +10,23 @@ import { SearchResultsDropdown } from "@/components/search/search-results-dropdo
 
 import { Button } from "@/components/ui/button";
 
-import { Menu, X, ChevronDown, Search } from "lucide-react";
+import { Menu, X, ChevronDown, Search, LogOut, LayoutDashboard } from "lucide-react";
 
 import { NAV_LINKS } from "@/content/landing/landing-page-content";
 
 import { searchWorkers } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { getAuthUser, getUserRole, logout } from "@/lib/auth";
 
 import type { WorkerDetail } from "@/types/worker";
+import type { User } from "@/interfaces/auth-interfaces";
+
+/** Map a role to its home/dashboard route. */
+function dashboardPath(role: string | null): string {
+  if (role === "WORKER") return "/worker/dashboard";
+  if (role === "ADMIN") return "/admin/dashboard";
+  return "/customer";
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -35,6 +44,15 @@ export function Navbar() {
     null,
   );
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Auth state — read from localStorage on the client only (avoids SSR
+  // hydration mismatch). Re-checks when the route changes.
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  useEffect(() => {
+    setAuthUser(getAuthUser());
+    setUserRole(getUserRole());
+  }, [pathname]);
 
   // Handle scroll detection
   useEffect(() => {
@@ -162,40 +180,79 @@ export function Navbar() {
 
           {/* Desktop Auth & Language */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Login Button */}
-            <a href="/auth/login">
-              <Button variant="outline" size="sm">
-                Login
-              </Button>
-            </a>
+            {authUser ? (
+              /* Logged-in: user menu */
+              <div className="relative">
+                <button
+                  onClick={() => setIsAuthDropdownOpen(!isAuthDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted animation-standard"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-tertiary text-tertiary-foreground text-sm font-semibold">
+                    {authUser.fullName?.charAt(0)?.toUpperCase() || "U"}
+                  </span>
+                  <span className="font-medium text-heading max-w-[120px] truncate">
+                    {authUser.fullName}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-paragraph" />
+                </button>
 
-            {/* Signup Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setIsAuthDropdownOpen(!isAuthDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-tertiary text-tertiary-foreground hover:bg-tertiary-hover rounded-lg animation-standard font-medium"
-              >
-                Sign Up
-                <ChevronDown className="w-4 h-4" />
-              </button>
+                {isAuthDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                    <a
+                      href={dashboardPath(userRole)}
+                      className="flex items-center gap-2 px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </a>
+                    <button
+                      onClick={() => logout()}
+                      className="flex w-full items-center gap-2 px-4 py-3 hover:bg-muted animation-standard text-red-600"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Login Button */}
+                <a href="/auth/login">
+                  <Button variant="outline" size="sm">
+                    Login
+                  </Button>
+                </a>
 
-              {isAuthDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                  <a
-                    href="/auth/signup/customer"
-                    className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
+                {/* Signup Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setIsAuthDropdownOpen(!isAuthDropdownOpen)}
+                    className="flex items-center gap-2 px-4 py-2 bg-tertiary text-tertiary-foreground hover:bg-tertiary-hover rounded-lg animation-standard font-medium"
                   >
-                    As Customer
-                  </a>
-                  <a
-                    href="/auth/signup/worker"
-                    className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
-                  >
-                    As Worker
-                  </a>
+                    Sign Up
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+
+                  {isAuthDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      <a
+                        href="/auth/signup/customer"
+                        className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
+                      >
+                        As Customer
+                      </a>
+                      <a
+                        href="/auth/signup/worker"
+                        className="block px-4 py-3 hover:bg-muted animation-standard text-paragraph hover:text-heading"
+                      >
+                        As Worker
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
 
           {/* Mobile Buttons - Always visible except auth pages */}
@@ -305,29 +362,62 @@ export function Navbar() {
 
               {/* Auth section */}
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 pb-2">
-                {isLandingPage ? "Get Started" : "Account"}
+                {authUser ? "Account" : isLandingPage ? "Get Started" : "Account"}
               </p>
-              <a
-                href="/auth/login"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Login
-              </a>
-              <a
-                href="/auth/signup/customer"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up as Customer
-              </a>
-              <a
-                href="/auth/signup/worker"
-                className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sign Up as Worker
-              </a>
+              {authUser ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-tertiary text-tertiary-foreground text-sm font-semibold">
+                      {authUser.fullName?.charAt(0)?.toUpperCase() || "U"}
+                    </span>
+                    <span className="font-medium text-heading truncate">
+                      {authUser.fullName}
+                    </span>
+                  </div>
+                  <a
+                    href={dashboardPath(userRole)}
+                    className="flex items-center gap-2 px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </a>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="flex items-center gap-2 px-3 py-3 rounded-lg hover:bg-muted animation-standard text-red-600 font-medium"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="/auth/login"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Login
+                  </a>
+                  <a
+                    href="/auth/signup/customer"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up as Customer
+                  </a>
+                  <a
+                    href="/auth/signup/worker"
+                    className="flex items-center px-3 py-3 rounded-lg hover:bg-muted animation-standard text-heading font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign Up as Worker
+                  </a>
+                </>
+              )}
 
               {/* CTA buttons for landing page */}
               {isLandingPage && (

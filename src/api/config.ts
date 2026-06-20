@@ -171,6 +171,14 @@ export const API_CONFIG = {
     ADMIN_ACTIVATE_SERVICE: (serviceId: number) => `/admin/services/${serviceId}/activate`,
     ADMIN_REVENUE: '/admin/revenue',
     ADMIN_ANALYTICS: '/admin/analytics',
+
+    // ==================== AI ASSISTANT (Nova) ====================
+    AI_AGENT: '/ai/agent',
+    AI_ONBOARD: '/ai/onboard',
+    AI_CONVERSATIONS: (userId: string) =>
+      `/ai/conversations?userId=${encodeURIComponent(userId)}`,
+    AI_CONVERSATION_MESSAGES: (conversationId: string) =>
+      `/ai/conversations/${conversationId}/messages`,
   },
 };
 
