@@ -159,6 +159,8 @@ export function useAIChat() {
         id: uid(),
         role: t.role,
         content: t.content,
+        workers: t.workers,
+        action: t.action,
       }));
       setMessages(restoredMsgs.length ? restoredMsgs : [greetingMessage()]);
     },

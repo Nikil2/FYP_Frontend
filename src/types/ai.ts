@@ -63,4 +63,7 @@ export interface StoredTurn {
   role: AiRole;
   content: string;
   createdAt: string;
+  /** Worker cards saved with an assistant turn (rehydrated in history). */
+  workers?: AiWorker[];
+  action?: string | null;
 }
