@@ -570,7 +570,22 @@ export const logout = () => {
   clearAuthUser();
   clearCurrentWorkerId();
   clearCurrentCustomerId();
+
   if (typeof window !== "undefined") {
+    // Clear ALL remaining auth/session caches so the next login can't inherit
+    // the previous account's data (this was leaking on account switch).
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("adminSession");
+    localStorage.removeItem(WORKER_PROFILE_CACHE_KEY);
+
+    // Drop any Nova chat sessions (keyed per user + the anon bucket).
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("nova_chat_")) {
+        localStorage.removeItem(key);
+      }
+    }
+
     window.location.href = "/auth/login";
   }
 };
