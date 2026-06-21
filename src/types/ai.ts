@@ -50,6 +50,43 @@ export interface AgentResponse {
   conversationId?: string | null;
 }
 
+// ─── Worker conversational onboarding (POST /ai/onboard) ─────────────────────
+
+/** A service the worker chose during onboarding, with the price they set. */
+export interface OnboardingService {
+  serviceId: number;
+  name: string;
+  price: number;
+}
+
+/** The "soft" worker profile gathered by chat (password/CNIC/photos done in form). */
+export interface OnboardingProfile {
+  fullName?: string;
+  services?: OnboardingService[];
+  experienceYears?: number;
+  visitingCharges?: number;
+  homeAddress?: string;
+  city?: string;
+  bio?: string;
+}
+
+/** Request body for POST /ai/onboard. */
+export interface OnboardRequest {
+  message: string;
+  history: { role: AiRole; content: string }[];
+  profile?: OnboardingProfile;
+}
+
+/** Response from POST /ai/onboard. */
+export interface OnboardResponse {
+  reply: string;
+  profile: OnboardingProfile;
+  /** Friendly labels of fields still needed, e.g. ["your city"]. */
+  missing: string[];
+  /** True when all chat-collected fields are present. */
+  complete: boolean;
+}
+
 /** One row in the history list (GET /ai/conversations). */
 export interface ConversationSummary {
   id: string;

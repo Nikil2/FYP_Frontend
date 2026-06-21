@@ -20,6 +20,9 @@ import type {
   AgentResponse,
   ConversationSummary,
   StoredTurn,
+  OnboardRequest,
+  OnboardResponse,
+  OnboardingProfile,
 } from '@/types/ai';
 
 const MAX_HISTORY_TURNS = 10;
@@ -64,12 +67,33 @@ export const aiService = {
     );
   },
 
-  /** Worker conversational onboarding (used later in F5). */
-  async onboard(history: AiMessage[], message: string): Promise<unknown> {
-    return apiClient.post(API_CONFIG.ENDPOINTS.AI_ONBOARD, {
-      history: slimHistory(history),
-      message,
-    });
+  /**
+   * Worker conversational onboarding. Sends the latest message + slimmed
+   * history + the profile gathered so far; gets back Nova's reply and the
+   * merged profile (with what's still missing).
+   */
+  async onboard(params: {
+    message: string;
+    history: AiMessage[];
+    profile?: OnboardingProfile;
+  }): Promise<OnboardResponse> {
+    const body: OnboardRequest = {
+      message: params.message,
+      history: slimHistory(params.history),
+      profile: params.profile,
+    };
+    return apiClient.post<OnboardResponse>(API_CONFIG.ENDPOINTS.AI_ONBOARD, body);
+  },
+
+  /** Speech-to-text: send a recorded audio clip, get the transcript back. */
+  async transcribe(audio: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('audio', audio, 'answer.webm');
+    const res = await apiClient.upload<{ text: string }>(
+      API_CONFIG.ENDPOINTS.AI_TRANSCRIBE,
+      form,
+    );
+    return res.text ?? '';
   },
 };
 

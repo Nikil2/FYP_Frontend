@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
 import { registerWorker, ApiRequestError } from "@/api";
+import type { OnboardingProfile } from "@/types/ai";
 
 import { StepBasicInfo } from "./StepBasicInfo";
 import { StepOtpVerification } from "./StepOtpVerification";
@@ -76,7 +77,12 @@ const buildPersistedFormData = (data: WorkerSignupFormData): PersistedFormData =
   cnicNumber: data.cnicNumber,
 });
 
-export function WorkerSignupForm() {
+export function WorkerSignupForm({
+  initialProfile,
+}: {
+  /** Profile gathered by the Nova onboarding chat; pre-fills the wizard. */
+  initialProfile?: OnboardingProfile;
+} = {}) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [lang, setLang] = useState<"en" | "ur">("en");
@@ -84,19 +90,23 @@ export function WorkerSignupForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<WorkerSignupFormData>({
-    fullName: "",
+    fullName: initialProfile?.fullName ?? "",
     email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
     otpCode: "",
-    selectedServices: [],
-    homeAddress: "",
+    selectedServices:
+      initialProfile?.services?.map((s) => ({
+        serviceId: s.serviceId,
+        price: s.price,
+      })) ?? [],
+    homeAddress: initialProfile?.homeAddress ?? initialProfile?.city ?? "",
     homeLat: 0,
     homeLng: 0,
-    experienceYears: 0,
-    visitingCharges: 0,
-    bio: "",
+    experienceYears: initialProfile?.experienceYears ?? 0,
+    visitingCharges: initialProfile?.visitingCharges ?? 0,
+    bio: initialProfile?.bio ?? "",
     workPhotos: [],
     selfieImage: null,
     cnicNumber: "",
