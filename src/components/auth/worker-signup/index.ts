@@ -1,4 +1,6 @@
 export { WorkerSignupForm } from "./WorkerSignupWizard";
+export { WorkerSignupExperience } from "./WorkerSignupExperience";
+export { WorkerOnboardingChat } from "./WorkerOnboardingChat";
 export { StepBasicInfo } from "./StepBasicInfo";
 export { StepOtpVerification } from "./StepOtpVerification";
 export { StepServiceSelection } from "./StepServiceSelection";
