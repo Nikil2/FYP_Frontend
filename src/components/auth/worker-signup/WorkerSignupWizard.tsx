@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,7 +16,6 @@ import {
   validatePhoneNumber,
   validatePassword,
   validateCNIC,
-  validateEmail,
   login,
 } from "@/lib/auth";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
@@ -33,13 +32,35 @@ import { StepSelfieVerification } from "./StepSelfieVerification";
 import { StepCnicIdentity } from "./StepCnicIdentity";
 import { uploadToCloudinary, uploadMultipleToCloudinary } from "@/lib/cloudinary";
 
-const TOTAL_STEPS = 8;
+const ALL_STEPS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const WORKER_SIGNUP_DRAFT_KEY = "worker-signup-draft:v1";
 
 const STEP_LABELS = {
   en: ["Account", "OTP", "Services", "Location", "Experience", "Work Photos", "Selfie", "CNIC"],
   ur: ["اکاؤنٹ", "او ٹی پی", "سروسز", "مقام", "تجربہ", "کام کی تصاویر", "سیلفی", "شناختی کارڈ"],
 };
+
+/**
+ * Which steps to actually show. When Nova's onboarding chat has already gathered
+ * a step's data, skip it — the worker only walks through what's left (phone +
+ * password, OTP, location pin, photos, selfie, CNIC). Steps 3 (services) and 5
+ * (experience/bio) are the ones the chat can fully complete.
+ */
+function computeActiveSteps(profile?: OnboardingProfile): number[] {
+  if (!profile) return [...ALL_STEPS];
+  const skip = new Set<number>();
+  if (profile.services?.length && profile.services.every((s) => s.price > 0)) {
+    skip.add(3); // Services
+  }
+  if (
+    typeof profile.experienceYears === "number" &&
+    (profile.visitingCharges ?? 0) > 0 &&
+    !!profile.bio
+  ) {
+    skip.add(5); // Experience + bio
+  }
+  return ALL_STEPS.filter((s) => !skip.has(s));
+}
 
 type PersistedFormData = Omit<
   WorkerSignupFormData,
@@ -52,7 +73,7 @@ type PersistedFormData = Omit<
 
 type WorkerSignupDraft = {
   version: 1;
-  currentStep: number;
+  stepIndex: number;
   lang: "en" | "ur";
   formData: PersistedFormData;
   uploadedWorkPhotoUrls: string[];
@@ -63,7 +84,6 @@ type WorkerSignupDraft = {
 
 const buildPersistedFormData = (data: WorkerSignupFormData): PersistedFormData => ({
   fullName: data.fullName,
-  email: data.email,
   phoneNumber: data.phoneNumber,
   password: data.password,
   confirmPassword: data.confirmPassword,
@@ -84,14 +104,20 @@ export function WorkerSignupForm({
   initialProfile?: OnboardingProfile;
 } = {}) {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(1);
+  // The steps the worker will actually walk through (AI-filled ones removed).
+  const activeSteps = useMemo(
+    () => computeActiveSteps(initialProfile),
+    [initialProfile],
+  );
+  const totalSteps = activeSteps.length;
+  const [stepIndex, setStepIndex] = useState(0);
+  const currentStep = activeSteps[stepIndex];
   const [lang, setLang] = useState<"en" | "ur">("en");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<WorkerSignupFormData>({
     fullName: initialProfile?.fullName ?? "",
-    email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -140,8 +166,8 @@ export function WorkerSignupForm({
         return;
       }
 
-      const safeStep = Math.min(Math.max(draft.currentStep || 1, 1), TOTAL_STEPS);
-      setCurrentStep(safeStep);
+      const safeIndex = Math.min(Math.max(draft.stepIndex || 0, 0), totalSteps - 1);
+      setStepIndex(safeIndex);
       setLang(draft.lang || "en");
       setFormData((prev) => ({
         ...prev,
@@ -163,7 +189,7 @@ export function WorkerSignupForm({
 
     const draft: WorkerSignupDraft = {
       version: 1,
-      currentStep,
+      stepIndex,
       lang,
       formData: buildPersistedFormData(formData),
       uploadedWorkPhotoUrls,
@@ -174,7 +200,7 @@ export function WorkerSignupForm({
 
     sessionStorage.setItem(WORKER_SIGNUP_DRAFT_KEY, JSON.stringify(draft));
   }, [
-    currentStep,
+    stepIndex,
     lang,
     formData,
     uploadedWorkPhotoUrls,
@@ -302,7 +328,6 @@ export function WorkerSignupForm({
     const errMsg = isUrdu
       ? {
           required: "ضروری ہے",
-          invalidEmail: "درست ای میل درج کریں",
           fullName: "پہلا اور آخری نام درج کریں",
           invalidPhone: "درست فون نمبر درج کریں",
           weakPassword: "پاسورڈ کم از کم 6 حروف کا ہونا چاہیے",
@@ -321,7 +346,6 @@ export function WorkerSignupForm({
         }
       : {
           required: "This field is required",
-          invalidEmail: "Enter a valid email address",
           fullName: "Enter your first and last name",
           invalidPhone: "Enter a valid Pakistani phone number",
           weakPassword: "Password must be at least 6 characters",
@@ -345,9 +369,6 @@ export function WorkerSignupForm({
           newErrors.fullName = errMsg.required;
         } else if (formData.fullName.trim().split(/\s+/).length < 2) {
           newErrors.fullName = errMsg.fullName;
-        }
-        if (formData.email && !validateEmail(formData.email)) {
-          newErrors.email = errMsg.invalidEmail;
         }
         if (!validatePhoneNumber(formData.phoneNumber)) newErrors.phoneNumber = errMsg.invalidPhone;
         const pwdCheck = validatePassword(formData.password);
@@ -403,15 +424,15 @@ export function WorkerSignupForm({
 
   const handleNext = () => {
     if (!validateCurrentStep()) return;
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((prev) => prev + 1);
+    if (stepIndex < totalSteps - 1) {
+      setStepIndex((prev) => prev + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep((prev) => prev - 1);
+    if (stepIndex > 0) {
+      setStepIndex((prev) => prev - 1);
       setErrors({});
     }
   };
@@ -561,7 +582,7 @@ export function WorkerSignupForm({
       <div className="text-center mb-6 mt-4">
         <h1 className="text-2xl font-bold text-heading">Mehnati</h1>
         <p className="text-xs text-paragraph mt-1">
-          {ui.step} {currentStep} {ui.of} {TOTAL_STEPS}
+          {ui.step} {stepIndex + 1} {ui.of} {totalSteps}
         </p>
       </div>
 
@@ -569,23 +590,23 @@ export function WorkerSignupForm({
       <div className="mb-6">
         {/* Step indicators - scroll horizontally on small screens */}
         <div className="flex items-center justify-between mb-3 overflow-x-auto gap-1">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
+          {activeSteps.map((step, i) => (
             <div key={step} className="flex items-center flex-1 min-w-0">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                  currentStep > step
+                  stepIndex > i
                     ? "bg-green-500 text-white"
-                    : currentStep === step
+                    : stepIndex === i
                     ? "bg-tertiary text-white ring-4 ring-tertiary/20"
                     : "bg-gray-200 text-gray-500"
                 }`}
               >
-                {currentStep > step ? <CheckCircle2 className="w-4 h-4" /> : step}
+                {stepIndex > i ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
               </div>
-              {step < TOTAL_STEPS && (
+              {i < totalSteps - 1 && (
                 <div
                   className={`flex-1 h-1 mx-1 rounded-full transition-all ${
-                    currentStep > step ? "bg-green-500" : "bg-gray-200"
+                    stepIndex > i ? "bg-green-500" : "bg-gray-200"
                   }`}
                 />
               )}
@@ -789,7 +810,7 @@ export function WorkerSignupForm({
 
       {/* Navigation */}
       <div className="flex justify-between mt-6 pt-4 border-t border-border">
-        {currentStep > 1 ? (
+        {stepIndex > 0 ? (
           <Button type="button" variant="outline" onClick={handleBack} size="md">
             <ArrowLeft className="w-4 h-4" />
             {ui.back}
@@ -798,7 +819,7 @@ export function WorkerSignupForm({
           <div />
         )}
 
-        {currentStep < TOTAL_STEPS ? (
+        {stepIndex < totalSteps - 1 ? (
           <Button type="button" variant="tertiary" onClick={handleNext} size="md">
             {ui.next}
             <ArrowRight className="w-4 h-4" />

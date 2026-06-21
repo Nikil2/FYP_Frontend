@@ -420,7 +420,6 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
     
     // User fields
     formData.append("fullName", data.fullName);
-    formData.append("email", data.email);
     formData.append("phoneNumber", data.phoneNumber);
     formData.append("password", data.password);
     formData.append("role", "WORKER");

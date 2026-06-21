@@ -91,7 +91,6 @@ export interface SelectedServiceEntry {
 export interface WorkerSignupFormData {
   // Step 1: Basic Info
   fullName: string;
-  email: string;
   phoneNumber: string;
   password: string;
   confirmPassword: string;
