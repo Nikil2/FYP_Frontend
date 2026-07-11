@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Loader2,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -619,6 +620,19 @@ export function WorkerSignupForm({
         </p>
       </div>
 
+      {/* When Nova pre-filled the profile, reassure the worker that these are
+          only the leftover steps — not a re-do of the whole form. */}
+      {initialProfile && stepIndex === 0 && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-800">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {isUrdu
+              ? "نووا نے آپ کی معلومات بھر دی ہیں۔ بس یہ باقی مراحل مکمل کریں۔"
+              : "Nova ne aap ki maloomat bhar di. Bas ye baaqi steps reh gaye hain."}
+          </span>
+        </div>
+      )}
+
       {/* Step Content */}
       <div className="min-h-[400px]">
         {currentStep === 1 && (
@@ -627,6 +641,7 @@ export function WorkerSignupForm({
             onChange={handleFieldChange}
             errors={errors}
             lang={lang}
+            namePrefilled={!!initialProfile?.fullName}
           />
         )}
         {currentStep === 2 && (

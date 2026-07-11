@@ -7,6 +7,7 @@ import {
   Phone,
   Lock,
   User,
+  CheckCircle2,
 } from "lucide-react";
 import { WorkerSignupFormData } from "@/interfaces/auth-interfaces";
 
@@ -15,11 +16,16 @@ interface Props {
   onChange: (field: keyof WorkerSignupFormData, value: string) => void;
   errors: Record<string, string>;
   lang: "en" | "ur";
+  /** True when Nova's chat already captured the name — show it confirmed, not asked. */
+  namePrefilled?: boolean;
 }
 
-export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
+export function StepBasicInfo({ formData, onChange, errors, lang, namePrefilled }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // A prefilled name starts collapsed as a confirmation; the worker can still edit.
+  const [editingName, setEditingName] = useState(false);
+  const showNameConfirmed = !!namePrefilled && !editingName && !!formData.fullName;
 
   const t = {
     en: {
@@ -27,6 +33,8 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
       subtitle: "Enter your basic information to get started",
       fullName: "Full Name",
       fullNamePlaceholder: "Enter your full name",
+      edit: "Edit",
+      byNova: "Added by Nova",
       phone: "Phone Number",
       phonePlaceholder: "03XX-XXXXXXX",
       password: "Password",
@@ -39,6 +47,8 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
       subtitle: "شروع کرنے کے لیے بنیادی معلومات درج کریں",
       fullName: "پورا نام",
       fullNamePlaceholder: "اپنا پورا نام لکھیں",
+      edit: "تبدیل کریں",
+      byNova: "نووا نے شامل کیا",
       phone: "فون نمبر",
       phonePlaceholder: "03XX-XXXXXXX",
       password: "پاسورڈ",
@@ -58,21 +68,45 @@ export function StepBasicInfo({ formData, onChange, errors, lang }: Props) {
         <p className="text-paragraph text-sm mt-1">{labels.subtitle}</p>
       </div>
 
-      {/* Full Name */}
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium text-heading">{labels.fullName} *</label>
-        <div className="relative">
-          <User className={`absolute ${isUrdu ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-paragraph w-5 h-5`} />
-          <input
-            type="text"
-            value={formData.fullName}
-            onChange={(e) => onChange("fullName", e.target.value)}
-            placeholder={labels.fullNamePlaceholder}
-            className={`w-full ${isUrdu ? "pr-10 pl-4" : "pl-10 pr-4"} py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent bg-white`}
-          />
+      {/* Full Name — shown as a confirmed row when Nova already captured it. */}
+      {showNameConfirmed ? (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-heading">{labels.fullName}</label>
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-3">
+            <span className="flex min-w-0 items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-heading">
+                  {formData.fullName}
+                </span>
+                <span className="block text-[11px] text-green-700">{labels.byNova}</span>
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditingName(true)}
+              className="shrink-0 text-xs font-medium text-tertiary hover:underline"
+            >
+              {labels.edit}
+            </button>
+          </div>
         </div>
-        {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
-      </div>
+      ) : (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-heading">{labels.fullName} *</label>
+          <div className="relative">
+            <User className={`absolute ${isUrdu ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 text-paragraph w-5 h-5`} />
+            <input
+              type="text"
+              value={formData.fullName}
+              onChange={(e) => onChange("fullName", e.target.value)}
+              placeholder={labels.fullNamePlaceholder}
+              className={`w-full ${isUrdu ? "pr-10 pl-4" : "pl-10 pr-4"} py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent bg-white`}
+            />
+          </div>
+          {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName}</p>}
+        </div>
+      )}
 
       {/* Phone */}
       <div className="space-y-1.5">
