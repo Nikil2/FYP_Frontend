@@ -23,9 +23,12 @@ interface Props {
 export function StepBasicInfo({ formData, onChange, errors, lang, namePrefilled }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  // A prefilled name starts collapsed as a confirmation; the worker can still edit.
+  // A prefilled name starts collapsed as a confirmation; the worker can still
+  // edit. If validation flags the name (e.g. only one word), expand to the
+  // editable input so the error is visible instead of a dead Next button.
   const [editingName, setEditingName] = useState(false);
-  const showNameConfirmed = !!namePrefilled && !editingName && !!formData.fullName;
+  const showNameConfirmed =
+    !!namePrefilled && !editingName && !!formData.fullName && !errors.fullName;
 
   const t = {
     en: {
