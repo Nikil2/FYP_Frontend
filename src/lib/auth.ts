@@ -473,6 +473,58 @@ export const signupWorker = async (data: WorkerSignupFormData): Promise<AuthResp
   }
 };
 
+/**
+ * Start the AI-first worker signup: phone + password + OTP creates the "soft"
+ * worker account and logs the worker in (token stored), so Nova can then
+ * complete the profile over chat. OTP is the dummy 000000 for now.
+ */
+export const startWorkerSignup = async (
+  phoneNumber: string,
+  password: string,
+  otp: string,
+): Promise<AuthResponse> => {
+  try {
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
+
+    const response = await fetch(`${API_BASE_URL}/users/worker/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phoneNumber: normalizedPhoneNumber,
+        password,
+        otp,
+      }),
+    });
+
+    const result = await response.json();
+    const user = extractUserPayload(result);
+    const token = extractTokenPayload(result);
+
+    if (response.ok && user?.id && user?.role && token) {
+      setAuthToken(token);
+      setUserRole(user.role);
+      setAuthUser(user);
+      return {
+        success: true,
+        message: "Account created",
+        data: { accessToken: token, token, user },
+      };
+    }
+
+    return {
+      success: false,
+      message: result.message || "Could not create account",
+      error: result.error,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Network error. Please try again.",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+};
+
 export const forgotPassword = async (
   phoneNumber: string,
 ): Promise<{ success: boolean; message: string }> => {

@@ -1,39 +1,39 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MessageSquareText, ClipboardList, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import type { OnboardingProfile } from '@/types/ai';
 import { WorkerSignupForm } from './WorkerSignupWizard';
 import { WorkerOnboardingChat } from './WorkerOnboardingChat';
+import { WorkerSignupStart } from './WorkerSignupStart';
 
-type Mode = 'choose' | 'chat' | 'form';
+type Mode = 'choose' | 'start' | 'chat' | 'form';
 
 /**
- * Entry point for worker signup. Lets the worker pick the EASY path (chat/voice
- * with Nova, who fills most of the profile) or fill the form themselves. After
- * the chat, the gathered profile pre-fills the wizard for the remaining
- * photo / CNIC / password steps.
+ * Entry point for worker signup. The EASY path is AI-first: the worker sets up a
+ * soft account with phone + password + OTP (WorkerSignupStart), then Nova gathers
+ * the WHOLE profile over chat — including inline location and photo captures — and
+ * submits it for verification. The manual "form" path is the classic wizard.
  */
 export function WorkerSignupExperience() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>('choose');
-  const [profile, setProfile] = useState<OnboardingProfile | undefined>();
+
+  if (mode === 'start') {
+    return <WorkerSignupStart onReady={() => setMode('chat')} />;
+  }
 
   if (mode === 'chat') {
     return (
       <WorkerOnboardingChat
-        onComplete={(p) => {
-          setProfile(p);
-          setMode('form');
-        }}
-        onSkip={() => setMode('form')}
+        onFinished={() => router.push('/worker/dashboard')}
       />
     );
   }
 
   if (mode === 'form') {
-    return <WorkerSignupForm initialProfile={profile} />;
+    return <WorkerSignupForm />;
   }
 
   // ── Choice screen ──
@@ -47,7 +47,7 @@ export function WorkerSignupExperience() {
       </div>
 
       <button
-        onClick={() => setMode('chat')}
+        onClick={() => setMode('start')}
         className="group mb-3 w-full rounded-xl border-2 border-tertiary bg-tertiary/5 p-4 text-left transition hover:bg-tertiary/10"
       >
         <div className="flex items-start gap-3">
@@ -62,8 +62,8 @@ export function WorkerSignupExperience() {
               </span>
             </p>
             <p className="mt-0.5 text-sm text-paragraph">
-              🎤 Bol kar ya likh kar batayein — Nova aap ki tamam maloomat bhar
-              dega. Likhna parhna zaroori nahi.
+              🎤 Bol kar ya likh kar batayein — Nova poora account bhar dega,
+              tasveerein aur location bhi. Likhna parhna zaroori nahi.
             </p>
           </div>
         </div>
@@ -88,7 +88,7 @@ export function WorkerSignupExperience() {
 
       <div className="mt-6 flex items-center justify-center gap-2 text-xs text-paragraph">
         <MessageSquareText size={14} />
-        Dono tareeqon mein photos aur CNIC aakhir mein lagani hain.
+        Sirf phone aur password se shuru karein — baaki Nova sambhal lega.
       </div>
     </Card>
   );

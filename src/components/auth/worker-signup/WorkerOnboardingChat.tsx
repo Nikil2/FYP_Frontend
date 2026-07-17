@@ -1,33 +1,36 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Send, Sparkles, Mic, Square, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Send, Sparkles, Mic, Square, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { TypingIndicator } from '@/components/ai/TypingIndicator';
 import { useWorkerOnboarding } from '@/hooks/useWorkerOnboarding';
-import type { OnboardingProfile } from '@/types/ai';
+import { OnboardingCaptureWidget } from './OnboardingCaptureWidget';
 
 /**
- * Conversational worker signup. The worker chats (or speaks) with Nova, who
- * gathers their profile one question at a time. When everything is collected
- * (or the worker chooses to continue), the parent receives the profile to
- * pre-fill the normal signup wizard for the photo/CNIC/password steps.
+ * Conversational worker signup. The worker (already logged into the soft account
+ * from the phone+OTP step) chats or speaks with Nova, who gathers the whole
+ * profile one step at a time — including inline location and photo captures.
+ * When everything is collected, the profile is submitted for verification and
+ * `onFinished` fires (parent redirects to the dashboard).
  */
 export function WorkerOnboardingChat({
-  onComplete,
-  onSkip,
+  onFinished,
 }: {
-  onComplete: (profile: OnboardingProfile) => void;
-  onSkip: () => void;
+  onFinished: () => void;
 }) {
   const {
     messages,
     loading,
     recording,
-    profile,
     complete,
+    awaiting,
+    finishing,
     send,
+    submitCapture,
+    uploadImage,
+    finish,
     startRecording,
     stopRecording,
   } = useWorkerOnboarding();
@@ -39,7 +42,7 @@ export function WorkerOnboardingChat({
       top: scrollRef.current.scrollHeight,
       behavior: 'smooth',
     });
-  }, [messages]);
+  }, [messages, awaiting]);
 
   const submit = () => {
     const text = input.trim();
@@ -47,6 +50,13 @@ export function WorkerOnboardingChat({
     setInput('');
     void send(text);
   };
+
+  const handleFinish = async () => {
+    const ok = await finish();
+    if (ok) onFinished();
+  };
+
+  const showWidget = !complete && awaiting !== 'text';
 
   return (
     <div className="flex h-[600px] max-h-[calc(100vh-7rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-gray-50 shadow-xl ring-1 ring-black/5">
@@ -59,12 +69,6 @@ export function WorkerOnboardingChat({
           <p className="font-semibold leading-tight">Nova</p>
           <p className="text-xs text-white/80">Aap ka account banane mein madad</p>
         </div>
-        <button
-          onClick={onSkip}
-          className="rounded-full px-3 py-1 text-xs font-medium transition hover:bg-white/20"
-        >
-          Form bharein
-        </button>
       </div>
 
       {/* Messages */}
@@ -95,6 +99,16 @@ export function WorkerOnboardingChat({
             </div>
           );
         })}
+
+        {/* Inline capture widget (location / CNIC / selfie / work photos) */}
+        {showWidget && (
+          <OnboardingCaptureWidget
+            awaiting={awaiting}
+            uploadImage={uploadImage}
+            onCapture={submitCapture}
+            disabled={loading}
+          />
+        )}
       </div>
 
       {/* Completion banner */}
@@ -108,11 +122,15 @@ export function WorkerOnboardingChat({
             type="button"
             variant="tertiary"
             size="md"
-            onClick={() => onComplete(profile)}
+            onClick={handleFinish}
+            disabled={finishing}
             className="w-full"
           >
-            Photos aur password ke liye aage barhein
-            <ArrowRight className="h-4 w-4" />
+            {finishing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              'Profile submit karein'
+            )}
           </Button>
         </div>
       )}

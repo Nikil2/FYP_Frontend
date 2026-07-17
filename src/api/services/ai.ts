@@ -95,6 +95,47 @@ export const aiService = {
     );
     return res.text ?? '';
   },
+
+  /**
+   * Upload one inline onboarding image (CNIC front/back, selfie, work photo)
+   * to Cloudinary and get its URL back. Requires the soft-account token.
+   */
+  async uploadOnboardingImage(image: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('image', image, 'photo.jpg');
+    const res = await apiClient.upload<{ url: string }>(
+      API_CONFIG.ENDPOINTS.AI_ONBOARD_UPLOAD_IMAGE,
+      form,
+    );
+    return res.url ?? '';
+  },
+
+  /**
+   * Finish onboarding: turn the soft worker account into a full WorkerProfile
+   * (submitted for verification). Maps the gathered profile to the backend DTO.
+   */
+  async completeWorkerProfile(profile: OnboardingProfile): Promise<unknown> {
+    const body = {
+      fullName: profile.fullName,
+      cnicNumber: profile.cnicNumber,
+      cnicFrontUrl: profile.cnicFrontUrl,
+      cnicBackUrl: profile.cnicBackUrl,
+      selfieUrl: profile.selfieUrl,
+      workPhotosUrls: profile.workPhotosUrls,
+      homeAddress: profile.homeAddress,
+      homeLat: profile.homeLat,
+      homeLng: profile.homeLng,
+      city: profile.city,
+      experienceYears: profile.experienceYears,
+      visitingCharges: profile.visitingCharges,
+      bio: profile.bio,
+      services: profile.services,
+    };
+    return apiClient.post(
+      API_CONFIG.ENDPOINTS.WORKERS_COMPLETE_PROFILE,
+      body,
+    );
+  },
 };
 
 export default aiService;

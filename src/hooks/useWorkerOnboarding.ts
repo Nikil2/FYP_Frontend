@@ -11,7 +11,11 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { aiService } from '@/api/services/ai';
-import type { AiMessage, OnboardingProfile } from '@/types/ai';
+import type {
+  AiMessage,
+  OnboardingAwaiting,
+  OnboardingProfile,
+} from '@/types/ai';
 
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -31,6 +35,8 @@ export function useWorkerOnboarding() {
   const [profile, setProfile] = useState<OnboardingProfile>({});
   const [missing, setMissing] = useState<string[]>([]);
   const [complete, setComplete] = useState(false);
+  const [awaiting, setAwaiting] = useState<OnboardingAwaiting>('text');
+  const [finishing, setFinishing] = useState(false);
 
   const profileRef = useRef<OnboardingProfile>({});
   const mediaRef = useRef<MediaRecorder | null>(null);
@@ -63,6 +69,7 @@ export function useWorkerOnboarding() {
         setProfile(res.profile);
         setMissing(res.missing);
         setComplete(res.complete);
+        setAwaiting(res.awaiting ?? 'text');
 
         setMessages((m) =>
           m.map((msg) =>
@@ -146,6 +153,51 @@ export function useWorkerOnboarding() {
     }
   }, [recording]);
 
+  // ─── Inline captures (location + photos) ────────────────────────────────────
+
+  /** Upload one image (CNIC/selfie/work photo) and return its stored URL. */
+  const uploadImage = useCallback(
+    (file: Blob): Promise<string> => aiService.uploadOnboardingImage(file),
+    [],
+  );
+
+  /**
+   * Merge captured fields (location coords, photo URLs, CNIC number) into the
+   * profile, then nudge Nova with a short note so she confirms and moves to the
+   * next step. The backend recomputes `awaiting`/`missing` from the new profile.
+   */
+  const submitCapture = useCallback(
+    async (partial: Partial<OnboardingProfile>, note: string) => {
+      profileRef.current = { ...profileRef.current, ...partial };
+      setProfile(profileRef.current);
+      await send(note);
+    },
+    [send],
+  );
+
+  /** Finish: create the full WorkerProfile (verification pending). */
+  const finish = useCallback(async (): Promise<boolean> => {
+    if (finishing) return false;
+    setFinishing(true);
+    try {
+      await aiService.completeWorkerProfile(profileRef.current);
+      return true;
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          id: uid(),
+          role: 'assistant',
+          content:
+            'Profile submit karne mein masla hua. Dobara koshish karein.',
+        },
+      ]);
+      return false;
+    } finally {
+      setFinishing(false);
+    }
+  }, [finishing]);
+
   return {
     messages,
     loading,
@@ -153,7 +205,12 @@ export function useWorkerOnboarding() {
     profile,
     missing,
     complete,
+    awaiting,
+    finishing,
     send,
+    submitCapture,
+    uploadImage,
+    finish,
     startRecording,
     stopRecording,
   };
