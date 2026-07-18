@@ -5,8 +5,12 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description }: PageHeaderProps) {
   return (
-    <section className="bg-secondary-background pt-28 md:pt-36 pb-16 md:pb-20">
-      <div className="layout-standard text-center">
+    <section className="relative overflow-hidden bg-secondary-background pt-32 md:pt-44 pb-16 md:pb-24">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,color-mix(in_srgb,var(--tertiary)_15%,transparent),transparent)]"
+        aria-hidden
+      />
+      <div className="relative layout-standard text-center">
         <div className="w-12 h-1.5 rounded-full bg-tertiary mx-auto mb-6" />
         <h1 className="text-3xl md:text-5xl font-bold text-heading mb-4">
           {title}
