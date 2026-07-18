@@ -145,12 +145,16 @@ export async function getVerifiedWorkers(
   skip: number = 0,
   take: number = 10,
   serviceId?: number,
-  categoryId?: string
+  categoryId?: string,
+  location?: { lat: number; lng: number; radiusKm: number }
 ): Promise<Worker[]> {
   try {
     let url = `${API_CONFIG.ENDPOINTS.WORKERS_GET_VERIFIED}?skip=${skip}&take=${take}`;
     if (serviceId) url += `&serviceId=${serviceId}`;
     if (categoryId) url += `&categoryId=${categoryId}`;
+    if (location) {
+      url += `&lat=${location.lat}&lng=${location.lng}&radiusKm=${location.radiusKm}`;
+    }
 
     const response = await apiClient.get<ApiResponse<Worker[]> | Worker[]>(url);
 
