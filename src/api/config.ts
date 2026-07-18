@@ -4,8 +4,12 @@
  */
 
 export const API_CONFIG = {
-  // Backend API URL
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+  // Backend API URL (trailing slash stripped — a env var set with one would
+  // otherwise produce double slashes like ".app//users/login" and 404).
+  BASE_URL: (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(
+    /\/+$/,
+    '',
+  ),
 
   // Request timeout (ms)
   TIMEOUT: 30000,

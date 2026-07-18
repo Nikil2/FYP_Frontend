@@ -7,7 +7,9 @@ import { socketClient } from "@/lib/socket";
 // API BASE URL
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+// Trailing slash stripped — an env var set with one would otherwise produce
+// double slashes like ".app//users/login", which 404s ("Cannot POST //...").
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
 const AUTH_USER_KEY = "authUser";
 const PK_COUNTRY_CODE = "+92";
 const WORKER_PROFILE_CACHE_KEY = "worker-dashboard-profile:v1";
