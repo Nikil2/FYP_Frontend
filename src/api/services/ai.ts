@@ -137,7 +137,13 @@ export const aiService = {
       experienceYears: profile.experienceYears,
       visitingCharges: profile.visitingCharges,
       bio: profile.bio,
-      services: profile.services,
+      // Backend's WorkerServiceInputDto only allows serviceId + price (with
+      // forbidNonWhitelisted on) — strip the display-only `name` field or the
+      // whole request gets rejected with "property name should not exist".
+      services: profile.services?.map(({ serviceId, price }) => ({
+        serviceId,
+        price,
+      })),
     };
     return apiClient.post(
       API_CONFIG.ENDPOINTS.WORKERS_COMPLETE_PROFILE,
