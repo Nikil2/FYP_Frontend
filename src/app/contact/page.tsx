@@ -54,12 +54,12 @@ export default function ContactPage() {
       />
 
       <section className="section-padding-standard">
-        <div className="layout-standard grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="layout-standard grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           <div className="lg:col-span-1 space-y-4">
             {contactDetails.map((detail) => {
               const Icon = detail.icon;
               return (
-                <Card key={detail.label}>
+                <Card key={detail.label} hover>
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-tertiary" />
@@ -77,8 +77,15 @@ export default function ContactPage() {
           </div>
 
           <div className="lg:col-span-2">
-            <Card>
-              <form onSubmit={handleSubmit} className="space-y-4">
+            <Card className="p-8">
+              <h2 className="text-xl font-semibold text-heading mb-1">
+                Send Us a Message
+              </h2>
+              <p className="text-sm text-paragraph mb-6">
+                Fill out the form below and our team will get back to you
+                within one business day.
+              </p>
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-heading mb-2">
                     Name
@@ -90,7 +97,7 @@ export default function ContactPage() {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Your name"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent animation-standard"
                   />
                 </div>
                 <div>
@@ -104,7 +111,7 @@ export default function ContactPage() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent"
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent animation-standard"
                   />
                 </div>
                 <div>
@@ -118,10 +125,15 @@ export default function ContactPage() {
                     value={formData.message}
                     onChange={handleChange}
                     placeholder="How can we help?"
-                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent resize-none"
+                    className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-tertiary focus:border-transparent resize-none animation-standard"
                   />
                 </div>
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  variant="tertiary"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
