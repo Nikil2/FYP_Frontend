@@ -46,6 +46,11 @@ const NAV_ITEMS = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/revenue", label: "Revenue", icon: Wallet },
   { href: "/admin/finance", label: "Finance", icon: BarChart3 },
+  {
+    href: "/admin/commission-overdue",
+    label: "Overdue",
+    icon: AlertTriangle,
+  },
   { href: "/admin/rewards", label: "Rewards", icon: Award },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
