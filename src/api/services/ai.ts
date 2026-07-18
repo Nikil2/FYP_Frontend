@@ -82,7 +82,15 @@ export const aiService = {
       history: slimHistory(params.history),
       profile: params.profile,
     };
-    return apiClient.post<OnboardResponse>(API_CONFIG.ENDPOINTS.AI_ONBOARD, body);
+    // Nova may chain several tool calls in one turn (e.g. list_services then
+    // record_worker_details) — each is a separate Groq round-trip, so this can
+    // legitimately take longer than the default 30s used for plain CRUD calls.
+    return apiClient.post<OnboardResponse>(
+      API_CONFIG.ENDPOINTS.AI_ONBOARD,
+      body,
+      undefined,
+      60000,
+    );
   },
 
   /** Speech-to-text: send a recorded audio clip, get the transcript back. */

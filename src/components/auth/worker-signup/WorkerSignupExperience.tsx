@@ -4,11 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MessageSquareText, ClipboardList, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { isAuthenticated, getUserRole } from '@/lib/auth';
 import { WorkerSignupForm } from './WorkerSignupWizard';
 import { WorkerOnboardingChat } from './WorkerOnboardingChat';
 import { WorkerSignupStart } from './WorkerSignupStart';
 
 type Mode = 'choose' | 'start' | 'chat' | 'form';
+
+/** If the soft worker account already exists in this browser (e.g. the page was
+ * refreshed mid-chat), resume the chat directly instead of re-showing
+ * phone+password+OTP — re-submitting that step would hit a "phone already
+ * exists" conflict since the account was already created. */
+function initialMode(): Mode {
+  if (isAuthenticated() && getUserRole() === 'WORKER') return 'chat';
+  return 'choose';
+}
 
 /**
  * Entry point for worker signup. The EASY path is AI-first: the worker sets up a
@@ -18,7 +28,7 @@ type Mode = 'choose' | 'start' | 'chat' | 'form';
  */
 export function WorkerSignupExperience() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('choose');
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   if (mode === 'start') {
     return <WorkerSignupStart onReady={() => setMode('chat')} />;
