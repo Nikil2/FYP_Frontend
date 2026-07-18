@@ -45,10 +45,16 @@ export function WorkerResultCard({ worker }: { worker: AiWorker }) {
             <span className="inline-flex items-center gap-0.5">
               <Briefcase size={12} /> {worker.totalJobsCompleted} jobs
             </span>
-            {worker.city && (
-              <span className="inline-flex items-center gap-0.5">
-                <MapPin size={12} /> {worker.city}
+            {typeof worker.distanceKm === "number" ? (
+              <span className="inline-flex items-center gap-0.5 font-medium text-emerald-700">
+                <MapPin size={12} /> {worker.distanceKm} km away
               </span>
+            ) : (
+              worker.city && (
+                <span className="inline-flex items-center gap-0.5">
+                  <MapPin size={12} /> {worker.city}
+                </span>
+              )
             )}
           </div>
         </div>

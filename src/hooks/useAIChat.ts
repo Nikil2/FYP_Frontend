@@ -61,6 +61,28 @@ export function useAIChat() {
   const [loading, setLoading] = useState(false);
   const conversationIdRef = useRef<string | undefined>(restored?.conversationId);
 
+  // Customer's coordinates, so the agent can search by real distance instead of
+  // guessing a city. Held in a ref because it's request metadata, not UI state —
+  // it should never trigger a re-render. Silently skipped if denied.
+  const locationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        locationRef.current = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+      },
+      () => {
+        /* denied or unavailable — agent falls back to asking for a city */
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
+
   // Mirror current session to localStorage whenever messages change.
   useEffect(() => {
     try {
@@ -99,6 +121,7 @@ export function useAIChat() {
           history: historyForRequest,
           conversationId: conversationIdRef.current,
           userId: userIdRef.current,
+          location: locationRef.current,
         });
 
         if (res.conversationId) conversationIdRef.current = res.conversationId;
