@@ -145,6 +145,7 @@ export const API_CONFIG = {
     COMMISSION_PAY: (workerId: string) => `/commission/worker/${workerId}/pay`,
     COMMISSION_PAYMENTS: (workerId: string) => `/commission/worker/${workerId}/payments`,
     COMMISSION_ADMIN_PENDING: '/commission/admin/pending',
+    COMMISSION_ADMIN_OVERDUE: '/commission/admin/overdue',
     COMMISSION_ADMIN_APPROVE: (paymentId: string) => `/commission/admin/${paymentId}/approve`,
     COMMISSION_ADMIN_REJECT: (paymentId: string) => `/commission/admin/${paymentId}/reject`,
 

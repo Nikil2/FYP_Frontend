@@ -18,6 +18,8 @@ export interface AiWorker {
   services: { id: number; name: string }[];
   /** AI-written "why recommended" line (recommend_workers only). */
   reason?: string;
+  /** Distance from the customer in km — only when location was shared. */
+  distanceKm?: number;
 }
 
 /** One message in the local chat thread (may carry rich payloads on assistant). */
@@ -39,6 +41,9 @@ export interface AgentRequest {
   history: { role: AiRole; content: string }[];
   userId?: string;
   conversationId?: string;
+  /** Customer's coordinates, when location was allowed — enables nearby search. */
+  lat?: number;
+  lng?: number;
 }
 
 /** Raw response from POST /ai/agent (returned directly by apiClient.post). */

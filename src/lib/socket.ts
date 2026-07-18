@@ -32,6 +32,7 @@ class SocketClient {
   private bookingStatusListeners: ((data: any) => void)[] = [];
   private proposalListeners: ((proposal: any) => void)[] = [];
   private typingListeners: ((data: any) => void)[] = [];
+  private workerLocationListeners: ((data: any) => void)[] = [];
 
   /**
    * Connect to Socket.IO server with JWT authentication.
@@ -95,6 +96,16 @@ class SocketClient {
     this.socket.on('user_stopped_typing', (data) => {
       this.typingListeners.forEach((cb) => cb({ ...data, stopped: true }));
     });
+
+    this.socket.on('worker_location_updated', (data) => {
+      this.workerLocationListeners.forEach((cb) => cb(data));
+    });
+
+    this.socket.on('tracking_stopped', (data) => {
+      this.workerLocationListeners.forEach((cb) =>
+        cb({ ...data, stopped: true }),
+      );
+    });
   }
 
   /**
@@ -111,6 +122,7 @@ class SocketClient {
     this.bookingStatusListeners = [];
     this.proposalListeners = [];
     this.typingListeners = [];
+    this.workerLocationListeners = [];
   }
 
   /**
@@ -169,6 +181,31 @@ class SocketClient {
     this.proposalListeners.push(callback);
     return () => {
       this.proposalListeners = this.proposalListeners.filter((cb) => cb !== callback);
+    };
+  }
+
+  /**
+   * Worker: broadcast current position for an active booking.
+   */
+  updateLocation(
+    bookingId: string,
+    lat: number,
+    lng: number,
+    heading?: number,
+    speed?: number
+  ): void {
+    this.socket?.emit('update_location', { bookingId, lat, lng, heading, speed });
+  }
+
+  /**
+   * Customer: subscribe to the assigned worker's live position.
+   */
+  onWorkerLocation(callback: (data: any) => void): () => void {
+    this.workerLocationListeners.push(callback);
+    return () => {
+      this.workerLocationListeners = this.workerLocationListeners.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 

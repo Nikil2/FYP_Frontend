@@ -82,3 +82,37 @@ export async function rejectCommissionPayment(
     { reason },
   );
 }
+
+export interface OverdueWorker {
+  workerId: string;
+  userId: string;
+  fullName: string;
+  phoneNumber: string;
+  city: string | null;
+  totalJobsCompleted: number;
+  amountDue: number;
+  commissionDueAt: string | null;
+  daysOverdue: number;
+  /** True when the worker has already submitted proof and is awaiting review. */
+  hasPendingSubmission: boolean;
+  isBlocked: boolean;
+  isBonusSuspended: boolean;
+}
+
+export interface OverdueWorkersResponse {
+  newlyFlagged: number;
+  totalOverdue: number;
+  totalAmountOwed: number;
+  awaitingReview: number;
+  workers: OverdueWorker[];
+}
+
+/**
+ * Workers flagged as overdue on commission, longest-overdue first.
+ * The backend re-runs its overdue sweep on each call, so this is current.
+ */
+export async function getOverdueWorkers(): Promise<OverdueWorkersResponse> {
+  return apiClient.get<OverdueWorkersResponse>(
+    API_CONFIG.ENDPOINTS.COMMISSION_ADMIN_OVERDUE,
+  );
+}

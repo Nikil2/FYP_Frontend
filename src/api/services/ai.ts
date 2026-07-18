@@ -43,12 +43,15 @@ export const aiService = {
     history: AiMessage[];
     conversationId?: string;
     userId?: string;
+    location?: { lat: number; lng: number } | null;
   }): Promise<AgentResponse> {
     const body: AgentRequest = {
       message: params.message,
       history: slimHistory(params.history),
       conversationId: params.conversationId,
       userId: params.userId,
+      lat: params.location?.lat,
+      lng: params.location?.lng,
     };
     return apiClient.post<AgentResponse>(API_CONFIG.ENDPOINTS.AI_AGENT, body);
   },
