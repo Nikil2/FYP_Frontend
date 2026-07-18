@@ -81,19 +81,19 @@ class ApiClient {
   /**
    * Execute HTTP request with timeout
    */
-  private async withTimeout<T>(promise: Promise<T>): Promise<T> {
+  private async withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number = this.timeout
+  ): Promise<T> {
     return Promise.race([
       promise,
       new Promise<T>((_, reject) =>
         setTimeout(
           () =>
             reject(
-              new ApiRequestError(
-                408,
-                `Request timeout after ${this.timeout}ms`
-              )
+              new ApiRequestError(408, `Request timeout after ${timeoutMs}ms`)
             ),
-          this.timeout
+          timeoutMs
         )
       ),
     ]);
@@ -105,7 +105,8 @@ class ApiClient {
    */
   private async doRequest<T>(
     endpoint: string,
-    options: CustomRequestInit = {}
+    options: CustomRequestInit = {},
+    timeoutMs?: number
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -134,7 +135,10 @@ class ApiClient {
 
     try {
       // Make request with timeout
-      const response = await this.withTimeout(fetch(url, fetchOptions));
+      const response = await this.withTimeout(
+        fetch(url, fetchOptions),
+        timeoutMs
+      );
 
       // Handle 401 Unauthorized
       if (response.status === 401) {
@@ -185,13 +189,18 @@ class ApiClient {
   async post<T = unknown>(
     endpoint: string,
     body: unknown,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
+    timeoutMs?: number
   ): Promise<T> {
-    return this.doRequest<T>(endpoint, {
-      method: 'POST',
-      body,
-      headers,
-    });
+    return this.doRequest<T>(
+      endpoint,
+      {
+        method: 'POST',
+        body,
+        headers,
+      },
+      timeoutMs
+    );
   }
 
   /**
@@ -238,7 +247,8 @@ class ApiClient {
    */
   async upload<T = unknown>(
     endpoint: string,
-    formData: FormData
+    formData: FormData,
+    timeoutMs?: number
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
@@ -257,7 +267,8 @@ class ApiClient {
           headers,
           body: formData,
           credentials: 'include',
-        })
+        }),
+        timeoutMs
       );
 
       // Handle 401

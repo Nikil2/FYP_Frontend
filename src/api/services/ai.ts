@@ -20,6 +20,9 @@ import type {
   AgentResponse,
   ConversationSummary,
   StoredTurn,
+  OnboardRequest,
+  OnboardResponse,
+  OnboardingProfile,
 } from '@/types/ai';
 
 const MAX_HISTORY_TURNS = 10;
@@ -64,12 +67,88 @@ export const aiService = {
     );
   },
 
-  /** Worker conversational onboarding (used later in F5). */
-  async onboard(history: AiMessage[], message: string): Promise<unknown> {
-    return apiClient.post(API_CONFIG.ENDPOINTS.AI_ONBOARD, {
-      history: slimHistory(history),
-      message,
-    });
+  /**
+   * Worker conversational onboarding. Sends the latest message + slimmed
+   * history + the profile gathered so far; gets back Nova's reply and the
+   * merged profile (with what's still missing).
+   */
+  async onboard(params: {
+    message: string;
+    history: AiMessage[];
+    profile?: OnboardingProfile;
+  }): Promise<OnboardResponse> {
+    const body: OnboardRequest = {
+      message: params.message,
+      history: slimHistory(params.history),
+      profile: params.profile,
+    };
+    // Nova may chain several tool calls in one turn (e.g. list_services then
+    // record_worker_details) — each is a separate Groq round-trip, so this can
+    // legitimately take longer than the default 30s used for plain CRUD calls.
+    return apiClient.post<OnboardResponse>(
+      API_CONFIG.ENDPOINTS.AI_ONBOARD,
+      body,
+      undefined,
+      60000,
+    );
+  },
+
+  /** Speech-to-text: send a recorded audio clip, get the transcript back. */
+  async transcribe(audio: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('audio', audio, 'answer.webm');
+    const res = await apiClient.upload<{ text: string }>(
+      API_CONFIG.ENDPOINTS.AI_TRANSCRIBE,
+      form,
+    );
+    return res.text ?? '';
+  },
+
+  /**
+   * Upload one inline onboarding image (CNIC front/back, selfie, work photo)
+   * to Cloudinary and get its URL back. Requires the soft-account token.
+   */
+  async uploadOnboardingImage(image: Blob): Promise<string> {
+    const form = new FormData();
+    form.append('image', image, 'photo.jpg');
+    const res = await apiClient.upload<{ url: string }>(
+      API_CONFIG.ENDPOINTS.AI_ONBOARD_UPLOAD_IMAGE,
+      form,
+    );
+    return res.url ?? '';
+  },
+
+  /**
+   * Finish onboarding: turn the soft worker account into a full WorkerProfile
+   * (submitted for verification). Maps the gathered profile to the backend DTO.
+   */
+  async completeWorkerProfile(profile: OnboardingProfile): Promise<unknown> {
+    const body = {
+      fullName: profile.fullName,
+      cnicNumber: profile.cnicNumber,
+      cnicFrontUrl: profile.cnicFrontUrl,
+      cnicBackUrl: profile.cnicBackUrl,
+      selfieUrl: profile.selfieUrl,
+      workPhotosUrls: profile.workPhotosUrls,
+      homeAddress: profile.homeAddress,
+      homeLat: profile.homeLat,
+      homeLng: profile.homeLng,
+      city: profile.city,
+      experienceYears: profile.experienceYears,
+      visitingCharges: profile.visitingCharges,
+      bio: profile.bio,
+      // Backend's WorkerServiceInputDto only allows serviceId + price (with
+      // forbidNonWhitelisted on) — strip the display-only `name` field or the
+      // whole request gets rejected with "property name should not exist".
+      services: profile.services?.map(({ serviceId, price }) => ({
+        serviceId,
+        price,
+      })),
+    };
+    return apiClient.post(
+      API_CONFIG.ENDPOINTS.WORKERS_COMPLETE_PROFILE,
+      body,
+    );
   },
 };
 

@@ -37,9 +37,11 @@ export const API_CONFIG = {
     USERS_VERIFY_OTP: '/users/verify-otp',
     USERS_RESET_PASSWORD: '/users/reset-password',
     USERS_CHANGE_PASSWORD: '/users/change-password',
+    USERS_WORKER_START: '/users/worker/start',
 
     // ==================== WORKERS ====================
     WORKERS_REGISTER: '/workers/register',
+    WORKERS_COMPLETE_PROFILE: '/workers/complete-profile',
     WORKERS_GET_ALL: '/workers',
     WORKERS_GET_VERIFIED: '/workers/verified',
     WORKERS_DETAIL: (workerId: string) => `/workers/${workerId}`,
@@ -175,6 +177,8 @@ export const API_CONFIG = {
     // ==================== AI ASSISTANT (Nova) ====================
     AI_AGENT: '/ai/agent',
     AI_ONBOARD: '/ai/onboard',
+    AI_ONBOARD_UPLOAD_IMAGE: '/ai/onboard/upload-image',
+    AI_TRANSCRIBE: '/ai/transcribe',
     AI_CONVERSATIONS: (userId: string) =>
       `/ai/conversations?userId=${encodeURIComponent(userId)}`,
     AI_CONVERSATION_MESSAGES: (conversationId: string) =>
