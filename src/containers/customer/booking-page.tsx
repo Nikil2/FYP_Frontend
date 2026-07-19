@@ -6,6 +6,11 @@ import { BookingForm } from "@/components/customer/booking-form";
 import { WorkerSelection } from "@/components/customer/worker-selection";
 import { getServiceById } from "@/api/services/services";
 import { getVerifiedWorkers } from "@/api/services/workers";
+import { useCustomerLocation } from "@/hooks/useCustomerLocation";
+import {
+  LocationPicker,
+  type ActiveLocation,
+} from "@/components/customer/location-picker";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { WorkerDetail } from "@/types/worker";
 
@@ -37,8 +42,6 @@ interface CustomerWorkerApi {
   distanceKm?: number;
 }
 
-type LocationStatus = "detecting" | "granted" | "denied";
-
 const RADIUS_OPTIONS = [5, 10, 20, 50];
 const DEFAULT_RADIUS_KM = 10;
 
@@ -50,9 +53,24 @@ export default function BookingPage({ serviceId }: BookingPageProps) {
   const [serviceName, setServiceName] = useState("");
   const [workers, setWorkers] = useState<WorkerDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>("detecting");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  // Only needed while choosing a worker; skipped once one is selected.
+  const {
+    status: gpsStatus,
+    coords: gpsCoords,
+    areaName: gpsAreaName,
+    request: requestLocation,
+  } = useCustomerLocation(!workerId);
+
+  // A saved address, when the customer picks one, overrides the GPS reading.
+  const [savedChoice, setSavedChoice] = useState<ActiveLocation | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const coords = savedChoice ?? gpsCoords;
+  const areaName = savedChoice ? savedChoice.name : gpsAreaName;
+  // A chosen address gives us coordinates even if the browser blocked GPS.
+  const locationStatus = savedChoice ? "granted" : gpsStatus;
 
   const mapWorkers = useCallback(
     (apiWorkers: CustomerWorkerApi[], name: string): WorkerDetail[] =>
@@ -97,26 +115,6 @@ export default function BookingPage({ serviceId }: BookingPageProps) {
         }),
     [numericServiceId]
   );
-
-  // Ask for the customer's location once, on mount. Skipped when a worker is
-  // already chosen, since we go straight to the booking form.
-  useEffect(() => {
-    if (workerId) return;
-
-    if (typeof window === "undefined" || !("geolocation" in navigator)) {
-      setLocationStatus("denied");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocationStatus("granted");
-      },
-      () => setLocationStatus("denied"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, [workerId]);
 
   useEffect(() => {
     // Wait for the location probe to settle before fetching the list, so we
@@ -184,11 +182,37 @@ export default function BookingPage({ serviceId }: BookingPageProps) {
           serviceId={serviceId}
           serviceName={serviceName}
           workers={workers}
-          locationEnabled={locationStatus === "granted"}
+          locationStatus={locationStatus}
+          areaName={areaName}
           radiusKm={radiusKm}
           radiusOptions={RADIUS_OPTIONS}
           onRadiusChange={setRadiusKm}
+          onEnableLocation={requestLocation}
+          onChangeLocation={() => setPickerOpen(true)}
         />
+
+        <LocationPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          active={
+            savedChoice ??
+            (gpsCoords
+              ? {
+                  ...gpsCoords,
+                  name: gpsAreaName ?? "Current location",
+                  source: "gps",
+                }
+              : null)
+          }
+          gpsAreaName={gpsAreaName}
+          gpsAvailable={gpsStatus !== "unsupported"}
+          onUseCurrentLocation={() => {
+            setSavedChoice(null);
+            requestLocation();
+          }}
+          onSelectSaved={setSavedChoice}
+        />
+
         <FloatingButtons />
       </>
     );

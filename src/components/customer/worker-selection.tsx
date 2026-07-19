@@ -3,27 +3,38 @@
 import Link from "next/link";
 import { ChevronLeft, Star, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { WorkerDetail } from "@/types/worker";
+
+type LocationStatus = "detecting" | "granted" | "denied" | "unsupported";
 
 interface WorkerSelectionProps {
   serviceId: string;
   serviceName: string;
   workers: WorkerDetail[];
-  locationEnabled?: boolean;
+  locationStatus?: LocationStatus;
+  areaName?: string | null;
   radiusKm?: number;
   radiusOptions?: number[];
   onRadiusChange?: (radiusKm: number) => void;
+  onEnableLocation?: () => void;
+  /** Opens the saved-address picker. Omit to hide the "Change" affordance. */
+  onChangeLocation?: () => void;
 }
 
 export function WorkerSelection({
   serviceId,
   serviceName,
   workers,
-  locationEnabled = false,
+  locationStatus = "denied",
+  areaName = null,
   radiusKm = 10,
   radiusOptions = [5, 10, 20, 50],
   onRadiusChange,
+  onEnableLocation,
+  onChangeLocation,
 }: WorkerSelectionProps) {
+  const locationEnabled = locationStatus === "granted";
   const header = (
     <div className="sticky top-0 z-10 bg-white border-b border-border">
       <div className="px-4 py-3 md:px-6 md:py-4 flex items-center gap-3">
@@ -40,6 +51,41 @@ export function WorkerSelection({
           )}
         </div>
       </div>
+
+      {/* Confirm where we think they are — otherwise "3 km away" is unverifiable */}
+      {locationEnabled && (
+        <div className="px-4 md:px-6 pb-2">
+          <button
+            type="button"
+            onClick={onChangeLocation}
+            disabled={!onChangeLocation}
+            className={cn(
+              "flex w-full items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-left transition-colors",
+              onChangeLocation && "hover:border-tertiary/50 hover:bg-muted/50",
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="relative flex h-2 w-2 flex-shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+              </span>
+              <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-tertiary" />
+              <span className="truncate text-xs text-heading">
+                Showing workers near{" "}
+                <span className="font-semibold">
+                  {areaName ?? "your location"}
+                </span>
+              </span>
+            </span>
+
+            {onChangeLocation && (
+              <span className="flex-shrink-0 text-xs font-medium text-tertiary">
+                Change
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Radius filter — only meaningful once we know where the customer is */}
       {locationEnabled && (
@@ -61,6 +107,60 @@ export function WorkerSelection({
               {option} km
             </button>
           ))}
+        </div>
+      )}
+
+      {locationStatus === "detecting" && (
+        <div className="px-4 md:px-6 pb-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="h-3 w-3 animate-spin rounded-full border-b-2 border-tertiary" />
+          Finding workers near you…
+        </div>
+      )}
+
+      {/* Location not available — say so and offer a way back in, rather than
+          silently showing an unfiltered list. */}
+      {(locationStatus === "denied" || locationStatus === "unsupported") && (
+        <div className="px-4 md:px-6 pb-3">
+          <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+              <div>
+                <p className="text-xs font-medium text-amber-900">
+                  Showing all workers
+                </p>
+                <p className="text-[11px] text-amber-800">
+                  {locationStatus === "unsupported"
+                    ? "Your browser doesn't support location, so we can't sort by distance."
+                    : "Turn on location to see only workers near you, sorted by distance."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-shrink-0 gap-2">
+              {locationStatus === "denied" && onEnableLocation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onEnableLocation}
+                  className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                >
+                  Use my location
+                </Button>
+              )}
+              {/* The recovery path when the browser has hard-blocked GPS —
+                  a saved address still gives us coordinates. */}
+              {onChangeLocation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onChangeLocation}
+                  className="border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                >
+                  Pick address
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
