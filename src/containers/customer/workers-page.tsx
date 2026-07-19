@@ -5,6 +5,11 @@ import { WorkerSelection } from "@/components/customer/worker-selection";
 import { FloatingButtons } from "@/components/customer/floating-buttons";
 import { getServiceById } from "@/api/services/services";
 import { getVerifiedWorkers } from "@/api/services/workers";
+import { useCustomerLocation } from "@/hooks/useCustomerLocation";
+import {
+  LocationPicker,
+  type ActiveLocation,
+} from "@/components/customer/location-picker";
 import { WorkerDetail } from "@/types/worker";
 
 interface WorkersPageProps {
@@ -35,8 +40,6 @@ interface CustomerWorkerApi {
   distanceKm?: number;
 }
 
-type LocationStatus = "detecting" | "granted" | "denied";
-
 const RADIUS_OPTIONS = [5, 10, 20, 50];
 const DEFAULT_RADIUS_KM = 10;
 
@@ -46,9 +49,23 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
   const [service, setService] = useState<{ id: number; name: string } | null>(null);
   const [workers, setWorkers] = useState<WorkerDetail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>("detecting");
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  const {
+    status: gpsStatus,
+    coords: gpsCoords,
+    areaName: gpsAreaName,
+    request: requestLocation,
+  } = useCustomerLocation();
+
+  // A saved address, when the customer picks one, overrides the GPS reading.
+  const [savedChoice, setSavedChoice] = useState<ActiveLocation | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const coords = savedChoice ?? gpsCoords;
+  const areaName = savedChoice ? savedChoice.name : gpsAreaName;
+  // A chosen address gives us coordinates even if the browser blocked GPS.
+  const locationStatus = savedChoice ? "granted" : gpsStatus;
 
   const mapWorkers = useCallback(
     (apiWorkers: CustomerWorkerApi[], serviceName: string): WorkerDetail[] =>
@@ -98,23 +115,6 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
       .then(setService)
       .catch((error) => console.error("Error loading service:", error));
   }, [numericServiceId]);
-
-  // Ask for the customer's location once, on mount.
-  useEffect(() => {
-    if (typeof window === "undefined" || !("geolocation" in navigator)) {
-      setLocationStatus("denied");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocationStatus("granted");
-      },
-      () => setLocationStatus("denied"),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, []);
 
   // Fetch workers whenever the service, location, or radius changes.
   useEffect(() => {
@@ -166,11 +166,37 @@ export default function WorkersPage({ serviceId }: WorkersPageProps) {
         serviceId={serviceId}
         serviceName={service?.name ?? ""}
         workers={workers}
-        locationEnabled={locationStatus === "granted"}
+        locationStatus={locationStatus}
+        areaName={areaName}
         radiusKm={radiusKm}
         radiusOptions={RADIUS_OPTIONS}
         onRadiusChange={setRadiusKm}
+        onEnableLocation={requestLocation}
+        onChangeLocation={() => setPickerOpen(true)}
       />
+
+      <LocationPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        active={
+          savedChoice ??
+          (gpsCoords
+            ? {
+                ...gpsCoords,
+                name: gpsAreaName ?? "Current location",
+                source: "gps",
+              }
+            : null)
+        }
+        gpsAreaName={gpsAreaName}
+        gpsAvailable={gpsStatus !== "unsupported"}
+        onUseCurrentLocation={() => {
+          setSavedChoice(null);
+          requestLocation();
+        }}
+        onSelectSaved={setSavedChoice}
+      />
+
       <FloatingButtons />
     </>
   );
