@@ -32,12 +32,16 @@ export function FinalCTA() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Button variant="primary" size="lg" className="text-lg px-10 py-6">
-              I Need a Worker
-            </Button>
-            <Button variant="tertiary" size="lg" className="text-lg px-10 py-6">
-              I Want to Work
-            </Button>
+            <a href="/auth/signup/customer">
+              <Button variant="primary" size="lg" className="text-lg px-10 py-6">
+                I Need a Worker
+              </Button>
+            </a>
+            <a href="/auth/signup/worker">
+              <Button variant="tertiary" size="lg" className="text-lg px-10 py-6">
+                I Want to Work
+              </Button>
+            </a>
           </div>
         </div>
       </div>
